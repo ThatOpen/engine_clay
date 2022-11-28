@@ -10,20 +10,58 @@
   <title>Components | Hello world</title>
 </head>
 <body>
-  <div class="full-screen" id="container"></div>
+  <canvas class="full-screen" id="container"></canvas>
+
   <script type="importmap">
     {
       "imports": {
         "three": "https://unpkg.com/three@0.135.0/build/three.module.js",
-        "stats.js/src/Stats.js": "https://unpkg.com/stats-js@1.0.1/src/Stats.js"
+        "three/examples/jsm/libs/lil-gui.module.min": "https://unpkg.com/three@0.135.0/examples/jsm/libs/lil-gui.module.min.js",
+        "three/examples/jsm/controls/OrbitControls": "https://unpkg.com/three@0.135.0/examples/jsm/controls/OrbitControls.js",
+        "stats.js/src/Stats.js": "https://unpkg.com/stats-js@1.0.1/src/Stats.js",
+        "client-zip": "https://unpkg.com/client-zip@2.3.0/index.js"
       }
     }
-</script>
+  </script>
   <script type="module">
 		import * as THREE from 'three';
+        import {SimpleThreeScene} from "./resources/simple-three-scene.js";
 		import * as OBC from './resources/openbim-clay.js';
 
-        const vertex = new OBC.Vertex();
+        const canvas = document.getElementById("container");
+        const world = new SimpleThreeScene(canvas);
+
+        const geometry = new THREE.ConeGeometry(1, 1, 4);
+        const shell = new OBC.Shell(geometry);
+        world.scene.add(shell);
+        world.scene.add(shell.selection);
+
+        const raycaster = new THREE.Raycaster();
+        const pointer = new THREE.Vector2();
+
+        window.onmousemove = (event) => {
+          pointer.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+          pointer.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+          raycaster.setFromCamera( pointer, world.camera );
+          const intersects = raycaster.intersectObject( shell );
+          if(intersects.length) {
+             const found = intersects[0];
+             shell.selectFace(found.faceIndex);
+          }
+        }
+
+        let counter = 1;
+        const position = new THREE.Vector3();
+        const transform = new THREE.Matrix4();
+        window.onkeydown = () => {
+          position.x = counter++;
+          transform.setPosition(position);
+          shell.transform(transform);
+        }
+
+        window.ondblclick = () => {
+          shell.geometry.computeVertexNormals();
+        }
 
 
   </script>
