@@ -31,8 +31,9 @@
         const canvas = document.getElementById("container");
         const world = new SimpleThreeScene(canvas);
 
-        const geometry = new THREE.ConeGeometry(1, 1, 4);
+        const geometry = new THREE.CylinderGeometry();
         const shell = new OBC.Shell(geometry);
+        shell.material.wireframe = true;
         world.scene.add(shell);
         world.scene.add(shell.selection);
 
@@ -58,11 +59,6 @@
           transform.setPosition(position);
           shell.transform(transform);
         }
-
-        window.ondblclick = () => {
-          shell.geometry.computeVertexNormals();
-        }
-
 
   </script>
 </body>

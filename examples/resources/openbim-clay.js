@@ -56,11 +56,16 @@ class Shell extends Clay {
         const newIndex = [];
         const vertexIndexMap = new Map();
         let indexCounter = 0;
+        const tolerance = 3;
         for (let i = 0; i < geometry.index.count; i++) {
             const currentIndex = geometry.index.getX(i);
-            const vertexX = geometry.attributes.position.getX(currentIndex);
-            const vertexY = geometry.attributes.position.getY(currentIndex);
-            const vertexZ = geometry.attributes.position.getZ(currentIndex);
+            let vertexX = geometry.attributes.position.getX(currentIndex);
+            let vertexY = geometry.attributes.position.getY(currentIndex);
+            let vertexZ = geometry.attributes.position.getZ(currentIndex);
+            const factor = 10 ** tolerance;
+            vertexX = Math.trunc(vertexX * factor) / factor;
+            vertexY = Math.trunc(vertexY * factor) / factor;
+            vertexZ = Math.trunc(vertexZ * factor) / factor;
             const vertexID = [vertexX, vertexY, vertexZ].toString();
             if (vertexIndexMap.has(vertexID)) {
                 const recicledIndex = vertexIndexMap.get(vertexID);
@@ -73,6 +78,21 @@ class Shell extends Clay {
                 indexCounter++;
             }
         }
+        // Clean up faces that are not triangles
+        const indexToDelete = [];
+        for (let i = 0; i < newIndex.length; i += 3) {
+            if (newIndex[i] === newIndex[i + 1] ||
+                newIndex[i] === newIndex[i + 2] ||
+                newIndex[i + 1] === newIndex[i + 2]) {
+                indexToDelete.push(i);
+            }
+        }
+        let counter = 0;
+        for (const index of indexToDelete) {
+            newIndex.splice(index - counter, 3);
+            counter += 3;
+        }
+        // Create new geometry
         const newPositionBuffer = new Float32Array(newPosition);
         const newPositionAttr = new THREE.BufferAttribute(newPositionBuffer, 3);
         geometry.setAttribute("position", newPositionAttr);
@@ -85,7 +105,6 @@ class Shell extends Clay {
         copy.setAttribute("position", geometry.attributes.position);
         copy.setAttribute("normal", geometry.attributes.normal);
         copy.setIndex([]);
-        this.selection = new THREE.Mesh(copy, this.selectionMaterial);
         this.selection = new THREE.Mesh(copy, this.selectionMaterial);
         // Sort triangles by shared edges
         const trianglesByEdges = new Map();
@@ -126,27 +145,46 @@ class Shell extends Clay {
         console.log(hardEdgesIDs);
         // Group adjacent faces
         let indexCount = 0;
+        const coplanarFaces = new Set();
         const facePairs = trianglesByEdges.values();
         for (const facePair of facePairs) {
             const face1 = facePair.faces[0];
             const face2 = facePair.faces[1];
-            if (this.faceIndexMap.has(face1)) {
-                const index = this.faceIndexMap.get(face1);
-                this.faces[index].push(face2);
+            const face1Found = this.faceIndexMap.has(face1);
+            const face2Found = this.faceIndexMap.has(face2);
+            if (face1Found && face2Found) {
+                continue;
             }
-            else if (this.faceIndexMap.has(face2)) {
+            else if (face1Found) {
+                const index = this.faceIndexMap.get(face1);
+                this.faceIndexMap.set(face2, index);
+                this.faces[index].push(face2);
+                coplanarFaces.add(face2);
+            }
+            else if (face2Found) {
                 const index = this.faceIndexMap.get(face2);
+                this.faceIndexMap.set(face1, index);
                 this.faces[index].push(face1);
+                coplanarFaces.add(face1);
             }
             else {
                 this.faceIndexMap.set(face1, indexCount);
                 this.faceIndexMap.set(face2, indexCount);
                 this.faces[indexCount] = [];
                 this.faces[indexCount].push(face1, face2);
+                coplanarFaces.add(face1);
+                coplanarFaces.add(face2);
                 indexCount++;
             }
         }
         console.log(this.faces);
+        // Get the faces that are just one triangle
+        for (let i = 0; i < geometry.index.count; i += 3) {
+            if (!coplanarFaces.has(i)) {
+                this.faceIndexMap.set(i, this.faces.length);
+                this.faces.push([i]);
+            }
+        }
     }
     transform(transform) {
         const index = this.selection.geometry.index;
