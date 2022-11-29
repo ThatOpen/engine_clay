@@ -127,7 +127,6 @@ class Shell extends Clay {
                 }
             }
         }
-        console.log(trianglesByEdges);
         // Collect hard edges
         const hardEdgesIDs = [];
         const edgeIDs = trianglesByEdges.keys();
@@ -141,8 +140,6 @@ class Shell extends Clay {
                 trianglesByEdges.delete(edgeID);
             }
         }
-        console.log(trianglesByEdges);
-        console.log(hardEdgesIDs);
         // Group adjacent faces
         let indexCount = 0;
         const coplanarFaces = new Set();
@@ -177,7 +174,6 @@ class Shell extends Clay {
                 indexCount++;
             }
         }
-        console.log(this.faces);
         // Get the faces that are just one triangle
         for (let i = 0; i < geometry.index.count; i += 3) {
             if (!coplanarFaces.has(i)) {

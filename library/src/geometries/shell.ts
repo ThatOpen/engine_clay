@@ -123,8 +123,6 @@ export class Shell extends Clay {
       }
     }
 
-    console.log(trianglesByEdges);
-
     // Collect hard edges
 
     const hardEdgesIDs: number[][] = [];
@@ -140,9 +138,6 @@ export class Shell extends Clay {
         trianglesByEdges.delete(edgeID);
       }
     }
-
-    console.log(trianglesByEdges);
-    console.log(hardEdgesIDs);
 
     // Group adjacent faces
 
@@ -179,8 +174,6 @@ export class Shell extends Clay {
         indexCount++;
       }
     }
-
-    console.log(this.faces);
 
     // Get the faces that are just one triangle
     for (let i = 0; i < geometry.index.count; i += 3) {
