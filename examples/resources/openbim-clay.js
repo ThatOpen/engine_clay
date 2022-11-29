@@ -1,13 +1,5 @@
 import * as THREE from 'https://unpkg.com/three@0.135.0/build/three.module.js';
 
-class Vertex {
-    constructor(x, y, z) {
-        this.x = x;
-        this.y = y;
-        this.z = z;
-    }
-}
-
 class Clay extends THREE.Mesh {
     constructor(vertexCount = 100) {
         super();
@@ -236,4 +228,11 @@ class Shell extends Clay {
     }
 }
 
-export { Shell, Vertex };
+class Extrusion extends Clay {
+    constructor() {
+        super();
+        console.log("Hey!");
+    }
+}
+
+export { Clay, Extrusion, Shell };
