@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link rel="stylesheet" href="resources/styles.css">
+    <link rel="icon" type="image/x-icon" href="../favicon.ico">
+    <title>Components | Hello world</title>
+</head>
+<body>
+<canvas class="full-screen" id="container"></canvas>
+
+<script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.135.0/build/three.module.js",
+        "three/examples/jsm/libs/lil-gui.module.min": "https://unpkg.com/three@0.135.0/examples/jsm/libs/lil-gui.module.min.js",
+        "three/examples/jsm/controls/OrbitControls": "https://unpkg.com/three@0.135.0/examples/jsm/controls/OrbitControls.js",
+        "three/examples/jsm/controls/TransformControls": "https://unpkg.com/three@0.135.0/examples/jsm/controls/TransformControls.js",
+        "stats.js/src/Stats.js": "https://unpkg.com/stats-js@1.0.1/src/Stats.js",
+        "client-zip": "https://unpkg.com/client-zip@2.3.0/index.js"
+      }
+    }
+
+</script>
+<script type="module">
+    import * as THREE from 'three';
+    import {SimpleThreeScene} from "./resources/simple-three-scene.js";
+    import {TransformControls} from "three/examples/jsm/controls/TransformControls";
+    import * as OBC from './resources/openbim-clay.js';
+
+    const canvas = document.getElementById("container");
+    const world = new SimpleThreeScene(canvas);
+
+    const points = new OBC.Points([
+        new THREE.Vector3(1, 0, -1),
+        new THREE.Vector3(-1, 0, -1),
+        new THREE.Vector3(-1, 0, 1),
+        new THREE.Vector3(1, 0, 1)
+    ]);
+
+    world.scene.add(points);
+
+    const controls = new TransformControls(world.camera, canvas);
+
+    points.controls = {
+        helper: controls,
+        scene: world.scene,
+        camera: world.camera,
+        canvas
+    };
+
+    controls.addEventListener( 'dragging-changed', (event) => {
+        world.controls.enabled = !event.value;
+    });
+
+    window.addEventListener("dblclick", (event) => {
+        points.pick(event);
+    })
+
+    window.addEventListener("keydown", (event) => {
+        if(event.code === "KeyR") {
+            points.resetSelection();
+            points.toggleControls(false);
+        }
+        if(event.code === "KeyK") {
+            points.toggleControls(true);
+        }
+    })
+
+</script>
+</body>
+</html>

@@ -4,8 +4,7 @@ export class Clay extends THREE.Mesh {
   size: number;
   geometry = new THREE.BufferGeometry();
 
-  // Necessary if we want to avoid duplicate edges in indexed buffergeometries
-  private static defaultMaterial = new THREE.MeshPhongMaterial({
+  protected static defaultMaterial = new THREE.MeshPhongMaterial({
     flatShading: true,
     side: THREE.DoubleSide,
   });

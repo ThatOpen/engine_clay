@@ -964,6 +964,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/earcut@npm:^2.1.1":
+  version: 2.1.1
+  resolution: "@types/earcut@npm:2.1.1"
+  checksum: 7845dab97ba2bf379caeb4fb91bb732e6710b0ce018a8e357f023cb96ac2fa5c64352461e93ecac2504966dcf6b0b882d117c2258cf15a679bd0063b3cee0e14
+  languageName: node
+  linkType: hard
+
 "@types/estree@npm:*":
   version: 1.0.0
   resolution: "@types/estree@npm:1.0.0"
@@ -1104,12 +1111,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/three@npm:^0.143.0":
-  version: 0.143.2
-  resolution: "@types/three@npm:0.143.2"
+"@types/three@npm:0.146":
+  version: 0.146.0
+  resolution: "@types/three@npm:0.146.0"
   dependencies:
     "@types/webxr": "*"
-  checksum: 34687c9b026bf4c095de131c0cd7b393d1ec251ceb2cdc178ac7f2500fe8326f762333c03a06854f2e381304d4e3b4fe53b1cabc882de623e6e6a67e5dba6f67
+  checksum: f8ea5ba032f6aaa1cb5ad7dfbbd13851e8cba04365bc7fa9a5320ea7e9a2538ea5f2426391f690f0465347ade15cc145d5dc84b1730d8cceea89f746231f667c
   languageName: node
   linkType: hard
 
@@ -2384,6 +2391,13 @@ __metadata:
   dependencies:
     webidl-conversions: ^5.0.0
   checksum: d638e9cb05c52999f1b2eb87c374b03311ea5b1d69c2f875bc92da73e17db60c12142b45c950228642ff7f845c536b65305483350d080df59003a653da80b691
+  languageName: node
+  linkType: hard
+
+"earcut@npm:^2.2.4":
+  version: 2.2.4
+  resolution: "earcut@npm:2.2.4"
+  checksum: aea0466cb2f24e0c3c57148d8d28ac9846f53c4f43ee66780826474303ac851b305ef988152d0bdeb31e8f7ca939dc0df737e7505cfb1c1bdf2ff9d7f9ea2faa
   languageName: node
   linkType: hard
 
@@ -5320,12 +5334,14 @@ __metadata:
   dependencies:
     "@rollup/plugin-commonjs": ^22.0.2
     "@rollup/plugin-node-resolve": ^14.1.0
+    "@types/earcut": ^2.1.1
     "@types/jest": ^26.0.23
     "@types/node": ^14.14.31
-    "@types/three": ^0.143.0
+    "@types/three": 0.146
     "@typescript-eslint/eslint-plugin": ^4.27.0
     "@typescript-eslint/parser": ^4.27.0
     cpy-cli: ^3.1.1
+    earcut: ^2.2.4
     eslint: ^7.28.0
     eslint-config-airbnb-base: ^14.2.1
     eslint-config-prettier: ^8.3.0
