@@ -6,4 +6,5 @@ export interface ControlData {
   helper: TransformControls;
   scene: THREE.Scene;
   camera: THREE.Camera;
+  active?: boolean;
 }

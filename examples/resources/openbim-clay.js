@@ -1008,7 +1008,7 @@ class Points extends THREE.Points {
     }
     set controls(data) {
         this.cleanUpControls();
-        this.controlData = data;
+        this.controlData = { ...data, active: true };
         data.scene.add(this.helper);
         data.helper.attach(this.helper);
         data.helper.addEventListener("change", this.onControlChange);
@@ -1023,6 +1023,8 @@ class Points extends THREE.Points {
         this.tempVector3 = new THREE.Vector3();
         this.tempVector2 = new THREE.Vector2();
         this.onControlChange = () => {
+            if (!this.controls.active)
+                return;
             this.previousTransform.multiply(this.helper.matrix);
             this.transform(this.previousTransform);
             this.previousTransform = this.helper.matrix.clone().invert();
@@ -1079,6 +1081,24 @@ class Points extends THREE.Points {
                 this.highlight(i / 3);
             }
         }
+        this.centerTransformToSelection();
+    }
+    centerTransformToSelection() {
+        const sum = new THREE.Vector3();
+        const position = this.geometry.attributes.position;
+        for (const index of this.selected) {
+            sum.x += position.getX(index);
+            sum.y += position.getY(index);
+            sum.z += position.getZ(index);
+        }
+        const midX = sum.x / this.selected.length;
+        const midY = sum.y / this.selected.length;
+        const midZ = sum.z / this.selected.length;
+        this.controls.active = false;
+        this.helper.position.set(0, 0, 0);
+        this.previousTransform.identity();
+        this.controls.helper.position.set(midX, midY, midZ);
+        this.controls.active = true;
     }
     getPositionVector(i) {
         const position = this.geometry.attributes.position;

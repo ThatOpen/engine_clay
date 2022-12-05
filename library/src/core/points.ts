@@ -7,6 +7,7 @@ export class Points extends THREE.Points {
 
   private selected: number[] = [];
   private mouse = new Mouse();
+
   private controlData?: ControlData;
   private helper = new THREE.Object3D();
   private previousTransform = new THREE.Matrix4();
@@ -23,7 +24,7 @@ export class Points extends THREE.Points {
 
   set controls(data: ControlData) {
     this.cleanUpControls();
-    this.controlData = data;
+    this.controlData = { ...data, active: true };
     data.scene.add(this.helper);
     data.helper.attach(this.helper);
     data.helper.addEventListener("change", this.onControlChange);
@@ -86,6 +87,25 @@ export class Points extends THREE.Points {
         this.highlight(i / 3);
       }
     }
+    this.centerTransformToSelection();
+  }
+
+  private centerTransformToSelection() {
+    const sum = new THREE.Vector3();
+    const position = this.geometry.attributes.position;
+    for (const index of this.selected) {
+      sum.x += position.getX(index);
+      sum.y += position.getY(index);
+      sum.z += position.getZ(index);
+    }
+    const midX = sum.x / this.selected.length;
+    const midY = sum.y / this.selected.length;
+    const midZ = sum.z / this.selected.length;
+    this.controls.active = false;
+    this.helper.position.set(0, 0, 0);
+    this.previousTransform.identity();
+    this.controls.helper.position.set(midX, midY, midZ);
+    this.controls.active = true;
   }
 
   private getPositionVector(i: number) {
@@ -116,6 +136,7 @@ export class Points extends THREE.Points {
   }
 
   private onControlChange = () => {
+    if (!this.controls.active) return;
     this.previousTransform.multiply(this.helper.matrix);
     this.transform(this.previousTransform);
     this.previousTransform = this.helper.matrix.clone().invert();
