@@ -1000,6 +1000,9 @@ class Mouse {
 }
 
 class Points extends THREE.Points {
+    get count() {
+        return this.geometry.attributes.position.count;
+    }
     get controls() {
         if (!this.controlData) {
             throw new Error("Controls were not initialized.");
@@ -1008,30 +1011,28 @@ class Points extends THREE.Points {
     }
     set controls(data) {
         this.cleanUpControls();
-        this.controlData = { ...data, active: true };
-        data.scene.add(this.helper);
-        data.helper.attach(this.helper);
+        const object = new THREE.Object3D();
+        this.controlData = { ...data, object, active: true };
+        data.scene.add(this.controls.object);
+        data.helper.attach(this.controls.object);
         data.helper.addEventListener("change", this.onControlChange);
     }
     constructor(points) {
         super();
         this.tolerance = 0.05;
-        this.selected = [];
+        this.list = [];
+        this.selected = new Set();
         this.mouse = new Mouse();
-        this.helper = new THREE.Object3D();
-        this.previousTransform = new THREE.Matrix4();
+        this.transformReference = new THREE.Matrix4();
         this.tempVector3 = new THREE.Vector3();
         this.tempVector2 = new THREE.Vector2();
         this.onControlChange = () => {
             if (!this.controls.active)
                 return;
-            this.previousTransform.multiply(this.helper.matrix);
-            this.transform(this.previousTransform);
-            this.previousTransform = this.helper.matrix.clone().invert();
+            this.transform();
         };
         this.geometry = new THREE.BufferGeometry();
-        this.geometry.setFromPoints(points);
-        this.resetSelection();
+        this.addPoints(points, 0);
         this.material = new THREE.PointsMaterial({
             depthTest: false,
             size: 10,
@@ -1039,33 +1040,24 @@ class Points extends THREE.Points {
             vertexColors: true,
         });
     }
+    addPoints(points, index = this.count) {
+        this.list.splice(index, 0, ...points);
+        this.geometry.setFromPoints(this.list);
+        this.resetSelection();
+    }
     toggleControls(active) {
         if (!active) {
             this.controls.helper.removeFromParent();
             this.controls.helper.enabled = false;
         }
-        else if (this.selected.length) {
+        else if (this.selected.size) {
             this.controls.helper.enabled = true;
             // this.controls.helper.position.copy(this.selected[0]);
             this.controls.scene.add(this.controls.helper);
         }
     }
-    transform(transform) {
-        const position = this.geometry.attributes.position;
-        for (let i = 0; i < this.selected.length; i++) {
-            const index = this.selected[i];
-            this.tempVector3.x = position.getX(index);
-            this.tempVector3.y = position.getY(index);
-            this.tempVector3.z = position.getZ(index);
-            this.tempVector3.applyMatrix4(transform);
-            position.setX(index, this.tempVector3.x);
-            position.setY(index, this.tempVector3.y);
-            position.setZ(index, this.tempVector3.z);
-        }
-        position.needsUpdate = true;
-    }
     resetSelection() {
-        this.selected.length = 0;
+        this.selected.clear();
         const size = this.geometry.attributes.position.count;
         const colorBuffer = new Float32Array(size * 3);
         const colorAttribute = new THREE.BufferAttribute(colorBuffer, 3);
@@ -1081,9 +1073,9 @@ class Points extends THREE.Points {
                 this.highlight(i / 3);
             }
         }
-        this.centerTransformToSelection();
+        this.resetControls();
     }
-    centerTransformToSelection() {
+    resetControls() {
         const sum = new THREE.Vector3();
         const position = this.geometry.attributes.position;
         for (const index of this.selected) {
@@ -1091,14 +1083,34 @@ class Points extends THREE.Points {
             sum.y += position.getY(index);
             sum.z += position.getZ(index);
         }
-        const midX = sum.x / this.selected.length;
-        const midY = sum.y / this.selected.length;
-        const midZ = sum.z / this.selected.length;
+        const midX = sum.x / this.selected.size;
+        const midY = sum.y / this.selected.size;
+        const midZ = sum.z / this.selected.size;
         this.controls.active = false;
-        this.helper.position.set(0, 0, 0);
-        this.previousTransform.identity();
-        this.controls.helper.position.set(midX, midY, midZ);
+        this.controls.object.position.set(midX, midY, midZ);
+        this.controls.object.rotation.set(0, 0, 0);
+        this.controls.object.scale.set(1, 1, 1);
+        this.controls.object.updateMatrixWorld();
+        this.transformReference.copy(this.controls.object.matrix).invert();
+        this.controls.helper.position.set(0, 0, 0);
         this.controls.active = true;
+    }
+    transform() {
+        const position = this.geometry.attributes.position;
+        for (const index of this.selected) {
+            const x = position.getX(index);
+            const y = position.getY(index);
+            const z = position.getZ(index);
+            this.tempVector3.set(x, y, z);
+            this.tempVector3
+                .applyMatrix4(this.transformReference)
+                .applyMatrix4(this.controls.object.matrixWorld);
+            position.setX(index, this.tempVector3.x);
+            position.setY(index, this.tempVector3.y);
+            position.setZ(index, this.tempVector3.z);
+        }
+        this.transformReference.copy(this.controls.object.matrix).invert();
+        position.needsUpdate = true;
     }
     getPositionVector(i) {
         const position = this.geometry.attributes.position;
@@ -1109,7 +1121,7 @@ class Points extends THREE.Points {
         this.tempVector2.set(this.tempVector3.x, this.tempVector3.y);
     }
     highlight(index) {
-        this.selected.push(index);
+        this.selected.add(index);
         const color = this.geometry.attributes.color;
         color.setX(index, 0);
         color.setY(index, 1);
