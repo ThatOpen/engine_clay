@@ -1020,7 +1020,6 @@ class Points extends THREE.Points {
     constructor(points) {
         super();
         this.tolerance = 0.05;
-        this.list = [];
         this.selected = new Set();
         this.mouse = new Mouse();
         this.transformReference = new THREE.Matrix4();
@@ -1032,7 +1031,8 @@ class Points extends THREE.Points {
             this.transform();
         };
         this.geometry = new THREE.BufferGeometry();
-        this.addPoints(points, 0);
+        this.geometry.setFromPoints(points);
+        this.resetSelection();
         this.material = new THREE.PointsMaterial({
             depthTest: false,
             size: 10,
@@ -1040,19 +1040,32 @@ class Points extends THREE.Points {
             vertexColors: true,
         });
     }
-    addPoints(points, index = this.count) {
-        this.list.splice(index, 0, ...points);
-        this.geometry.setFromPoints(this.list);
+    create(points, index = this.count) {
+        this.toggleControls(false);
+        const list = this.getPointList();
+        list.splice(index, 0, ...points);
+        this.geometry.setFromPoints(list);
         this.resetSelection();
     }
+    delete(indices = Array.from(this.selected)) {
+        const sorted = indices.sort();
+        const list = this.getPointList();
+        this.toggleControls(false);
+        this.resetSelection();
+        let counter = 0;
+        for (const index of sorted) {
+            list.splice(index - counter, 1);
+            counter++;
+        }
+        this.geometry.setFromPoints(list);
+    }
     toggleControls(active) {
+        this.controls.active = active;
+        this.controls.helper.enabled = active;
         if (!active) {
             this.controls.helper.removeFromParent();
-            this.controls.helper.enabled = false;
         }
         else if (this.selected.size) {
-            this.controls.helper.enabled = true;
-            // this.controls.helper.position.copy(this.selected[0]);
             this.controls.scene.add(this.controls.helper);
         }
     }
@@ -1094,6 +1107,17 @@ class Points extends THREE.Points {
         this.transformReference.copy(this.controls.object.matrix).invert();
         this.controls.helper.position.set(0, 0, 0);
         this.controls.active = true;
+    }
+    getPointList() {
+        const list = [];
+        const position = this.geometry.attributes.position;
+        for (let i = 0; i < position.count; i++) {
+            const x = position.getX(i);
+            const y = position.getY(i);
+            const z = position.getZ(i);
+            list.push(new THREE.Vector3(x, y, z));
+        }
+        return list;
     }
     transform() {
         const position = this.geometry.attributes.position;

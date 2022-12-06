@@ -23,10 +23,6 @@
         "client-zip": "https://unpkg.com/client-zip@2.3.0/index.js"
       }
     }
-
-
-
-
 </script>
 <script type="module">
 	import * as THREE from 'three';
@@ -70,6 +66,9 @@
 			points.resetSelection();
 			points.toggleControls(false);
 		}
+         else if(event.code === 'Delete') {
+          points.delete();
+        }
 	});
 
 	// Set up GUI
@@ -88,13 +87,26 @@
 			points.resetControls();
 		});
 
-	const shortcutsFolder = gui.addFolder('Shortcuts');
+    const actions = {
+      'Create Point': () => {
+        const randomPoint = new THREE.Vector3(
+                Math.random() * 3 - 1.5,
+                0,
+                Math.random() * 3 - 1.5
+        );
+        points.create([randomPoint]);
+      }
+    }
+
+    const actionsFolder = gui.addFolder('Actions');
+    actionsFolder.add(actions, 'Create Point');
 
 	const shortcuts = {
 		'Select point': 'Double click',
 		'Deselect all': 'Escape',
 	};
 
+    const shortcutsFolder = gui.addFolder('Shortcuts');
 	shortcutsFolder.add(shortcuts, 'Select point');
 	shortcutsFolder.add(shortcuts, 'Deselect all');
 
