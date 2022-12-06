@@ -1020,18 +1020,19 @@ class Points extends THREE.Points {
     constructor(points) {
         super();
         this.tolerance = 0.05;
+        this.pickMode = "point";
         this.selected = new Set();
-        this.mouse = new Mouse();
-        this.transformReference = new THREE.Matrix4();
         this.tempVector3 = new THREE.Vector3();
         this.tempVector2 = new THREE.Vector2();
+        this.mouse = new Mouse();
+        this.transformReference = new THREE.Matrix4();
         this.onControlChange = () => {
             if (!this.controls.active)
                 return;
             this.transform();
         };
         this.geometry = new THREE.BufferGeometry();
-        this.geometry.setFromPoints(points);
+        this.regenerate(points);
         this.resetSelection();
         this.material = new THREE.PointsMaterial({
             depthTest: false,
@@ -1044,7 +1045,7 @@ class Points extends THREE.Points {
         this.toggleControls(false);
         const list = this.getPointList();
         list.splice(index, 0, ...points);
-        this.geometry.setFromPoints(list);
+        this.regenerate(list);
         this.resetSelection();
     }
     delete(indices = Array.from(this.selected)) {
@@ -1071,17 +1072,13 @@ class Points extends THREE.Points {
     }
     resetSelection() {
         this.selected.clear();
-        const size = this.geometry.attributes.position.count;
-        const colorBuffer = new Float32Array(size * 3);
-        const colorAttribute = new THREE.BufferAttribute(colorBuffer, 3);
-        this.geometry.setAttribute("color", colorAttribute);
+        this.resetColor(this.geometry);
     }
     pick(event) {
         const mouse = this.mouse.getPosition(this.controls.canvas, event);
         const length = this.geometry.attributes.position.array.length;
         for (let i = 0; i < length - 2; i += 3) {
-            this.getPositionVector(i);
-            const distance = this.tempVector2.distanceTo(mouse);
+            const distance = this.getMouseScreenDistance(i, mouse);
             if (distance < this.tolerance) {
                 this.highlight(i / 3);
             }
@@ -1107,6 +1104,35 @@ class Points extends THREE.Points {
         this.transformReference.copy(this.controls.object.matrix).invert();
         this.controls.helper.position.set(0, 0, 0);
         this.controls.active = true;
+    }
+    regenerate(points) {
+        this.geometry.setFromPoints(points);
+    }
+    highlight(index) {
+        this.selected.add(index);
+        const color = this.geometry.attributes.color;
+        color.setX(index, 0);
+        color.setY(index, 1);
+        color.setZ(index, 0);
+        color.needsUpdate = true;
+    }
+    resetColor(geometry) {
+        const size = geometry.attributes.position.count;
+        const colorBuffer = new Float32Array(size * 3);
+        const colorAttribute = new THREE.BufferAttribute(colorBuffer, 3);
+        geometry.setAttribute("color", colorAttribute);
+    }
+    getMouseScreenDistance(index, mouse) {
+        const vector = this.getPositionVector(index);
+        return vector.distanceTo(mouse);
+    }
+    getPositionVector(i) {
+        const position = this.geometry.attributes.position;
+        this.tempVector3.x = position.array[i];
+        this.tempVector3.y = position.array[i + 1];
+        this.tempVector3.z = position.array[i + 2];
+        this.tempVector3.project(this.controls.camera);
+        return new THREE.Vector2(this.tempVector3.x, this.tempVector3.y);
     }
     getPointList() {
         const list = [];
@@ -1136,22 +1162,6 @@ class Points extends THREE.Points {
         this.transformReference.copy(this.controls.object.matrix).invert();
         position.needsUpdate = true;
     }
-    getPositionVector(i) {
-        const position = this.geometry.attributes.position;
-        this.tempVector3.x = position.array[i];
-        this.tempVector3.y = position.array[i + 1];
-        this.tempVector3.z = position.array[i + 2];
-        this.tempVector3.project(this.controls.camera);
-        this.tempVector2.set(this.tempVector3.x, this.tempVector3.y);
-    }
-    highlight(index) {
-        this.selected.add(index);
-        const color = this.geometry.attributes.color;
-        color.setX(index, 0);
-        color.setY(index, 1);
-        color.setZ(index, 0);
-        color.needsUpdate = true;
-    }
     cleanUpControls() {
         if (this.controlData) {
             this.controlData.helper.removeEventListener("change", this.onControlChange);
@@ -1159,4 +1169,42 @@ class Points extends THREE.Points {
     }
 }
 
-export { Clay, Extrusion, Points, Shell };
+class Edges extends Points {
+    constructor(points) {
+        super(points);
+        this.tempLine = new THREE.Line3();
+        this.lineMaterial = new THREE.LineBasicMaterial({
+            vertexColors: true,
+        });
+        this.lines = new THREE.Line(this.geometry, this.lineMaterial);
+        this.add(this.lines);
+    }
+    regenerate(points) {
+        super.regenerate(points);
+    }
+    getMouseScreenDistance(index, mouse) {
+        if (this.pickMode !== "edge") {
+            return super.getMouseScreenDistance(index, mouse);
+        }
+        if (index / 3 === this.count - 1)
+            return this.tolerance + 1;
+        const currentPoint = this.getPositionVector(index);
+        const nextPoint = this.getPositionVector(index + 3);
+        this.tempLine.start.set(currentPoint.x, currentPoint.y, 0);
+        this.tempLine.end.set(nextPoint.x, nextPoint.y, 0);
+        this.tempVector3.set(mouse.x, mouse.y, 0);
+        const closest = new THREE.Vector3();
+        this.tempLine.closestPointToPoint(this.tempVector3, false, closest);
+        return closest.distanceTo(this.tempVector3);
+    }
+    highlight(index) {
+        if (this.pickMode !== "edge") {
+            super.highlight(index);
+            return;
+        }
+        super.highlight(index);
+        super.highlight(index + 1);
+    }
+}
+
+export { Clay, Edges, Extrusion, Points, Shell };

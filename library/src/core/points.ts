@@ -4,15 +4,15 @@ import { ControlData, ControlInput } from "./types";
 
 export class Points extends THREE.Points {
   tolerance = 0.05;
+  pickMode: "point" | "edge" = "point";
 
-  private selected = new Set<number>();
+  protected selected = new Set<number>();
+  protected tempVector3 = new THREE.Vector3();
+  protected tempVector2 = new THREE.Vector2();
+
   private mouse = new Mouse();
-
   private controlData?: ControlData;
-
   private transformReference = new THREE.Matrix4();
-  private tempVector3 = new THREE.Vector3();
-  private tempVector2 = new THREE.Vector2();
 
   get count() {
     return this.geometry.attributes.position.count;
@@ -37,7 +37,7 @@ export class Points extends THREE.Points {
   constructor(points: THREE.Vector3[]) {
     super();
     this.geometry = new THREE.BufferGeometry();
-    this.geometry.setFromPoints(points);
+    this.regenerate(points);
     this.resetSelection();
     this.material = new THREE.PointsMaterial({
       depthTest: false,
@@ -51,7 +51,7 @@ export class Points extends THREE.Points {
     this.toggleControls(false);
     const list = this.getPointList();
     list.splice(index, 0, ...points);
-    this.geometry.setFromPoints(list);
+    this.regenerate(list);
     this.resetSelection();
   }
 
@@ -80,18 +80,14 @@ export class Points extends THREE.Points {
 
   resetSelection() {
     this.selected.clear();
-    const size = this.geometry.attributes.position.count;
-    const colorBuffer = new Float32Array(size * 3);
-    const colorAttribute = new THREE.BufferAttribute(colorBuffer, 3);
-    this.geometry.setAttribute("color", colorAttribute);
+    this.resetColor(this.geometry);
   }
 
   pick(event: MouseEvent) {
     const mouse = this.mouse.getPosition(this.controls.canvas, event);
     const length = this.geometry.attributes.position.array.length;
     for (let i = 0; i < length - 2; i += 3) {
-      this.getPositionVector(i);
-      const distance = this.tempVector2.distanceTo(mouse);
+      const distance = this.getMouseScreenDistance(i, mouse);
       if (distance < this.tolerance) {
         this.highlight(i / 3);
       }
@@ -118,6 +114,40 @@ export class Points extends THREE.Points {
     this.transformReference.copy(this.controls.object.matrix).invert();
     this.controls.helper.position.set(0, 0, 0);
     this.controls.active = true;
+  }
+
+  protected regenerate(points: THREE.Vector3[]) {
+    this.geometry.setFromPoints(points);
+  }
+
+  protected highlight(index: number) {
+    this.selected.add(index);
+    const color = this.geometry.attributes.color;
+    color.setX(index, 0);
+    color.setY(index, 1);
+    color.setZ(index, 0);
+    color.needsUpdate = true;
+  }
+
+  protected resetColor(geometry: THREE.BufferGeometry) {
+    const size = geometry.attributes.position.count;
+    const colorBuffer = new Float32Array(size * 3);
+    const colorAttribute = new THREE.BufferAttribute(colorBuffer, 3);
+    geometry.setAttribute("color", colorAttribute);
+  }
+
+  protected getMouseScreenDistance(index: number, mouse: THREE.Vector2) {
+    const vector = this.getPositionVector(index);
+    return vector.distanceTo(mouse);
+  }
+
+  protected getPositionVector(i: number) {
+    const position = this.geometry.attributes.position;
+    this.tempVector3.x = position.array[i];
+    this.tempVector3.y = position.array[i + 1];
+    this.tempVector3.z = position.array[i + 2];
+    this.tempVector3.project(this.controls.camera);
+    return new THREE.Vector2(this.tempVector3.x, this.tempVector3.y);
   }
 
   private getPointList() {
@@ -150,24 +180,6 @@ export class Points extends THREE.Points {
     }
     this.transformReference.copy(this.controls.object.matrix).invert();
     position.needsUpdate = true;
-  }
-
-  private getPositionVector(i: number) {
-    const position = this.geometry.attributes.position;
-    this.tempVector3.x = position.array[i];
-    this.tempVector3.y = position.array[i + 1];
-    this.tempVector3.z = position.array[i + 2];
-    this.tempVector3.project(this.controls.camera);
-    this.tempVector2.set(this.tempVector3.x, this.tempVector3.y);
-  }
-
-  private highlight(index: number) {
-    this.selected.add(index);
-    const color = this.geometry.attributes.color;
-    color.setX(index, 0);
-    color.setY(index, 1);
-    color.setZ(index, 0);
-    color.needsUpdate = true;
   }
 
   private cleanUpControls() {

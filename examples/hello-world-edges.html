@@ -34,18 +34,20 @@
 	const canvas = document.getElementById('container');
 	const world = new SimpleThreeScene(canvas);
 
-	const points = new OBC.Points([
+	const edges = new OBC.Edges([
 		new THREE.Vector3(1, 0, -1),
 		new THREE.Vector3(-1, 0, -1),
 		new THREE.Vector3(-1, 0, 1),
 		new THREE.Vector3(1, 0, 1),
 	]);
 
-	world.scene.add(points);
+    edges.pickMode = "edge";
+
+	world.scene.add(edges);
 
 	const controls = new TransformControls(world.camera, canvas);
 
-	points.controls = {
+	edges.controls = {
 		helper: controls,
 		scene: world.scene,
 		camera: world.camera,
@@ -57,17 +59,17 @@
 	});
 
 	window.addEventListener('dblclick', (event) => {
-		points.pick(event);
-		points.toggleControls(true);
+		edges.pick(event);
+		edges.toggleControls(true);
 	});
 
 	window.addEventListener('keydown', (event) => {
 		if (event.code === 'Escape') {
-			points.resetSelection();
-			points.toggleControls(false);
+			edges.resetSelection();
+			edges.toggleControls(false);
 		}
          else if(event.code === 'Delete') {
-          points.delete();
+          edges.delete();
         }
 	});
 
@@ -84,8 +86,23 @@
 			if(event === 'A') controls.setMode("translate");
 			else if(event === 'B') controls.setMode("rotate");
 			else if(event === 'C') controls.setMode("scale");
-			points.resetControls();
+			edges.resetControls();
 		});
+
+    const pickMode = {
+      'Pick mode': 'Edges',
+    };
+
+    gui.add(pickMode, 'Pick mode', { Points: 'A', Edges: 'B' })
+            .onChange((event) => {
+              edges.resetSelection();
+              edges.toggleControls(false);
+              if(event === 'A') {
+                edges.pickMode = "point";
+              } else {
+                edges.pickMode = "edge";
+              }
+            });
 
     const actions = {
       'Create Random Point': () => {
@@ -94,7 +111,7 @@
                 0,
                 Math.random() * 3 - 1.5
         );
-        points.create([randomPoint]);
+        edges.create([randomPoint]);
       }
     }
 
