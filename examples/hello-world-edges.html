@@ -1,13 +1,13 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport"
-        content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
-  <meta http-equiv="X-UA-Compatible" content="ie=edge">
-  <link rel="stylesheet" href="resources/styles.css">
-  <link rel="icon" type="image/x-icon" href="../favicon.ico">
-  <title>Components | Hello world</title>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link rel="stylesheet" href="resources/styles.css">
+    <link rel="icon" type="image/x-icon" href="../favicon.ico">
+    <title>Components | Hello world</title>
 </head>
 <body>
 <canvas class="full-screen" id="container"></canvas>
@@ -23,109 +23,109 @@
         "client-zip": "https://unpkg.com/client-zip@2.3.0/index.js"
       }
     }
+
 </script>
 <script type="module">
-	import * as THREE from 'three';
-	import { SimpleThreeScene } from './resources/simple-three-scene.js';
-	import { TransformControls } from 'three/examples/jsm/controls/TransformControls';
-	import * as OBC from './resources/openbim-clay.js';
-	import * as dat from 'three/examples/jsm/libs/lil-gui.module.min';
+    import * as THREE from 'three';
+    import {SimpleThreeScene} from './resources/simple-three-scene.js';
+    import {TransformControls} from 'three/examples/jsm/controls/TransformControls';
+    import * as OBC from './resources/openbim-clay.js';
+    import * as dat from 'three/examples/jsm/libs/lil-gui.module.min';
 
-	const canvas = document.getElementById('container');
-	const world = new SimpleThreeScene(canvas);
+    const canvas = document.getElementById('container');
+    const world = new SimpleThreeScene(canvas);
 
-	const edges = new OBC.Edges([
-		new THREE.Vector3(1, 0, -1),
-		new THREE.Vector3(-1, 0, -1),
-		new THREE.Vector3(-1, 0, 1),
-		new THREE.Vector3(1, 0, 1),
-	]);
+    const edges = new OBC.Edges([
+        new THREE.Vector3(1, 0, -1),
+        new THREE.Vector3(-1, 0, -1),
+        new THREE.Vector3(-1, 0, 1),
+        new THREE.Vector3(1, 0, 1),
+    ]);
 
     edges.pickMode = "edge";
 
-	world.scene.add(edges);
+    world.scene.add(edges);
 
-	const controls = new TransformControls(world.camera, canvas);
+    const controls = new TransformControls(world.camera, canvas);
 
-	edges.controls = {
-		helper: controls,
-		scene: world.scene,
-		camera: world.camera,
-		canvas,
-	};
-
-	controls.addEventListener('dragging-changed', (event) => {
-		world.controls.enabled = !event.value;
-	});
-
-	window.addEventListener('dblclick', (event) => {
-		edges.pick(event);
-		edges.toggleControls(true);
-	});
-
-	window.addEventListener('keydown', (event) => {
-		if (event.code === 'Escape') {
-			edges.resetSelection();
-			edges.toggleControls(false);
-		}
-         else if(event.code === 'Delete') {
-          edges.delete();
-        }
-	});
-
-	// Set up GUI
-
-	const gui = new dat.GUI();
-
-	const text = {
-		Mode: 'Translate',
-	};
-
-	gui.add(text, 'Mode', { Translate: 'A', Rotate: 'B', Scale: 'C' })
-		.onChange((event) => {
-			if(event === 'A') controls.setMode("translate");
-			else if(event === 'B') controls.setMode("rotate");
-			else if(event === 'C') controls.setMode("scale");
-			edges.resetControls();
-		});
-
-    const pickMode = {
-      'Pick mode': 'Edges',
+    edges.controls = {
+        helper: controls,
+        scene: world.scene,
+        camera: world.camera,
+        canvas,
     };
 
-    gui.add(pickMode, 'Pick mode', { Points: 'A', Edges: 'B' })
-            .onChange((event) => {
-              edges.resetSelection();
-              edges.toggleControls(false);
-              if(event === 'A') {
+    controls.addEventListener('dragging-changed', (event) => {
+        world.controls.enabled = !event.value;
+    });
+
+    window.addEventListener('dblclick', (event) => {
+        edges.pick(event);
+        edges.toggleControls(true);
+    });
+
+    window.addEventListener('keydown', (event) => {
+        if (event.code === 'Escape') {
+            edges.resetSelection();
+            edges.toggleControls(false);
+        } else if (event.code === 'Delete') {
+            edges.delete();
+        }
+    });
+
+    // Set up GUI
+
+    const gui = new dat.GUI();
+
+    const text = {
+        Mode: 'Translate',
+    };
+
+    gui.add(text, 'Mode', {Translate: 'A', Rotate: 'B', Scale: 'C'})
+        .onChange((event) => {
+            if (event === 'A') controls.setMode("translate");
+            else if (event === 'B') controls.setMode("rotate");
+            else if (event === 'C') controls.setMode("scale");
+            edges.resetControls();
+        });
+
+    const pickMode = {
+        'Pick mode': 'Edges',
+    };
+
+    gui.add(pickMode, 'Pick mode', {Points: 'A', Edges: 'B'})
+        .onChange((event) => {
+            edges.resetSelection();
+            edges.toggleControls(false);
+            if (event === 'A') {
                 edges.pickMode = "point";
-              } else {
+            } else {
                 edges.pickMode = "edge";
-              }
-            });
+            }
+        });
 
     const actions = {
-      'Create Random Point': () => {
-        const randomPoint = new THREE.Vector3(
+        'Create Random Point': () => {
+            const randomPoint = new THREE.Vector3(
                 Math.random() * 3 - 1.5,
                 0,
                 Math.random() * 3 - 1.5
-        );
-        edges.create([randomPoint]);
-      }
+            );
+            edges.create([randomPoint]);
+        }
     }
 
     const actionsFolder = gui.addFolder('Actions');
     actionsFolder.add(actions, 'Create Random Point');
 
-	const shortcuts = {
-		'Select point': 'Double click',
-		'Deselect all': 'Escape',
-	};
+    const shortcuts = {
+        'Select point': 'Double click',
+        'Deselect all': 'Escape',
+    };
 
     const shortcutsFolder = gui.addFolder('Shortcuts');
-	shortcutsFolder.add(shortcuts, 'Select point');
-	shortcutsFolder.add(shortcuts, 'Deselect all');
+    shortcutsFolder.add(shortcuts, 'Select point');
+    shortcutsFolder.add(shortcuts, 'Deselect all');
 
 </script>
 </body>

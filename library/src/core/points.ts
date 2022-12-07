@@ -3,8 +3,13 @@ import { Mouse } from "../helpers/mouse";
 import { ControlData, ControlInput } from "./types";
 
 export class Points extends THREE.Points {
-  tolerance = 0.05;
+  screenTolerance = 0.05;
   pickMode: "point" | "edge" = "point";
+
+  snapSettings = {
+    distance: 1,
+    enabled: true,
+  };
 
   protected selected = new Set<number>();
   protected tempVector3 = new THREE.Vector3();
@@ -13,6 +18,11 @@ export class Points extends THREE.Points {
   private mouse = new Mouse();
   private controlData?: ControlData;
   private transformReference = new THREE.Matrix4();
+
+  snappedPoints: THREE.Vector3[] = [];
+  snappedLines: THREE.Line3[] = [];
+  snapPointObject = new THREE.Points();
+  snapLineObject = new THREE.Line();
 
   get count() {
     return this.geometry.attributes.position.count;
@@ -39,6 +49,7 @@ export class Points extends THREE.Points {
     this.geometry = new THREE.BufferGeometry();
     this.regenerate(points);
     this.resetSelection();
+    this.setupSnappingObjects();
     this.material = new THREE.PointsMaterial({
       depthTest: false,
       size: 10,
@@ -88,7 +99,7 @@ export class Points extends THREE.Points {
     const length = this.geometry.attributes.position.array.length;
     for (let i = 0; i < length - 2; i += 3) {
       const distance = this.getMouseScreenDistance(i, mouse);
-      if (distance < this.tolerance) {
+      if (distance < this.screenTolerance) {
         this.highlight(i / 3);
       }
     }
@@ -165,14 +176,11 @@ export class Points extends THREE.Points {
   private transform() {
     const position = this.geometry.attributes.position;
     for (const index of this.selected) {
-      const x = position.getX(index);
-      const y = position.getY(index);
-      const z = position.getZ(index);
-
-      this.tempVector3.set(x, y, z);
-      this.tempVector3
-        .applyMatrix4(this.transformReference)
-        .applyMatrix4(this.controls.object.matrixWorld);
+      if (this.selected.size === 1) {
+        this.transformOnePoint();
+      } else {
+        this.transformManyPoints(index);
+      }
 
       position.setX(index, this.tempVector3.x);
       position.setY(index, this.tempVector3.y);
@@ -180,6 +188,107 @@ export class Points extends THREE.Points {
     }
     this.transformReference.copy(this.controls.object.matrix).invert();
     position.needsUpdate = true;
+  }
+
+  // TODO: Extract this in a separate class
+  // TODO: Transform many points and transform one point can be merged
+  // if in the case of many points we consider 1 reference point
+
+  private transformManyPoints(index: number) {
+    const position = this.geometry.attributes.position;
+
+    const x = position.getX(index);
+    const y = position.getY(index);
+    const z = position.getZ(index);
+
+    this.tempVector3.set(x, y, z);
+    this.tempVector3
+      .applyMatrix4(this.transformReference)
+      .applyMatrix4(this.controls.object.matrixWorld);
+  }
+
+  private transformOnePoint() {
+    if (this.snapSettings.enabled) {
+      const snapped = this.applySnapping();
+      if (snapped) return;
+    }
+    const isOffset = !this.controls.object.position.equals(this.tempVector3);
+    if (isOffset) {
+      this.tempVector3.copy(this.controls.object.position);
+    }
+  }
+
+  private applySnapping() {
+    const snapped = this.snapPoints();
+    if (snapped) return snapped;
+    return this.snapLines();
+  }
+
+  private snapLines() {
+    const controls = this.controls.object.position;
+    for (const line of this.snappedLines) {
+      const temp = new THREE.Vector3();
+      line.closestPointToPoint(controls, false, temp);
+      if (temp.distanceTo(controls) < this.snapSettings.distance) {
+        this.tempVector3.copy(temp);
+        this.toggleSnapLineObject(true, line);
+        return true;
+      }
+    }
+    this.toggleSnapLineObject(false);
+    return false;
+  }
+
+  private snapPoints() {
+    const controls = this.controls.object.position;
+    for (const point of this.snappedPoints) {
+      if (point.distanceTo(controls) < this.snapSettings.distance) {
+        this.tempVector3.copy(point);
+        this.toggleSnapPointObject(true);
+        return true;
+      }
+    }
+    this.toggleSnapPointObject(false);
+    return false;
+  }
+
+  toggleSnapPointObject(active: boolean) {
+    if (active) {
+      this.controls.scene.add(this.snapPointObject);
+      this.snapPointObject.position.copy(this.tempVector3);
+    } else if (this.snapPointObject.parent) {
+      this.snapPointObject.removeFromParent();
+    }
+  }
+
+  toggleSnapLineObject(active: boolean, line?: THREE.Line3) {
+    if (active && line) {
+      this.controls.scene.add(this.snapLineObject);
+      this.snapLineObject.position.copy(line.start);
+      this.snapLineObject.lookAt(line.end);
+    } else if (this.snapLineObject.parent) {
+      this.snapLineObject.removeFromParent();
+    }
+  }
+
+  private setupSnappingObjects() {
+    this.snapPointObject.geometry = new THREE.BufferGeometry();
+    this.snapPointObject.geometry.setFromPoints([new THREE.Vector3()]);
+    this.snapPointObject.renderOrder = 1;
+    this.snapPointObject.material = new THREE.PointsMaterial({
+      color: 0xff00ff,
+      depthTest: false,
+      size: 12,
+      sizeAttenuation: false,
+    });
+    this.snapLineObject.geometry = new THREE.BufferGeometry();
+    this.snapLineObject.geometry.setFromPoints([
+      new THREE.Vector3(0, 0, -1000),
+      new THREE.Vector3(0, 0, 1000),
+    ]);
+    this.snapLineObject.material = new THREE.LineBasicMaterial({
+      color: 0xff00ff,
+    });
   }
 
   private cleanUpControls() {

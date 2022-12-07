@@ -23,7 +23,7 @@ export class Edges extends Points {
     if (this.pickMode !== "edge") {
       return super.getMouseScreenDistance(index, mouse);
     }
-    if (index / 3 === this.count - 1) return this.tolerance + 1;
+    if (index / 3 === this.count - 1) return this.screenTolerance + 1;
     const currentPoint = this.getPositionVector(index);
     const nextPoint = this.getPositionVector(index + 3);
     this.tempLine.start.set(currentPoint.x, currentPoint.y, 0);
