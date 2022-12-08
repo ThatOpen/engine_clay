@@ -1012,7 +1012,7 @@ class Points extends THREE.Points {
     set controls(data) {
         this.cleanUpControls();
         const object = new THREE.Object3D();
-        this.controlData = { ...data, object, active: true };
+        this.controlData = { ...data, object, active: false, position: "last" };
         data.scene.add(this.controls.object);
         data.helper.attach(this.controls.object);
         data.helper.addEventListener("change", this.onControlChange);
@@ -1096,10 +1096,29 @@ class Points extends THREE.Points {
         }
         if (!anythingFound) {
             this.resetSelection();
+            this.toggleControls(false);
         }
         this.resetControls();
     }
     resetControls() {
+        if (this.controls.position === "center") {
+            this.setControlsInCenter();
+        }
+        else if (this.controls.position === "last") {
+            const last = this.getLastSelected();
+            if (last === undefined)
+                return;
+            const position = this.geometry.attributes.position;
+            const x = position.getX(last);
+            const y = position.getY(last);
+            const z = position.getZ(last);
+            this.setControlsPosition(x, y, z);
+        }
+    }
+    getLastSelected() {
+        return Array.from(this.selected).pop();
+    }
+    setControlsInCenter() {
         const sum = new THREE.Vector3();
         const position = this.geometry.attributes.position;
         for (const index of this.selected) {
@@ -1110,14 +1129,18 @@ class Points extends THREE.Points {
         const midX = sum.x / this.selected.size;
         const midY = sum.y / this.selected.size;
         const midZ = sum.z / this.selected.size;
+        this.setControlsPosition(midX, midY, midZ);
+    }
+    setControlsPosition(x, y, z) {
+        const previousState = this.controls.active;
         this.controls.active = false;
-        this.controls.object.position.set(midX, midY, midZ);
+        this.controls.object.position.set(x, y, z);
         this.controls.object.rotation.set(0, 0, 0);
         this.controls.object.scale.set(1, 1, 1);
         this.controls.object.updateMatrixWorld();
         this.transformReference.copy(this.controls.object.matrix).invert();
         this.controls.helper.position.set(0, 0, 0);
-        this.controls.active = true;
+        this.controls.active = previousState;
     }
     regenerate(points) {
         this.geometry.setFromPoints(points);

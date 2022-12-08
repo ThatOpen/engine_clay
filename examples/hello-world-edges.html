@@ -61,6 +61,7 @@
 
     window.addEventListener('dblclick', (event) => {
         edges.pick(event);
+        edges.toggleControls(true);
     });
 
     window.addEventListener('keydown', (event) => {
@@ -88,11 +89,12 @@
             edges.resetControls();
         });
 
-    const pickMode = {
+    const picking = {
         'Pick mode': 'Points',
+        'Pick position': 'Last selected'
     };
 
-    gui.add(pickMode, 'Pick mode', {Points: 'A', Edges: 'B'})
+    gui.add(picking, 'Pick mode', {Points: 'A', Edges: 'B'})
         .onChange((event) => {
             edges.resetSelection();
             edges.toggleControls(false);
@@ -101,6 +103,16 @@
             } else {
                 edges.pickMode = "edge";
             }
+        });
+
+    gui.add(picking, 'Pick position', {'Last selected': 'A', 'Center': 'B'})
+        .onChange((event) => {
+            if (event === 'A') {
+                edges.controls.position = "last";
+            } else {
+                edges.controls.position = "center";
+            }
+            edges.resetControls();
         });
 
     const actions = {
