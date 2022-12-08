@@ -42,7 +42,7 @@
         new THREE.Vector3(1, 0, 1),
     ]);
 
-    edges.pickMode = "edge";
+    edges.pickMode = "point";
 
     world.scene.add(edges);
 
@@ -61,7 +61,6 @@
 
     window.addEventListener('dblclick', (event) => {
         edges.pick(event);
-        edges.toggleControls(true);
     });
 
     window.addEventListener('keydown', (event) => {
@@ -90,7 +89,7 @@
         });
 
     const pickMode = {
-        'Pick mode': 'Edges',
+        'Pick mode': 'Points',
     };
 
     gui.add(pickMode, 'Pick mode', {Points: 'A', Edges: 'B'})

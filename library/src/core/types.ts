@@ -8,7 +8,10 @@ export interface ControlInput {
   camera: THREE.Camera;
 }
 
+export type TransformPosition = "center" | "last";
+
 export interface ControlData extends ControlInput {
   active: boolean;
   object: THREE.Object3D;
+  position: TransformPosition;
 }

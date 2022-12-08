@@ -1086,11 +1086,16 @@ class Points extends THREE.Points {
     pick(event) {
         const mouse = this.mouse.getPosition(this.controls.canvas, event);
         const length = this.geometry.attributes.position.array.length;
+        let anythingFound = false;
         for (let i = 0; i < length - 2; i += 3) {
             const distance = this.getMouseScreenDistance(i, mouse);
             if (distance < this.screenTolerance) {
+                anythingFound = true;
                 this.highlight(i / 3);
             }
+        }
+        if (!anythingFound) {
+            this.resetSelection();
         }
         this.resetControls();
     }
