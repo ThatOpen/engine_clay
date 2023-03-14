@@ -25,48 +25,14 @@
     }
   </script>
   <script type="module">
-		import * as THREE from 'three';
-        import {SimpleThreeScene} from "./resources/simple-three-scene.js";
-		import * as OBC from './resources/openbim-clay.js';
+		  import * as THREE from 'three';
+      import {SimpleThreeScene} from "./resources/simple-three-scene.js";
+		  import * as OBC from './resources/openbim-clay.js';
 
         const canvas = document.getElementById("container");
         const world = new SimpleThreeScene(canvas);
 
-        const geometry = new THREE.CylinderGeometry();
-        const extrusion = new OBC.Extrusion();
-
-        extrusion.points = [
-                new THREE.Vector3(1, 0, -1),
-                new THREE.Vector3(-1, 1, -1),
-                new THREE.Vector3(-1, 1, 1),
-                new THREE.Vector3(1, 0, 1),
-        ];
-
-        extrusion.material.transparent = true;
-        extrusion.material.opacity = 0.6;
-
-        extrusion.regenerate();
-
-        world.scene.add(extrusion.profileMesh);
-        world.scene.add(extrusion.pointsMesh);
-        world.scene.add(extrusion);
-
-        // const cone = new THREE.Mesh(new THREE.PlaneGeometry(), new THREE.MeshPhongMaterial({color: "red"}));
-        // world.scene.add(cone);
-        //
-        // cone.position.set(2, 3, 1);
-        //
-        // const v1 = new THREE.Vector3(Math.random() * Math.PI * 2, Math.random() * Math.PI * 2, Math.random() * Math.PI * 2);
-        // v1.normalize();
-        // cone.lookAt(v1);
-        //
-        // const v2 = new THREE.Vector3(0, 1, 0);
-        //
-        // const quaternion = new THREE.Quaternion();
-        // quaternion.setFromUnitVectors( v1, v2 );
-        // const matrix = new THREE.Matrix4();
-        // matrix.makeRotationFromQuaternion( quaternion );
-        // cone.applyMatrix4( matrix );
+        const vertex = new OBC.Vertex();
 
 
   </script>
