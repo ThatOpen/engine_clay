@@ -44,22 +44,28 @@ class Vertices {
     }
     resetBuffer() {
         this.capacity += this.bufferIncrease;
-        this.geometry.deleteAttribute("position");
-        this.bufferPosition = new Float32Array(this.capacity);
-        this.position = new THREE.BufferAttribute(this.bufferPosition, 3);
-        this.position.count = this.vertices.length;
-        this.geometry.deleteAttribute("color");
-        this.bufferColor = new Float32Array(this.capacity);
-        this.color = new THREE.BufferAttribute(this.bufferColor, 3);
-        this.color.count = this.vertices.length;
-        this.geometry.setAttribute("position", this.position);
-        this.geometry.setAttribute("color", this.color);
+        this.resetAttributePosition();
+        this.resetAttributeColor();
         for (let i = 0; i < this.vertices.length; i++) {
             const { x, y, z } = this.vertices[i];
             this.bufferPosition.set([x, y, z], i * 3);
             const { r, g, b } = this.colors[i];
             this.bufferColor.set([r, g, b], i * 3);
         }
+    }
+    resetAttributePosition() {
+        this.geometry.deleteAttribute("position");
+        this.bufferPosition = new Float32Array(this.capacity);
+        this.position = new THREE.BufferAttribute(this.bufferPosition, 3);
+        this.position.count = this.vertices.length;
+        this.geometry.setAttribute("position", this.position);
+    }
+    resetAttributeColor() {
+        this.geometry.deleteAttribute("color");
+        this.bufferColor = new Float32Array(this.capacity);
+        this.color = new THREE.BufferAttribute(this.bufferColor, 3);
+        this.color.count = this.vertices.length;
+        this.geometry.setAttribute("color", this.color);
     }
 }
 
