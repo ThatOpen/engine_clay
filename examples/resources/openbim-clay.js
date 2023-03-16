@@ -4,6 +4,7 @@ class Vertices {
     constructor(size = 0.1) {
         /** Buffer increment when geometry size is exceeded, multiple of 3. */
         this.bufferIncrease = 300;
+        this.defaultColor = new THREE.Color(0.5, 0.5, 0.5);
         this._geometry = new THREE.BufferGeometry();
         this._vertices = [];
         this._colors = [];
@@ -11,7 +12,6 @@ class Vertices {
         this._positionBuffer = new THREE.BufferAttribute(new Float32Array(0), 3);
         this._colorBuffer = new THREE.BufferAttribute(new Float32Array(0), 3);
         this._selected = new Set();
-        this._selectedColor = new Set();
         this.resetBuffer();
         const material = new THREE.PointsMaterial({
             size,
@@ -23,9 +23,11 @@ class Vertices {
      * Add new points
      * @param coordinates Points to add
      */
-    add(coordinates, colors) {
+    add(coordinates) {
         this._vertices.push(...coordinates);
-        this._colors.push(...colors);
+        for (let i = 0; i < this._vertices.length; i++) {
+            this._colors.push(this.defaultColor);
+        }
         this.regenerate();
     }
     /**
@@ -72,7 +74,6 @@ class Vertices {
         if (selection.length === 0) {
             this.resetAllSelectedColors();
             this._selected.clear();
-            this._selectedColor.clear();
             for (let i = 0; i < this._vertices.length; i++) {
                 this.addSelection(i);
             }
@@ -84,7 +85,6 @@ class Vertices {
     }
     addSelection(index) {
         this._selected.add(index);
-        this._selectedColor.add(new THREE.Color(this._colorBuffer.getX(index), this._colorBuffer.getY(index), this._colorBuffer.getZ(index)));
         this._colorBuffer.setX(index, 1);
         this._colorBuffer.setY(index, 0);
         this._colorBuffer.setZ(index, 0);
@@ -93,7 +93,6 @@ class Vertices {
         this.restoreColor(selection);
         if (selection.length === 0) {
             this._selected.clear();
-            this._selectedColor.clear();
             return;
         }
         for (let i = 0; i < selection.length; i++) {
@@ -108,19 +107,13 @@ class Vertices {
         this.resetSelectedColors(selection);
     }
     resetAllSelectedColors() {
-        const colorArray = Array.from(this._selectedColor);
-        let i = 0;
         for (const index of this._selected.values()) {
-            this._colorBuffer.setXYZ(index, colorArray[i].r, colorArray[i].g, colorArray[i].b);
-            i++;
+            this._colorBuffer.setXYZ(index, this.defaultColor.r, this.defaultColor.g, this.defaultColor.b);
         }
     }
     resetSelectedColors(selection) {
-        const selectionArray = Array.from(this._selected);
-        const colorArray = Array.from(this._selectedColor);
         for (let i = 0; i < selection.length; i++) {
-            const index = selectionArray.indexOf(selection[i]);
-            this._colorBuffer.setXYZ(selection[i], colorArray[index].r, colorArray[index].g, colorArray[index].b);
+            this._colorBuffer.setXYZ(selection[i], this.defaultColor.r, this.defaultColor.g, this.defaultColor.b);
         }
     }
     transform(transformation) {
