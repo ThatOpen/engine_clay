@@ -37,13 +37,16 @@
       const vertex = new OBC.Vertices(0.05); // or no arguments
       vertex.bufferIncrease = 5000;
       for (let i = 1; i < 500; i++) {
-        vertex.add(
-          [new THREE.Vector3(i / 50, i / 50, i / 50)]
-        );
+        vertex.add([new THREE.Vector3(i / 50, i / 50, i / 50)]);
       }
 
-      vertex.select(true, [1,2,3,4,5,6,100,101,102]);
-      //vertex.select(false);
+      vertex.select(true, [1, 2, 3, 4, 5, 6, 100, 101, 102]);
+
+      vertex.move(new THREE.Vector3(-1, 1, 1));
+      vertex.rotate(new THREE.Vector3(0.5 * 3.1416, 0, 0));
+      vertex.scale(new THREE.Vector3(2, 1, 1));
+
+      vertex.select(false);
 
       console.log(vertex);
       world.scene.add(vertex.points);
