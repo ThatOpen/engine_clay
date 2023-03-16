@@ -34,12 +34,11 @@
       const canvas = document.getElementById("container");
       const world = new SimpleThreeScene(canvas);
 
-      const vertex = new OBC.Vertices(0x8888EE, 0.05); // or no arguments
+      const vertex = new OBC.Vertices(0.05); // or no arguments
       for (let i = 1; i < 50000; i++) {
-        vertex.add([new THREE.Vector3(i, i, i)]);
+        vertex.add([new THREE.Vector3(i/50000, i/50000, i/50000)], [new THREE.Color(i/50000, 0.5, 0.5)]);
       }
 
-      vertex.move(i)
       console.log(vertex);
       world.scene.add(vertex.points);
     </script>

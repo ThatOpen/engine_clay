@@ -1,46 +1,65 @@
 import * as THREE from 'https://unpkg.com/three@0.135.0/build/three.module.js';
 
 class Vertices {
-    constructor(color = 0x888888, size = 0.1) {
+    constructor(size = 0.1) {
+        /** Buffer increment when geometry size is exceeded, multiple of 3. */
+        this.bufferIncrease = 300;
         this.geometry = new THREE.BufferGeometry();
         this.vertices = [];
+        this.colors = [];
         this.capacity = 0;
-        this.buffer = new Float32Array(0);
-        this.position = new THREE.BufferAttribute(this.buffer, 3);
-        this.bufferIncrease = 300;
+        this.bufferPosition = new Float32Array(0);
+        this.position = new THREE.BufferAttribute(this.bufferPosition, 3);
+        this.bufferColor = new Float32Array(0);
+        this.color = new THREE.BufferAttribute(this.bufferColor, 3);
         this.resetBuffer();
-        const material = new THREE.PointsMaterial({ color, size });
+        const material = new THREE.PointsMaterial({
+            size,
+            vertexColors: true,
+        });
         this.points = new THREE.Points(this.geometry, material);
     }
-    add(coordinates) {
+    /**
+     * Add new points
+     * @param coordinates Points to add
+     */
+    add(coordinates, colors) {
         this.vertices.push(...coordinates);
+        this.colors.push(...colors);
         this.regenerate();
-    }
-    setIncreaseBufferValue(value) {
-        this.bufferIncrease = value * 3;
     }
     regenerate() {
         const size = this.vertices.length * 3;
         if (size >= this.capacity) {
             this.resetBuffer();
-            for (let i = 0; i < this.vertices.length; i++) {
-                const { x, y, z } = this.vertices[i];
-                this.buffer.set([x, y, z], i * 3);
-            }
+            return;
         }
-        else {
-            const indexToAdd = this.vertices.length - 1;
-            const { x, y, z } = this.vertices[indexToAdd];
-            this.buffer.set([x, y, z], indexToAdd * 3);
-        }
+        const indexToAdd = this.vertices.length - 1;
+        const { x, y, z } = this.vertices[indexToAdd];
+        this.bufferPosition.set([x, y, z], indexToAdd * 3);
+        const { r, g, b } = this.colors[indexToAdd];
+        this.bufferColor.set([r, g, b], indexToAdd * 3);
         this.position.count = this.vertices.length;
+        this.color.count = this.vertices.length;
     }
     resetBuffer() {
         this.capacity += this.bufferIncrease;
         this.geometry.deleteAttribute("position");
-        this.buffer = new Float32Array(this.capacity);
-        this.position = new THREE.BufferAttribute(this.buffer, 3);
+        this.bufferPosition = new Float32Array(this.capacity);
+        this.position = new THREE.BufferAttribute(this.bufferPosition, 3);
+        this.position.count = this.vertices.length;
+        this.geometry.deleteAttribute("color");
+        this.bufferColor = new Float32Array(this.capacity);
+        this.color = new THREE.BufferAttribute(this.bufferColor, 3);
+        this.color.count = this.vertices.length;
         this.geometry.setAttribute("position", this.position);
+        this.geometry.setAttribute("color", this.color);
+        for (let i = 0; i < this.vertices.length; i++) {
+            const { x, y, z } = this.vertices[i];
+            this.bufferPosition.set([x, y, z], i * 3);
+            const { r, g, b } = this.colors[i];
+            this.bufferColor.set([r, g, b], i * 3);
+        }
     }
 }
 
