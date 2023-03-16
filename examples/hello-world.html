@@ -30,14 +30,21 @@
       import * as THREE from "three";
       import { SimpleThreeScene } from "./resources/simple-three-scene.js";
       import * as OBC from "./resources/openbim-clay.js";
-      
+
       const canvas = document.getElementById("container");
       const world = new SimpleThreeScene(canvas);
 
       const vertex = new OBC.Vertices(0.05); // or no arguments
-      for (let i = 1; i < 50000; i++) {
-        vertex.add([new THREE.Vector3(i/50000, i/50000, i/50000)], [new THREE.Color(i/50000, 0.5, 0.5)]);
+      vertex.bufferIncrease = 5000;
+      for (let i = 1; i < 500; i++) {
+        vertex.add(
+          [new THREE.Vector3(i / 50, i / 50, i / 50)],
+          [new THREE.Color(i / 500, 0.5, 0.5)]
+        );
       }
+
+      vertex.select(true, [1,2,3,4,5,6,100,101,102]);
+      //vertex.select(false);
 
       console.log(vertex);
       world.scene.add(vertex.points);
