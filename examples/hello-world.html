@@ -39,7 +39,7 @@
       vertex.bufferIncrease = numberToAdd / 10;
       const start = 1;
       for (let i = 1; i < numberToAdd; i++) {
-        vertex.add([new THREE.Vector3(i / 10 ,i / 10, i / 10)]);
+        vertex.add([new THREE.Vector3(i / 10, i / 10, i / 10)]);
         if (i < numberToAdd / 2) {
           vertex.select(true, [i - start]);
         }
@@ -51,7 +51,35 @@
       // vertex.remove();
       vertex.select(false);
 
+      const faces = new OBC.Faces();
+      faces.addFaces([[
+        new THREE.Vector3(-1, 1, 0),
+        new THREE.Vector3(1, 1, 0),
+        new THREE.Vector3(1, -1, 0),
+        new THREE.Vector3(-1, -1, 0),
+      ], [
+        new THREE.Vector3(-1, 2, 0),
+        new THREE.Vector3(1, 2, 0),
+        new THREE.Vector3(1, -2, 0),
+        new THREE.Vector3(-1, -2, 0),
+      ]]);
+
+      faces.addFaces([[
+        new THREE.Vector3(-1, 1, 2),
+        new THREE.Vector3(1, 1, 2),
+        new THREE.Vector3(1, -1, 2),
+        new THREE.Vector3(-1, -1, 2),
+      ], [
+        new THREE.Vector3(-2, 1, 2),
+        new THREE.Vector3(2, 1, 2),
+        new THREE.Vector3(2, -1, 2),
+        new THREE.Vector3(-2, -1, 2),
+      ]]);
+      
+      faces.removeFaces([0]);
+
       world.scene.add(vertex.points);
+      world.scene.add(faces.mesh);
     </script>
   </body>
 </html>

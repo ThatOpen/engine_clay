@@ -36,6 +36,7 @@ export class Vertices {
    * @param coordinates Points to add
    */
   add(coordinates: THREE.Vector3[]) {
+    const list = [];
     this.checkBufferSize(coordinates.length);
     for (let i = 0; i < coordinates.length; i++) {
       const indexToAdd = this._positionBuffer.count + i;
@@ -43,9 +44,11 @@ export class Vertices {
       this._positionBuffer.setXYZ(indexToAdd, x, y, z);
       const { r, g, b } = this.defaultColor;
       this._colorBuffer.setXYZ(indexToAdd, r, g, b);
+      list.push(indexToAdd);
     }
     this._positionBuffer.count += coordinates.length;
     this._colorBuffer.count += coordinates.length;
+    return list;
   }
 
   /**
@@ -112,6 +115,30 @@ export class Vertices {
       );
       this._positionBuffer.count--;
     }
+  }
+
+  /**
+   * Get position buffer
+   * @returns The position buffer of the vertices
+   */
+  getPositionBuffer() {
+    return this._positionBuffer;
+  }
+
+  /**
+   * Number of points
+   * @returns Number corresponding to the lenght
+   */
+  length() {
+    return this._positionBuffer.count;
+  }
+
+  getPointByIndex(index: number) {
+    return [
+      this._positionBuffer.getX(index),
+      this._positionBuffer.getY(index),
+      this._positionBuffer.getZ(index),
+    ];
   }
 
   private checkBufferSize(increase: number) {
