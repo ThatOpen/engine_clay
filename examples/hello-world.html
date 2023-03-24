@@ -52,31 +52,16 @@
       vertex.select(false);
 
       const faces = new OBC.Faces();
+      for (let i = 0; i < 20; i++) {
       faces.addFaces([[
-        new THREE.Vector3(-1, 1, 0),
-        new THREE.Vector3(1, 1, 0),
-        new THREE.Vector3(1, -1, 0),
-        new THREE.Vector3(-1, -1, 0),
-      ], [
-        new THREE.Vector3(-1, 2, 0),
-        new THREE.Vector3(1, 2, 0),
-        new THREE.Vector3(1, -2, 0),
-        new THREE.Vector3(-1, -2, 0),
+        new THREE.Vector3(-1, 1, i),
+        new THREE.Vector3(1, 1, i),
+        new THREE.Vector3(1, -1, i),
+        new THREE.Vector3(-1, -1, i),
       ]]);
+      }
 
-      faces.addFaces([[
-        new THREE.Vector3(-1, 1, 2),
-        new THREE.Vector3(1, 1, 2),
-        new THREE.Vector3(1, -1, 2),
-        new THREE.Vector3(-1, -1, 2),
-      ], [
-        new THREE.Vector3(-2, 1, 2),
-        new THREE.Vector3(2, 1, 2),
-        new THREE.Vector3(2, -1, 2),
-        new THREE.Vector3(-2, -1, 2),
-      ]]);
-      
-      faces.removeFaces([0]);
+      faces.removeFaces([2]);
 
       world.scene.add(vertex.points);
       world.scene.add(faces.mesh);
