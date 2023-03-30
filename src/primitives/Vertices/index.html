@@ -42,8 +42,9 @@
     selectionStart: 0,
     selectionEnd: 5,
     baseColor: 0x888888,
-    selectionColor: 0xff0000,
-    transformMode: "translate"
+    selectColor: 0xff0000,
+    transformMode: "translate",
+    remove: removeVertices
 	}
 
 	// Set up the vertices
@@ -65,9 +66,11 @@
 	function setPoints() {
 		vertices.clear();
 		resetControls();
+		const newVertices = [];
 		for (let i = 1; i < settings.numberOfPoints; i++) {
-			vertices.add([new THREE.Vector3(i / 10, i / 10, i / 10)]);
+			newVertices.push(new THREE.Vector3(i / 10, i / 10, i / 10));
 		}
+		vertices.add(newVertices);
 		setSelected();
   }
 
@@ -101,11 +104,9 @@
 			transform = helper.matrix.clone();
   });
 
-	// vertex.move(new THREE.Vector3(-1, 1, 1));
-	// vertex.rotate(new THREE.Vector3(0.5 * 3.1416, 0, 0));
-	// vertex.scale(new THREE.Vector3(2, 1, 1));
-	// vertex.remove();
-	// vertex.select(false);
+	function removeVertices() {
+		vertices.remove();
+  }
 
 
 	// Set up GUI
@@ -115,8 +116,17 @@
 	gui.add(settings, "selectionStart").name("Selection start").min(0).max(1000).onChange(setSelected);
 	gui.add(settings, "selectionEnd").name("Selection end").min(0).max(1000).onChange(setSelected);
 
-	// gui.add(settings, "color").name("Base color").min(0).max(1000).onChange(() => {
-  // });
+	const baseColor = new THREE.Color();
+	gui.addColor(settings, "baseColor").name("Base color").onChange(() => {
+		baseColor.set(settings.baseColor);
+		vertices.baseColor = baseColor;
+  });
+
+	const selectColor = new THREE.Color();
+	gui.addColor(settings, "selectColor").name("Select color").onChange(() => {
+		selectColor.set(settings.selectColor);
+		vertices.selectColor = selectColor;
+	});
 
 	// gui.add(settings, "selectionColor").name("Selection color").min(0).max(1000).onChange(setSelected);
 
@@ -124,6 +134,8 @@
     .name("Transform mode").min(0).max(1000).onChange((result) => {
 			control.setMode(result);
   });
+
+	gui.add(settings, "remove").name("Remove selected");
 
 
 </script>

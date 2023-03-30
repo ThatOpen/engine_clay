@@ -7,28 +7,83 @@ export class Vertices {
   /** THREE points */
   points: THREE.Points;
 
-  defaultColor: THREE.Color = new THREE.Color(0.5, 0.5, 0.5);
-  selectColor: THREE.Color = new THREE.Color(1, 0, 0);
-
+  private _baseColor: THREE.Color = new THREE.Color(0.5, 0.5, 0.5);
+  private _selectColor: THREE.Color = new THREE.Color(1, 0, 0);
   private _capacity = 0;
-  private _geometry = new THREE.BufferGeometry();
-  private _positionBuffer = new THREE.BufferAttribute(new Float32Array(0), 3);
-  private _colorBuffer = new THREE.BufferAttribute(new Float32Array(0), 3);
   private _selected = new Set<number>();
+
+  /**
+   * Number of points
+   * @returns Number corresponding to the length
+   */
+  get length() {
+    return this._positionBuffer.count;
+  }
+
+  /**
+   * The color of all the points.
+   */
+  get baseColor() {
+    return this._baseColor;
+  }
+
+  /**
+   * The color of all the points.
+   */
+  set baseColor(color: THREE.Color) {
+    this._baseColor.copy(color);
+    this.updateColor(false);
+  }
+
+  /**
+   * The color of all the selected points.
+   */
+  get selectColor() {
+    return this._baseColor;
+  }
+
+  /**
+   * The color of all the selected points.
+   */
+  set selectColor(color: THREE.Color) {
+    this._selectColor.copy(color);
+    this.updateColor(true);
+  }
+
+  private get _positionBuffer() {
+    return this._geometry.attributes.position as THREE.BufferAttribute;
+  }
+
+  private get _colorBuffer() {
+    return this._geometry.attributes.color as THREE.BufferAttribute;
+  }
+
+  private get _geometry() {
+    return this.points.geometry;
+  }
 
   /**
    * Creates a new instance of vertices
    * @param size Visualization point size
    */
   constructor(size: number = 0.1) {
-    this.resetAttributes();
-    this.resetBuffer();
-    const material = new THREE.PointsMaterial({
-      size,
-      vertexColors: true,
-    });
-    this.points = new THREE.Points(this._geometry, material);
+    const geometry = new THREE.BufferGeometry();
+    const material = this.newPointsMaterial(size);
+    this.points = new THREE.Points(geometry, material);
     this.points.frustumCulled = false;
+    this.resetAttributes();
+  }
+
+  /**
+   * Gets a point at the given index.
+   * @param index the index of the point to retrieve.
+   */
+  get(index: number) {
+    return [
+      this._positionBuffer.getX(index),
+      this._positionBuffer.getY(index),
+      this._positionBuffer.getZ(index),
+    ];
   }
 
   /**
@@ -42,7 +97,7 @@ export class Vertices {
       const indexToAdd = this._positionBuffer.count + i;
       const { x, y, z } = coordinates[i];
       this._positionBuffer.setXYZ(indexToAdd, x, y, z);
-      const { r, g, b } = this.defaultColor;
+      const { r, g, b } = this._baseColor;
       this._colorBuffer.setXYZ(indexToAdd, r, g, b);
       list.push(indexToAdd);
     }
@@ -118,15 +173,13 @@ export class Vertices {
    * Quickly removes all the points and releases all the memory used.
    */
   clear() {
-    this._positionBuffer = new THREE.BufferAttribute(new Float32Array(0), 3);
-    this._colorBuffer = new THREE.BufferAttribute(new Float32Array(0), 3);
     this.resetAttributes();
     this._capacity = 0;
     this._selected.clear();
   }
 
   /**
-   * Removes points from the list
+   * Removes the selected points from the list
    */
   remove() {
     const selected = this._selected.values();
@@ -138,33 +191,11 @@ export class Vertices {
     }
   }
 
-  /**
-   * Get position buffer
-   * @returns The position buffer of the vertices
-   */
-  getPositionBuffer() {
-    return this._positionBuffer;
-  }
-
-  /**
-   * Number of points
-   * @returns Number corresponding to the length
-   */
-  length() {
-    return this._positionBuffer.count;
-  }
-
-  getPointByIndex(index: number) {
-    return [
-      this._positionBuffer.getX(index),
-      this._positionBuffer.getY(index),
-      this._positionBuffer.getZ(index),
-    ];
-  }
-
   private resetAttributes() {
-    this._geometry.setAttribute("position", this._positionBuffer);
-    this._geometry.setAttribute("color", this._colorBuffer);
+    const positionBuffer = new THREE.BufferAttribute(new Float32Array(0), 3);
+    const colorBuffer = new THREE.BufferAttribute(new Float32Array(0), 3);
+    this._geometry.setAttribute("position", positionBuffer);
+    this._geometry.setAttribute("color", colorBuffer);
   }
 
   private removeFromColorBuffer(index: number, lastIndex: number) {
@@ -210,7 +241,7 @@ export class Vertices {
       this.unselectAll();
       return;
     }
-    this.resetColor(selection);
+    this.removeSelectColor(selection);
     for (let i = 0; i < selection.length; i++) {
       this._selected.delete(selection[i]);
     }
@@ -223,24 +254,34 @@ export class Vertices {
   }
 
   private unselectAll() {
-    this.resetColor();
+    this.removeSelectColor();
     this._selected.clear();
   }
 
   private addSelection(index: number) {
     this._selected.add(index);
-    this._colorBuffer.setX(index, this.selectColor.r);
-    this._colorBuffer.setY(index, this.selectColor.g);
-    this._colorBuffer.setZ(index, this.selectColor.b);
+    this._colorBuffer.setX(index, this._selectColor.r);
+    this._colorBuffer.setY(index, this._selectColor.g);
+    this._colorBuffer.setZ(index, this._selectColor.b);
   }
 
-  private resetColor(selection = Array.from(this._selected)) {
+  private updateColor(select: boolean) {
+    for (let i = 0; i < this._positionBuffer.count; i++) {
+      const isSelected = this._selected.has(i);
+      if (select !== isSelected) continue;
+      const color = select ? this._selectColor : this._baseColor;
+      this._colorBuffer.setXYZ(i, color.r, color.g, color.b);
+    }
+    this._colorBuffer.needsUpdate = true;
+  }
+
+  private removeSelectColor(selection = Array.from(this._selected)) {
     for (let i = 0; i < selection.length; i++) {
       this._colorBuffer.setXYZ(
         selection[i],
-        this.defaultColor.r,
-        this.defaultColor.g,
-        this.defaultColor.b
+        this._baseColor.r,
+        this._baseColor.g,
+        this._baseColor.b
       );
     }
   }
@@ -249,8 +290,8 @@ export class Vertices {
     this._capacity += increase;
     const tempPositionArray = this._geometry.getAttribute("position").array;
     const tempColorArray = this._geometry.getAttribute("color").array;
-    this.resetAttributePosition();
-    this.resetAttributeColor();
+    this.resetAttribute("position", this._positionBuffer);
+    this.resetAttribute("color", this._colorBuffer);
     for (let i = 0; i < this._positionBuffer.count; i++) {
       const x = tempPositionArray[i * 3];
       const y = tempPositionArray[i * 3 + 1];
@@ -263,25 +304,19 @@ export class Vertices {
     }
   }
 
-  private resetAttributePosition() {
-    const count = this._positionBuffer.count;
-    this._geometry.deleteAttribute("position");
-    this._positionBuffer = new THREE.BufferAttribute(
-      new Float32Array(this._capacity),
-      3
-    );
-    this._positionBuffer.count = count;
-    this._geometry.setAttribute("position", this._positionBuffer);
+  private resetAttribute(name: string, buffer: THREE.BufferAttribute) {
+    const count = buffer.count;
+    this._geometry.deleteAttribute(name);
+    const array = new Float32Array(this._capacity);
+    const newBuffer = new THREE.BufferAttribute(array, 3);
+    newBuffer.count = count;
+    this._geometry.setAttribute(name, newBuffer);
   }
 
-  private resetAttributeColor() {
-    const count = this._colorBuffer.count;
-    this._geometry.deleteAttribute("color");
-    this._colorBuffer = new THREE.BufferAttribute(
-      new Float32Array(this._capacity),
-      3
-    );
-    this._colorBuffer.count = count;
-    this._geometry.setAttribute("color", this._colorBuffer);
+  private newPointsMaterial(size: number) {
+    return new THREE.PointsMaterial({
+      size,
+      vertexColors: true,
+    });
   }
 }

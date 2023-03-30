@@ -31,7 +31,7 @@ export class Index {
       if (pointList.length > 2) {
         const newList = [];
         for (let i = 0; i < pointList.length; i++) {
-          newList.push(this._points.length() + i);
+          newList.push(this._points.length + i);
         }
         this._points.add(pointList);
         const face = new Types(newList);
@@ -123,7 +123,8 @@ export class Index {
   }
 
   private updatePositionBuffer() {
-    this._geometry.setAttribute("position", this._points.getPositionBuffer());
+    const positionBuffer = this._points.points.geometry.attributes.position;
+    this._geometry.setAttribute("position", positionBuffer);
   }
 
   private createStartList(startIndex: number) {
@@ -143,7 +144,7 @@ export class Index {
     const coordinates = [];
     for (let j = 0; j < face.indexPoints.length; j++) {
       const index = face.indexPoints[j];
-      const position = this._points.getPointByIndex(index);
+      const position = this._points.get(index);
       coordinates.push(position[0]);
       coordinates.push(position[1]);
       coordinates.push(position[2]);
