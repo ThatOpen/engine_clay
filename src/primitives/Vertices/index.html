@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+          name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"
+  />
+  <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+  <link rel="stylesheet" href="../../../resources/styles.css" />
+  <link rel="icon" type="image/x-icon" href="../../../resources/favicon.ico" />
+  <title>Components | Hello world</title>
+</head>
+<body>
+<canvas class="full-screen" id="container"></canvas>
+
+<script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.135.0/build/three.module.js",
+          "three/examples/jsm/libs/lil-gui.module.min": "https://unpkg.com/three@0.135.0/examples/jsm/libs/lil-gui.module.min.js",
+          "three/examples/jsm/controls/OrbitControls": "https://unpkg.com/three@0.135.0/examples/jsm/controls/OrbitControls.js",
+          "three/examples/jsm/controls/TransformControls": "https://unpkg.com/three@0.135.0/examples/jsm/controls/TransformControls.js",
+          "stats.js/src/Stats.js": "https://unpkg.com/stats-js@1.0.1/src/Stats.js",
+          "client-zip": "https://unpkg.com/client-zip@2.3.0/index.js",
+          "three/examples/controls/TransformControls.js": "https://unpkg.com/three@0.135.0/examples/jsm/controls/TransformControls.js"
+        }
+      }
+    </script>
+<script type="module">
+	import * as THREE from "three";
+	import { SimpleThreeScene } from "../../../resources/simple-three-scene.js";
+	import { TransformControls } from "three/examples/controls/TransformControls.js";
+	import * as OBC from "../../../resources/openbim-clay.js";
+	import * as dat from "three/examples/jsm/libs/lil-gui.module.min";
+
+	const canvas = document.getElementById("container");
+	const world = new SimpleThreeScene(canvas);
+
+	const settings = {
+		numberOfPoints: 10,
+    selectionStart: 0,
+    selectionEnd: 5,
+    baseColor: 0x888888,
+    selectionColor: 0xff0000,
+    transformMode: "translate"
+	}
+
+	// Set up the vertices
+
+	const vertices = new OBC.Vertices(0.05);
+	world.scene.add(vertices.points);
+
+	// Set up the controls to move them around
+
+	const control = new TransformControls(world.camera, world.renderer.domElement);
+	const helper = new THREE.Object3D();
+	let transform = new THREE.Matrix4();
+	world.scene.add(helper);
+	control.attach(helper);
+	world.scene.add(control);
+
+	setPoints();
+
+	function setPoints() {
+		vertices.clear();
+		resetControls();
+		for (let i = 1; i < settings.numberOfPoints; i++) {
+			vertices.add([new THREE.Vector3(i / 10, i / 10, i / 10)]);
+		}
+		setSelected();
+  }
+
+	function setSelected() {
+    const min = Math.min(settings.numberOfPoints, settings.selectionEnd);
+		const selection = [];
+		for (let i = settings.selectionStart; i < min; i++) {
+			selection.push(i);
+		}
+		vertices.select(false);
+		vertices.select(true, selection);
+  }
+
+  // Control logic
+
+	function resetControls() {
+		control.detach();
+
+		helper.position.set(0, 0, 0);
+		helper.rotation.set(0, 0, 0);
+		helper.scale.set(1, 1, 1);
+		control.attach(helper);
+  }
+
+	control.addEventListener("dragging-changed", (event) => world.controls.enabled = ! event.value);
+	control.addEventListener( 'change', () => {
+		  helper.updateMatrix();
+			const temp = helper.matrix.clone();
+		  temp.multiply(transform.invert());
+      vertices.transform(temp);
+			transform = helper.matrix.clone();
+  });
+
+	// vertex.move(new THREE.Vector3(-1, 1, 1));
+	// vertex.rotate(new THREE.Vector3(0.5 * 3.1416, 0, 0));
+	// vertex.scale(new THREE.Vector3(2, 1, 1));
+	// vertex.remove();
+	// vertex.select(false);
+
+
+	// Set up GUI
+
+	const gui = new dat.GUI();
+  gui.add(settings, "numberOfPoints").name("Number of points").min(0).max(1000).onChange(setPoints);
+	gui.add(settings, "selectionStart").name("Selection start").min(0).max(1000).onChange(setSelected);
+	gui.add(settings, "selectionEnd").name("Selection end").min(0).max(1000).onChange(setSelected);
+
+	// gui.add(settings, "color").name("Base color").min(0).max(1000).onChange(() => {
+  // });
+
+	// gui.add(settings, "selectionColor").name("Selection color").min(0).max(1000).onChange(setSelected);
+
+	gui.add(settings, "transformMode", {translate: "translate", rotate: "rotate", scale: "scale"})
+    .name("Transform mode").min(0).max(1000).onChange((result) => {
+			control.setMode(result);
+  });
+
+
+</script>
+</body>
+</html>

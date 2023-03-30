@@ -1,4 +1,4 @@
-export class ClayFace {
+export class Types {
   indexPoints: number[] = [];
   indexFaces: number[] = [];
 

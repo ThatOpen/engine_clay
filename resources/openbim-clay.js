@@ -15,14 +15,14 @@ class Vertices {
         this._positionBuffer = new THREE.BufferAttribute(new Float32Array(0), 3);
         this._colorBuffer = new THREE.BufferAttribute(new Float32Array(0), 3);
         this._selected = new Set();
-        this._geometry.setAttribute("position", this._positionBuffer);
-        this._geometry.setAttribute("color", this._colorBuffer);
+        this.resetAttributes();
         this.resetBuffer();
         const material = new THREE.PointsMaterial({
             size,
             vertexColors: true,
         });
         this.points = new THREE.Points(this._geometry, material);
+        this.points.frustumCulled = false;
     }
     /**
      * Add new points
@@ -30,7 +30,7 @@ class Vertices {
      */
     add(coordinates) {
         const list = [];
-        this.checkBufferSize(coordinates.length);
+        this.resizeBufferIfNecessary(coordinates.length);
         for (let i = 0; i < coordinates.length; i++) {
             const indexToAdd = this._positionBuffer.count + i;
             const { x, y, z } = coordinates[i];
@@ -46,14 +46,17 @@ class Vertices {
     /**
      * Creates a set of selected points
      * @param active When true we will select, when false we will unselect
-     * @param selection List of point indices to add to the selected set
+     * @param selection List of point indices to add to the selected set. If not
+     * defined, all items will be selected or deselected.
      */
-    select(active, selection = []) {
+    select(active, selection) {
         if (active) {
-            this.selectIndex(selection);
-            return;
+            this.selectPoints(selection);
         }
-        this.unselect(selection);
+        else {
+            this.unselectPoints(selection);
+        }
+        this._colorBuffer.needsUpdate = true;
     }
     /**
      * Apply a displacement vector to the selected points
@@ -84,13 +87,40 @@ class Vertices {
         this.transform(transform);
     }
     /**
+     * Applies a transformation to the selected vertices.
+     * @param transformation Transformation matrix to apply.
+     */
+    transform(transformation) {
+        const vector = new THREE.Vector3();
+        for (const index of this._selected) {
+            const x = this._positionBuffer.getX(index);
+            const y = this._positionBuffer.getY(index);
+            const z = this._positionBuffer.getZ(index);
+            vector.set(x, y, z);
+            vector.applyMatrix4(transformation);
+            this._positionBuffer.setXYZ(index, vector.x, vector.y, vector.z);
+        }
+        this._positionBuffer.needsUpdate = true;
+    }
+    /**
+     * Quickly removes all the points and releases all the memory used.
+     */
+    clear() {
+        this._positionBuffer = new THREE.BufferAttribute(new Float32Array(0), 3);
+        this._colorBuffer = new THREE.BufferAttribute(new Float32Array(0), 3);
+        this.resetAttributes();
+        this._capacity = 0;
+        this._selected.clear();
+    }
+    /**
      * Removes points from the list
      */
     remove() {
-        for (const index of this._selected.values()) {
+        const selected = this._selected.values();
+        for (const index of selected) {
             const lastIndex = this._positionBuffer.count - 1;
-            this._positionBuffer.setXYZ(index, this._positionBuffer.getX(lastIndex), this._positionBuffer.getY(lastIndex), this._positionBuffer.getZ(lastIndex));
-            this._colorBuffer.setXYZ(index, this._colorBuffer.getX(lastIndex), this._colorBuffer.getY(lastIndex), this._colorBuffer.getZ(lastIndex));
+            this.removeFromPositionBuffer(index, lastIndex);
+            this.removeFromColorBuffer(index, lastIndex);
             this._positionBuffer.count--;
         }
     }
@@ -103,7 +133,7 @@ class Vertices {
     }
     /**
      * Number of points
-     * @returns Number corresponding to the lenght
+     * @returns Number corresponding to the length
      */
     length() {
         return this._positionBuffer.count;
@@ -115,29 +145,52 @@ class Vertices {
             this._positionBuffer.getZ(index),
         ];
     }
-    checkBufferSize(increase) {
+    resetAttributes() {
+        this._geometry.setAttribute("position", this._positionBuffer);
+        this._geometry.setAttribute("color", this._colorBuffer);
+    }
+    removeFromColorBuffer(index, lastIndex) {
+        this._colorBuffer.setXYZ(index, this._colorBuffer.getX(lastIndex), this._colorBuffer.getY(lastIndex), this._colorBuffer.getZ(lastIndex));
+    }
+    removeFromPositionBuffer(index, lastIndex) {
+        this._positionBuffer.setXYZ(index, this._positionBuffer.getX(lastIndex), this._positionBuffer.getY(lastIndex), this._positionBuffer.getZ(lastIndex));
+    }
+    resizeBufferIfNecessary(increase) {
         const tempPositionArray = this._geometry.getAttribute("position");
         const size = tempPositionArray.count * 3 + increase * 3;
-        while (size >= this._capacity) {
-            if (this.bufferIncrease < 1) {
-                this.bufferIncrease = 1;
-            }
-            this.resetBuffer();
-            return;
+        if (size >= this._capacity) {
+            const diff = size - this._capacity;
+            const increase = Math.max(diff, this.bufferIncrease);
+            this.resetBuffer(increase);
         }
     }
-    selectIndex(selection = []) {
-        if (selection.length === 0) {
-            this.resetAllSelectedColors();
-            this._selected.clear();
-            for (let i = 0; i < this._positionBuffer.count; i++) {
-                this.addSelection(i);
-            }
+    selectPoints(selection) {
+        if (!selection) {
+            this.selectAll();
             return;
         }
         for (let i = 0; i < selection.length; i++) {
             this.addSelection(selection[i]);
         }
+    }
+    unselectPoints(selection) {
+        if (!selection) {
+            this.unselectAll();
+            return;
+        }
+        this.resetColor(selection);
+        for (let i = 0; i < selection.length; i++) {
+            this._selected.delete(selection[i]);
+        }
+    }
+    selectAll() {
+        for (let i = 0; i < this._positionBuffer.count; i++) {
+            this.addSelection(i);
+        }
+    }
+    unselectAll() {
+        this.resetColor();
+        this._selected.clear();
     }
     addSelection(index) {
         this._selected.add(index);
@@ -145,46 +198,13 @@ class Vertices {
         this._colorBuffer.setY(index, this.selectColor.g);
         this._colorBuffer.setZ(index, this.selectColor.b);
     }
-    unselect(selection = []) {
-        this.restoreColor(selection);
-        if (selection.length === 0) {
-            this._selected.clear();
-            return;
-        }
-        for (let i = 0; i < selection.length; i++) {
-            this._selected.delete(selection[i]);
-        }
-    }
-    restoreColor(selection = []) {
-        if (selection.length === 0) {
-            this.resetAllSelectedColors();
-            return;
-        }
-        this.resetSelectedColors(selection);
-    }
-    resetAllSelectedColors() {
-        for (const index of this._selected.values()) {
-            this._colorBuffer.setXYZ(index, this.defaultColor.r, this.defaultColor.g, this.defaultColor.b);
-        }
-    }
-    resetSelectedColors(selection) {
+    resetColor(selection = Array.from(this._selected)) {
         for (let i = 0; i < selection.length; i++) {
             this._colorBuffer.setXYZ(selection[i], this.defaultColor.r, this.defaultColor.g, this.defaultColor.b);
         }
     }
-    transform(transformation) {
-        const vector = new THREE.Vector3();
-        for (const index of this._selected) {
-            const x = this._positionBuffer.getX(index);
-            const y = this._positionBuffer.getY(index);
-            const z = this._positionBuffer.getZ(index);
-            vector.set(x, y, z);
-            vector.applyMatrix4(transformation);
-            this._positionBuffer.setXYZ(index, vector.x, vector.y, vector.z);
-        }
-    }
-    resetBuffer() {
-        this._capacity += this.bufferIncrease;
+    resetBuffer(increase = this.bufferIncrease) {
+        this._capacity += increase;
         const tempPositionArray = this._geometry.getAttribute("position").array;
         const tempColorArray = this._geometry.getAttribute("color").array;
         this.resetAttributePosition();
@@ -1004,7 +1024,7 @@ function signedArea( data, start, end, dim ) {
 
 }
 
-class ClayFace {
+class Types {
     constructor(list) {
         this.indexPoints = [];
         this.indexFaces = [];
@@ -1012,7 +1032,7 @@ class ClayFace {
     }
 }
 
-class Faces {
+class Index {
     constructor() {
         /** Mesh containing all faces */
         this.mesh = new THREE.Mesh();
@@ -1036,7 +1056,7 @@ class Faces {
                     newList.push(this._points.length() + i);
                 }
                 this._points.add(pointList);
-                const face = new ClayFace(newList);
+                const face = new Types(newList);
                 this._clayFaces.push(face);
             }
         }
@@ -1172,4 +1192,4 @@ class Faces {
     }
 }
 
-export { Faces, Vertices };
+export { Index, Vertices };

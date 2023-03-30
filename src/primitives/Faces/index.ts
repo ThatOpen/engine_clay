@@ -1,15 +1,16 @@
 import * as THREE from "three";
+// eslint-disable-next-line import/extensions
 import { Earcut } from "three/src/extras/Earcut.js";
-import { Vertices } from "./vertex";
-import { ClayFace } from "./clayFace";
+import { Vertices } from "../Vertices";
+import { Types } from "./types";
 
-export class Faces {
+export class Index {
   /** Mesh containing all faces */
   mesh: THREE.Mesh = new THREE.Mesh();
 
   private _points: Vertices = new Vertices();
   private _geometry = new THREE.BufferGeometry();
-  private _clayFaces: ClayFace[] = [];
+  private _clayFaces: Types[] = [];
 
   constructor() {
     this.updatePositionBuffer();
@@ -33,7 +34,7 @@ export class Faces {
           newList.push(this._points.length() + i);
         }
         this._points.add(pointList);
-        const face = new ClayFace(newList);
+        const face = new Types(newList);
         this._clayFaces.push(face);
       }
     }
@@ -138,7 +139,7 @@ export class Faces {
     return newIndices;
   }
 
-  private triangulateFace(face: ClayFace) {
+  private triangulateFace(face: Types) {
     const coordinates = [];
     for (let j = 0; j < face.indexPoints.length; j++) {
       const index = face.indexPoints[j];
@@ -152,7 +153,7 @@ export class Faces {
   }
 
   private addTriangulatedFace(
-    face: ClayFace,
+    face: Types,
     indices: number[],
     newIndices: number[]
   ) {
@@ -162,7 +163,7 @@ export class Faces {
       const c = indices[j + 2];
       const pointA = face.indexPoints[a];
       const pointB = face.indexPoints[b];
-      const pointC = face.indexPoints[c];  
+      const pointC = face.indexPoints[c];
       face.indexFaces.push(newIndices.length / 3);
       newIndices.push(pointA);
       newIndices.push(pointB);

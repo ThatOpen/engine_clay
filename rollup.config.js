@@ -6,7 +6,7 @@ export default {
   input: "dist/index.js",
   external: ["three"], // so it's not included
   output: {
-    file: "../examples/resources/openbim-clay.js",
+    file: "./resources/openbim-clay.js",
     format: "esm",
     inlineDynamicImports: true, // Necessary for jspdf
     paths: {

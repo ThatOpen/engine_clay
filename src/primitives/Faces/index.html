@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+          name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"
+  />
+  <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+  <link rel="stylesheet" href="resources/styles.css" />
+  <link rel="icon" type="image/x-icon" href="../favicon.ico" />
+  <title>Components | Hello world</title>
+</head>
+<body>
+<canvas class="full-screen" id="container"></canvas>
+
+<script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.135.0/build/three.module.js",
+          "three/examples/jsm/libs/lil-gui.module.min": "https://unpkg.com/three@0.135.0/examples/jsm/libs/lil-gui.module.min.js",
+          "three/examples/jsm/controls/OrbitControls": "https://unpkg.com/three@0.135.0/examples/jsm/controls/OrbitControls.js",
+          "three/examples/jsm/controls/TransformControls": "https://unpkg.com/three@0.135.0/examples/jsm/controls/TransformControls.js",
+          "stats.js/src/Stats.js": "https://unpkg.com/stats-js@1.0.1/src/Stats.js",
+          "client-zip": "https://unpkg.com/client-zip@2.3.0/index.js"
+        }
+      }
+    </script>
+<script type="module">
+	import * as THREE from "three";
+	import { SimpleThreeScene } from "../../../resources/simple-three-scene.js";
+	import * as OBC from "../../../resources/openbim-clay.js";
+
+	const canvas = document.getElementById("container");
+	const world = new SimpleThreeScene(canvas);
+
+	const vertex = new OBC.Vertices(0.05); // or no arguments
+	const numberToAdd = 1000;
+	vertex.bufferIncrease = numberToAdd / 10;
+	const start = 1;
+	for (let i = 1; i < numberToAdd; i++) {
+		vertex.add([new THREE.Vector3(i / 10, i / 10, i / 10)]);
+		if (i < numberToAdd / 2) {
+			vertex.select(true, [i - start]);
+		}
+	}
+
+	vertex.move(new THREE.Vector3(-1, 1, 1));
+	vertex.rotate(new THREE.Vector3(0.5 * 3.1416, 0, 0));
+	vertex.scale(new THREE.Vector3(2, 1, 1));
+	// vertex.remove();
+	vertex.select(false);
+
+	const faces = new OBC.Faces();
+	for (let i = 0; i < 20; i++) {
+		faces.addFaces([[
+			new THREE.Vector3(-1, 1, i),
+			new THREE.Vector3(1, 1, i),
+			new THREE.Vector3(1, -1, i),
+			new THREE.Vector3(-1, -1, i),
+		]]);
+	}
+
+	faces.removeFaces([2]);
+
+	world.scene.add(vertex.points);
+	world.scene.add(faces.mesh);
+</script>
+</body>
+</html>

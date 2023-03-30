@@ -1940,12 +1940,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"clay@workspace:.":
-  version: 0.0.0-use.local
-  resolution: "clay@workspace:."
-  languageName: unknown
-  linkType: soft
-
 "clean-stack@npm:^2.0.0":
   version: 2.2.0
   resolution: "clean-stack@npm:2.2.0"
@@ -5328,9 +5322,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"openbim-clay@workspace:library":
+"openbim-clay@workspace:.":
   version: 0.0.0-use.local
-  resolution: "openbim-clay@workspace:library"
+  resolution: "openbim-clay@workspace:."
   dependencies:
     "@rollup/plugin-commonjs": ^22.0.2
     "@rollup/plugin-node-resolve": ^14.1.0
