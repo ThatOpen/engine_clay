@@ -4,7 +4,7 @@ import { Earcut } from "three/src/extras/Earcut.js";
 import { Vertices } from "../Vertices";
 import { Types } from "./types";
 
-export class Index {
+export class Faces {
   /** Mesh containing all faces */
   mesh: THREE.Mesh = new THREE.Mesh();
 
@@ -145,6 +145,7 @@ export class Index {
     for (let j = 0; j < face.indexPoints.length; j++) {
       const index = face.indexPoints[j];
       const position = this._points.get(index);
+      if (position === null) continue;
       coordinates.push(position[0]);
       coordinates.push(position[1]);
       coordinates.push(position[2]);

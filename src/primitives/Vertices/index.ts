@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { IdIndexMap } from "./id-index-map";
 
 export class Vertices {
   /** Buffer increment when geometry size is exceeded, multiple of 3. */
@@ -10,7 +11,9 @@ export class Vertices {
   private _baseColor: THREE.Color = new THREE.Color(0.5, 0.5, 0.5);
   private _selectColor: THREE.Color = new THREE.Color(1, 0, 0);
   private _capacity = 0;
+
   private _selected = new Set<number>();
+  private _items = new IdIndexMap();
 
   /**
    * Number of points
@@ -75,10 +78,12 @@ export class Vertices {
   }
 
   /**
-   * Gets a point at the given index.
-   * @param index the index of the point to retrieve.
+   * Gets the coordinates of the vertex with the given ID.
+   * @param id the id of the point to retrieve.
    */
-  get(index: number) {
+  get(id: number) {
+    const index = this._items.getIndex(id);
+    if (index === null) return null;
     return [
       this._positionBuffer.getX(index),
       this._positionBuffer.getY(index),
@@ -91,32 +96,28 @@ export class Vertices {
    * @param coordinates Points to add
    */
   add(coordinates: THREE.Vector3[]) {
-    const list = [];
     this.resizeBufferIfNecessary(coordinates.length);
     for (let i = 0; i < coordinates.length; i++) {
-      const indexToAdd = this._positionBuffer.count + i;
+      const index = this._items.add();
       const { x, y, z } = coordinates[i];
-      this._positionBuffer.setXYZ(indexToAdd, x, y, z);
+      this._positionBuffer.setXYZ(index, x, y, z);
       const { r, g, b } = this._baseColor;
-      this._colorBuffer.setXYZ(indexToAdd, r, g, b);
-      list.push(indexToAdd);
+      this._colorBuffer.setXYZ(index, r, g, b);
     }
-    this._positionBuffer.count += coordinates.length;
-    this._colorBuffer.count += coordinates.length;
-    return list;
+    this.updateBuffersCount();
   }
 
   /**
    * Creates a set of selected points
    * @param active When true we will select, when false we will unselect
-   * @param selection List of point indices to add to the selected set. If not
+   * @param ids List of point IDs to add to the selected set. If not
    * defined, all items will be selected or deselected.
    */
-  select(active: boolean, selection?: number[]) {
+  select(active: boolean, ids?: number[]) {
     if (active) {
-      this.selectPoints(selection);
+      this.selectPoints(ids);
     } else {
-      this.unselectPoints(selection);
+      this.unselectPoints(ids);
     }
     this._colorBuffer.needsUpdate = true;
   }
@@ -158,7 +159,9 @@ export class Vertices {
    */
   transform(transformation: THREE.Matrix4) {
     const vector = new THREE.Vector3();
-    for (const index of this._selected) {
+    for (const id of this._selected) {
+      const index = this._items.getIndex(id);
+      if (index === null) continue;
       const x = this._positionBuffer.getX(index);
       const y = this._positionBuffer.getY(index);
       const z = this._positionBuffer.getZ(index);
@@ -174,8 +177,8 @@ export class Vertices {
    */
   clear() {
     this.resetAttributes();
-    this._capacity = 0;
     this._selected.clear();
+    this._items.reset();
   }
 
   /**
@@ -183,12 +186,46 @@ export class Vertices {
    */
   remove() {
     const selected = this._selected.values();
-    for (const index of selected) {
-      const lastIndex = this._positionBuffer.count - 1;
+    for (const id of selected) {
+      const index = this._items.getIndex(id);
+      if (index === null) continue;
+      const lastIndex = this._items.getLastIndex();
       this.removeFromPositionBuffer(index, lastIndex);
       this.removeFromColorBuffer(index, lastIndex);
-      this._positionBuffer.count--;
+      this._items.remove(id);
     }
+    this.updateBuffersCount();
+    this._positionBuffer.needsUpdate = true;
+    this._colorBuffer.needsUpdate = true;
+  }
+
+  private selectPoints(ids?: number[]) {
+    const selection = ids || this._items.ids;
+    for (const id of selection) {
+      const index = this._items.getIndex(id);
+      if (index === null) continue;
+      this._selected.add(id);
+      this._colorBuffer.setX(index, this._selectColor.r);
+      this._colorBuffer.setY(index, this._selectColor.g);
+      this._colorBuffer.setZ(index, this._selectColor.b);
+    }
+  }
+
+  private unselectPoints(ids?: number[]) {
+    this.removeSelectColor(ids);
+    if (!ids) {
+      this._selected.clear();
+      return;
+    }
+    for (const id of ids) {
+      this._selected.delete(id);
+    }
+  }
+
+  private updateBuffersCount() {
+    const size = this._items.size;
+    this._positionBuffer.count = size;
+    this._colorBuffer.count = size;
   }
 
   private resetAttributes() {
@@ -196,6 +233,7 @@ export class Vertices {
     const colorBuffer = new THREE.BufferAttribute(new Float32Array(0), 3);
     this._geometry.setAttribute("position", positionBuffer);
     this._geometry.setAttribute("color", colorBuffer);
+    this._capacity = 0;
   }
 
   private removeFromColorBuffer(index: number, lastIndex: number) {
@@ -217,100 +255,66 @@ export class Vertices {
   }
 
   private resizeBufferIfNecessary(increase: number) {
-    const tempPositionArray = this._geometry.getAttribute("position");
-    const size = tempPositionArray.count * 3 + increase * 3;
-    if (size >= this._capacity) {
-      const diff = size - this._capacity;
-      const increase = Math.max(diff, this.bufferIncrease);
-      this.resetBuffer(increase);
+    const position = this._geometry.getAttribute("position");
+    const size = position.count * 3 + increase * 3;
+    const difference = size - this._capacity;
+    if (difference >= 0) {
+      const increase = Math.max(difference, this.bufferIncrease);
+      this.resizeBuffers(increase);
     }
   }
 
-  private selectPoints(selection?: number[]) {
-    if (!selection) {
-      this.selectAll();
-      return;
-    }
-    for (let i = 0; i < selection.length; i++) {
-      this.addSelection(selection[i]);
-    }
-  }
-
-  private unselectPoints(selection?: number[]) {
-    if (!selection) {
-      this.unselectAll();
-      return;
-    }
-    this.removeSelectColor(selection);
-    for (let i = 0; i < selection.length; i++) {
-      this._selected.delete(selection[i]);
-    }
-  }
-
-  private selectAll() {
-    for (let i = 0; i < this._positionBuffer.count; i++) {
-      this.addSelection(i);
-    }
-  }
-
-  private unselectAll() {
-    this.removeSelectColor();
-    this._selected.clear();
-  }
-
-  private addSelection(index: number) {
-    this._selected.add(index);
-    this._colorBuffer.setX(index, this._selectColor.r);
-    this._colorBuffer.setY(index, this._selectColor.g);
-    this._colorBuffer.setZ(index, this._selectColor.b);
-  }
-
-  private updateColor(select: boolean) {
-    for (let i = 0; i < this._positionBuffer.count; i++) {
-      const isSelected = this._selected.has(i);
-      if (select !== isSelected) continue;
-      const color = select ? this._selectColor : this._baseColor;
-      this._colorBuffer.setXYZ(i, color.r, color.g, color.b);
-    }
-    this._colorBuffer.needsUpdate = true;
-  }
-
-  private removeSelectColor(selection = Array.from(this._selected)) {
-    for (let i = 0; i < selection.length; i++) {
-      this._colorBuffer.setXYZ(
-        selection[i],
-        this._baseColor.r,
-        this._baseColor.g,
-        this._baseColor.b
-      );
-    }
-  }
-
-  private resetBuffer(increase = this.bufferIncrease) {
+  private resizeBuffers(increase = this.bufferIncrease) {
     this._capacity += increase;
-    const tempPositionArray = this._geometry.getAttribute("position").array;
-    const tempColorArray = this._geometry.getAttribute("color").array;
-    this.resetAttribute("position", this._positionBuffer);
-    this.resetAttribute("color", this._colorBuffer);
+    const oldPositionArray = this._geometry.getAttribute("position").array;
+    const oldColorArray = this._geometry.getAttribute("color").array;
+    this.resizeAttribute("position", this._positionBuffer);
+    this.resizeAttribute("color", this._colorBuffer);
     for (let i = 0; i < this._positionBuffer.count; i++) {
-      const x = tempPositionArray[i * 3];
-      const y = tempPositionArray[i * 3 + 1];
-      const z = tempPositionArray[i * 3 + 2];
+      const x = oldPositionArray[i * 3];
+      const y = oldPositionArray[i * 3 + 1];
+      const z = oldPositionArray[i * 3 + 2];
       this._positionBuffer.setXYZ(i, x, y, z);
-      const r = tempColorArray[i * 3];
-      const g = tempColorArray[i * 3 + 1];
-      const b = tempColorArray[i * 3 + 2];
+      const r = oldColorArray[i * 3];
+      const g = oldColorArray[i * 3 + 1];
+      const b = oldColorArray[i * 3 + 2];
       this._colorBuffer.setXYZ(i, r, g, b);
     }
   }
 
-  private resetAttribute(name: string, buffer: THREE.BufferAttribute) {
+  private resizeAttribute(name: string, buffer: THREE.BufferAttribute) {
     const count = buffer.count;
     this._geometry.deleteAttribute(name);
     const array = new Float32Array(this._capacity);
     const newBuffer = new THREE.BufferAttribute(array, 3);
     newBuffer.count = count;
     this._geometry.setAttribute(name, newBuffer);
+  }
+
+  private updateColor(select: boolean) {
+    const allIDs = this._items.ids;
+    for (const id of allIDs) {
+      const isSelected = this._selected.has(id);
+      if (select !== isSelected) continue;
+      const index = this._items.getIndex(id);
+      if (!index) continue;
+      const color = select ? this._selectColor : this._baseColor;
+      this._colorBuffer.setXYZ(index, color.r, color.g, color.b);
+    }
+    this._colorBuffer.needsUpdate = true;
+  }
+
+  private removeSelectColor(ids = Array.from(this._selected)) {
+    for (const id of ids) {
+      const index = this._items.getIndex(id);
+      if (index === null) return;
+      this._colorBuffer.setXYZ(
+        index,
+        this._baseColor.r,
+        this._baseColor.g,
+        this._baseColor.b
+      );
+    }
   }
 
   private newPointsMaterial(size: number) {
