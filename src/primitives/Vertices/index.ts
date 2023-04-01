@@ -1,17 +1,17 @@
 import * as THREE from "three";
 import { IdIndexMap } from "./id-index-map";
+import { Primitive } from "../types";
 
-export class Vertices {
+export class Vertices implements Primitive {
   /** Buffer increment when geometry size is exceeded, multiple of 3. */
   bufferIncrease = 300;
 
-  /** THREE points */
-  points: THREE.Points;
+  /** {@link Primitive.mesh } */
+  mesh: THREE.Points;
 
   private _baseColor: THREE.Color = new THREE.Color(0.5, 0.5, 0.5);
   private _selectColor: THREE.Color = new THREE.Color(1, 0, 0);
   private _capacity = 0;
-
   private _selected = new Set<number>();
   private _items = new IdIndexMap();
 
@@ -19,7 +19,7 @@ export class Vertices {
    * Number of points
    * @returns Number corresponding to the length
    */
-  get length() {
+  get size() {
     return this._positionBuffer.count;
   }
 
@@ -62,7 +62,7 @@ export class Vertices {
   }
 
   private get _geometry() {
-    return this.points.geometry;
+    return this.mesh.geometry;
   }
 
   /**
@@ -72,8 +72,8 @@ export class Vertices {
   constructor(size: number = 0.1) {
     const geometry = new THREE.BufferGeometry();
     const material = this.newPointsMaterial(size);
-    this.points = new THREE.Points(geometry, material);
-    this.points.frustumCulled = false;
+    this.mesh = new THREE.Points(geometry, material);
+    this.mesh.frustumCulled = false;
     this.resetAttributes();
   }
 
@@ -93,18 +93,23 @@ export class Vertices {
 
   /**
    * Add new points
-   * @param coordinates Points to add
+   * @param coordinates Points to add.
+   * @returns the list of ids of the created vertices.
    */
-  add(coordinates: THREE.Vector3[]) {
+  add(coordinates: [number, number, number][]) {
     this.resizeBufferIfNecessary(coordinates.length);
+    const ids: number[] = [];
     for (let i = 0; i < coordinates.length; i++) {
       const index = this._items.add();
-      const { x, y, z } = coordinates[i];
+      const id = this._items.getId(index);
+      ids.push(id);
+      const [x, y, z] = coordinates[i];
       this._positionBuffer.setXYZ(index, x, y, z);
       const { r, g, b } = this._baseColor;
       this._colorBuffer.setXYZ(index, r, g, b);
     }
     this.updateBuffersCount();
+    return ids;
   }
 
   /**

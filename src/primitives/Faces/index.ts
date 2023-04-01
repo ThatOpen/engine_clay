@@ -1,187 +1,143 @@
 import * as THREE from "three";
-// eslint-disable-next-line import/extensions
-import { Earcut } from "three/src/extras/Earcut.js";
+import earcut from "earcut";
 import { Vertices } from "../Vertices";
-import { Types } from "./types";
+import { Primitive } from "../types";
 
-export class Faces {
-  /** Mesh containing all faces */
+export class Faces implements Primitive {
+  /** {@link Primitive.mesh } */
   mesh: THREE.Mesh = new THREE.Mesh();
 
-  private _points: Vertices = new Vertices();
-  private _geometry = new THREE.BufferGeometry();
-  private _clayFaces: Types[] = [];
+  /**
+   * The list of outer points that define the faces. Each point corresponds to a set of {@link Vertices}. This way,
+   * we can provide an API of faces that share vertices, but under the hood the vertices are duplicated per face
+   * (and thus being able to contain the normals as a vertex attribute).
+   */
+  points: {
+    [id: number]: {
+      coordinates: [number, number, number];
+      verticesIDs: Set<number>;
+    };
+  } = {};
+
+  /**
+   * The list of faces. Each face is defined by a list of outer points.
+   * TODO: Implement inner points.
+   */
+  faces: { [id: number]: { position: number; points: number[] } } = {};
+
+  private _faceIdGenerator = 0;
+  private _pointIdGenerator = 0;
+
+  private _vertices: Vertices = new Vertices();
+
+  private _baseMaterial = new THREE.MeshLambertMaterial({
+    side: THREE.DoubleSide,
+    color: 0x888888,
+  });
+
+  private get _geometry() {
+    return this.mesh.geometry;
+  }
 
   constructor() {
     this.updatePositionBuffer();
-    this.updateIndexBuffer();
-    this.mesh = new THREE.Mesh(
-      this._geometry,
-      new THREE.MeshPhongMaterial({ side: THREE.DoubleSide })
-    );
+    const geometry = new THREE.BufferGeometry();
+    this.mesh = new THREE.Mesh(geometry, this._baseMaterial);
   }
 
   /**
-   * Creates a new faces
-   * @param ptList List of coplanar points for each face
+   * Adds a face.
+   * @param ids - the IDs of the {@link points} that define that face. It's assumed that they are coplanar.
    */
-  addFaces(pointLists: [THREE.Vector3[]]) {
-    for (const index in pointLists) {
-      const pointList = pointLists[index];
-      if (pointList.length > 2) {
-        const newList = [];
-        for (let i = 0; i < pointList.length; i++) {
-          newList.push(this._points.length + i);
-        }
-        this._points.add(pointList);
-        const face = new Types(newList);
-        this._clayFaces.push(face);
-      }
-    }
-    this.updateIndexBuffer(this._clayFaces.length - pointLists.length);
+  add(ids: number[]) {
+    const id = this._faceIdGenerator++;
+    this.faces[id] = {
+      position: id,
+      points: ids,
+    };
   }
 
   /**
-   * Remove faces from the model
-   * @param indices Indices of the faces to remove
+   * Adds the points that can be used by one or many faces
    */
-  removeFaces(indices: number[]) {
-    for (let i = 0; i < indices.length; i++) {
-      const index = indices[i];
-      const face = this._clayFaces[index];
-      this._points.select(true, face.indexPoints);
-      this.correctIndices(index);
-      this._points.remove();
-      this.removeTriangles(face.indexFaces);
-      this._clayFaces.splice(index, 1);
+  addPoints(points: [number, number, number][]) {
+    for (const [x, y, z] of points) {
+      const id = this._pointIdGenerator++;
+      this.points[id] = {
+        coordinates: [x, y, z],
+        verticesIDs: new Set<number>(),
+      };
     }
   }
 
-  private removeTriangles(list: number[]) {
-    const IndexList = this.createStartList(1);
-    for (let i = 0; i < list.length; i++) {
-      const index = (list[i] - i) * 3;
-      IndexList.splice(index, 1);
-      IndexList.splice(index + 1, 1);
-      IndexList.splice(index + 2, 1);
-    }
-    this.correctFaceTriangles(list);
-    this._geometry.setIndex(IndexList);
-  }
-
-  private correctFaceTriangles(list: number[]) {
-    for (let k = 0; k < list.length; k++) {
-      for (let i = 0; i < this._clayFaces.length; i++) {
-        for (let j = 0; j < this._clayFaces[i].indexFaces.length; j++) {
-          if (this._clayFaces[i].indexFaces[j] > list[k]) {
-            this._clayFaces[i].indexFaces[j]--;
-          }
-        }
+  regenerate() {
+    this._vertices.clear();
+    this._geometry.deleteAttribute("position");
+    this.updatePositionBuffer();
+    const allIndices: number[] = [];
+    let nextIndex = 0;
+    for (const faceID in this.faces) {
+      const face = this.faces[faceID];
+      const flatCoordinates: number[] = [];
+      for (const pointID of face.points) {
+        const point = this.points[pointID];
+        flatCoordinates.push(...point.coordinates);
+        const [id] = this._vertices.add([point.coordinates]);
+        point.verticesIDs.add(id);
       }
-      for (let i = 0; i < list.length; i++) {
-        if (list[i] > list[k]) {
-          list[i]--;
-        }
+      const faceIndices = this.triangulate(flatCoordinates);
+      const offset = nextIndex;
+      for (const faceIndex of faceIndices) {
+        const absoluteIndex = faceIndex + offset;
+        if (absoluteIndex >= nextIndex) nextIndex = absoluteIndex + 1;
+        allIndices.push(absoluteIndex);
       }
     }
-  }
-
-  private correctIndexFaces(faceIndex: number, pointer: number) {
-    for (let i = 0; i < this._clayFaces.length; i++) {
-      if (i !== faceIndex) {
-        const face2 = this._clayFaces[i];
-        for (let k = 0; k < face2.indexPoints.length; k++) {
-          if (face2.indexPoints[k] > pointer) {
-            face2.indexPoints[k]--;
-          }
-        }
-      }
-    }
-  }
-
-  private correctIndexTriangles(pointer: number) {
-    const newIndices: number[] = this.createStartList(1);
-    for (let i = 0; i < newIndices.length; i++) {
-      if (newIndices[i] > pointer) {
-        newIndices[i]--;
-      }
-    }
-    this._geometry.setIndex(newIndices);
-  }
-
-  private correctIndices(index: number) {
-    const face = this._clayFaces[index];
-    for (let j = 0; j < face.indexPoints.length; j++) {
-      for (let k = 0; k < face.indexPoints.length; k++) {
-        if (face.indexPoints[k] > face.indexPoints[j]) {
-          face.indexPoints[k]--;
-        }
-      }
-      this.correctIndexFaces(index, face.indexPoints[j]);
-      this.correctIndexTriangles(face.indexPoints[j]);
-    }
+    this._geometry.setIndex(allIndices);
+    this.updatePositionBuffer();
+    this._geometry.computeVertexNormals();
   }
 
   private updatePositionBuffer() {
-    const positionBuffer = this._points.points.geometry.attributes.position;
+    const positionBuffer = this._vertices.mesh.geometry.attributes.position;
     this._geometry.setAttribute("position", positionBuffer);
   }
 
-  private createStartList(startIndex: number) {
-    const newIndices: number[] | null = [];
-    if (startIndex > 0) {
-      const tempIndexList = this._geometry.getIndex()?.array;
-      if (tempIndexList) {
-        for (let i = 0; i < tempIndexList.length; i++) {
-          newIndices.push(tempIndexList[i]);
-        }
+  private triangulate(coordinates: number[]) {
+    // Earcut only supports 2d triangulations, so let's project the face
+    // into the cartesian plane that is more parallel to the face
+    const dim = this.getProjectionDimension(coordinates);
+    const projectedCoords: number[] = [];
+    for (let i = 0; i < coordinates.length; i++) {
+      if (i % 3 !== dim) {
+        projectedCoords.push(coordinates[i]);
       }
     }
-    return newIndices;
+    return earcut(projectedCoords, [], 2);
   }
 
-  private triangulateFace(face: Types) {
-    const coordinates = [];
-    for (let j = 0; j < face.indexPoints.length; j++) {
-      const index = face.indexPoints[j];
-      const position = this._points.get(index);
-      if (position === null) continue;
-      coordinates.push(position[0]);
-      coordinates.push(position[1]);
-      coordinates.push(position[2]);
-    }
-    const voidList: number[] = [];
-    return Earcut.triangulate(coordinates, voidList, 3);
+  private getProjectionDimension(coordinates: number[]) {
+    const [x1, y1, z1] = this.getCoordinate(0, coordinates);
+    const [x2, y2, z2] = this.getCoordinate(1, coordinates);
+    const [x3, y3, z3] = this.getCoordinate(2, coordinates);
+
+    const a = [x2 - x1, y2 - y1, z2 - z1];
+    const b = [x3 - x2, y3 - y2, z3 - z2];
+
+    const crossProd = [
+      Math.abs(a[1] * b[2] - a[2] * b[1]),
+      Math.abs(a[2] * b[0] - a[0] * b[2]),
+      Math.abs(a[0] * b[1] - a[1] * b[0]),
+    ];
+
+    const max = Math.max(...crossProd);
+    return crossProd.indexOf(max);
   }
 
-  private addTriangulatedFace(
-    face: Types,
-    indices: number[],
-    newIndices: number[]
-  ) {
-    for (let j = 0; j < indices.length; j++) {
-      const a = indices[j];
-      const b = indices[j + 1];
-      const c = indices[j + 2];
-      const pointA = face.indexPoints[a];
-      const pointB = face.indexPoints[b];
-      const pointC = face.indexPoints[c];
-      face.indexFaces.push(newIndices.length / 3);
-      newIndices.push(pointA);
-      newIndices.push(pointB);
-      newIndices.push(pointC);
-      j += 2;
-    }
-  }
-
-  private updateIndexBuffer(startIndex: number = 0) {
-    const newIndices = this.createStartList(startIndex);
-    for (let i = startIndex; i < this._clayFaces.length; i++) {
-      const face = this._clayFaces[i];
-      const indices = this.triangulateFace(face);
-      // @ts-ignore
-      this.addTriangulatedFace(face, indices, newIndices);
-    }
-    this._geometry.setIndex(newIndices);
+  private getCoordinate(index: number, coordinates: number[]) {
+    const x = coordinates[index * 3];
+    const y = coordinates[index * 3 + 1];
+    const z = coordinates[index * 3 + 2];
+    return [x, y, z];
   }
 }
