@@ -212,7 +212,7 @@ class Vertices {
     /**
      * Select or unselects the given vertices.
      * @param active Whether to select or unselect.
-     * @param ids List of vertices IDs to add to the selected set. If not
+     * @param ids List of vertices IDs to select or deselect. If not
      * defined, all vertices will be selected or deselected.
      */
     select(active, ids = this.idMap.ids) {
@@ -1147,21 +1147,16 @@ class Faces {
             position: id,
             vertices: new Set(),
             points: new Set(ids),
+            indexStart: -1,
+            indexEnd: -1,
         };
     }
     /**
-     * Adds the points that can be used by one or many faces
+     * Select or unselects the given faces.
+     * @param active Whether to select or unselect.
+     * @param ids List of faces IDs to add to select or unselect. If not
+     * defined, all vertices will be selected or deselected.
      */
-    addPoints(points) {
-        for (const [x, y, z] of points) {
-            const id = this._pointIdGenerator++;
-            this.points[id] = {
-                id,
-                coordinates: [x, y, z],
-                vertices: new Set(),
-            };
-        }
-    }
     select(active, ids) {
         const faceIDs = ids || Object.values(this.faces).map((face) => face.id);
         const idsToUpdate = [];
@@ -1181,6 +1176,19 @@ class Faces {
             }
         }
         this.updateColor(idsToUpdate);
+    }
+    /**
+     * Adds the points that can be used by one or many faces
+     */
+    addPoints(points) {
+        for (const [x, y, z] of points) {
+            const id = this._pointIdGenerator++;
+            this.points[id] = {
+                id,
+                coordinates: [x, y, z],
+                vertices: new Set(),
+            };
+        }
     }
     /**
      * Selects or unselects the given points.
@@ -1217,6 +1225,7 @@ class Faces {
                 point.vertices.add(id);
                 face.vertices.add(id);
             }
+            face.indexStart = allIndices.length;
             const faceIndices = this.triangulate(flatCoordinates);
             const offset = nextIndex;
             for (const faceIndex of faceIndices) {
@@ -1225,6 +1234,7 @@ class Faces {
                     nextIndex = absoluteIndex + 1;
                 allIndices.push(absoluteIndex);
             }
+            face.indexEnd = allIndices.length - 1;
         }
         this._geometry.setIndex(allIndices);
         this.resetBuffers();

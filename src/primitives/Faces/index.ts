@@ -30,6 +30,8 @@ export class Faces implements Primitive {
       position: number;
       vertices: Set<number>;
       points: Set<number>;
+      indexStart: number;
+      indexEnd: number;
     };
   } = {};
 
@@ -119,23 +121,17 @@ export class Faces implements Primitive {
       position: id,
       vertices: new Set(),
       points: new Set(ids),
+      indexStart: -1,
+      indexEnd: -1,
     };
   }
 
   /**
-   * Adds the points that can be used by one or many faces
+   * Select or unselects the given faces.
+   * @param active Whether to select or unselect.
+   * @param ids List of faces IDs to add to select or unselect. If not
+   * defined, all vertices will be selected or deselected.
    */
-  addPoints(points: [number, number, number][]) {
-    for (const [x, y, z] of points) {
-      const id = this._pointIdGenerator++;
-      this.points[id] = {
-        id,
-        coordinates: [x, y, z],
-        vertices: new Set<number>(),
-      };
-    }
-  }
-
   select(active: boolean, ids?: number[]) {
     const faceIDs = ids || Object.values(this.faces).map((face) => face.id);
     const idsToUpdate: number[] = [];
@@ -152,6 +148,20 @@ export class Faces implements Primitive {
       }
     }
     this.updateColor(idsToUpdate);
+  }
+
+  /**
+   * Adds the points that can be used by one or many faces
+   */
+  addPoints(points: [number, number, number][]) {
+    for (const [x, y, z] of points) {
+      const id = this._pointIdGenerator++;
+      this.points[id] = {
+        id,
+        coordinates: [x, y, z],
+        vertices: new Set<number>(),
+      };
+    }
   }
 
   /**
@@ -189,6 +199,7 @@ export class Faces implements Primitive {
         point.vertices.add(id);
         face.vertices.add(id);
       }
+      face.indexStart = allIndices.length;
       const faceIndices = this.triangulate(flatCoordinates);
       const offset = nextIndex;
       for (const faceIndex of faceIndices) {
@@ -196,6 +207,7 @@ export class Faces implements Primitive {
         if (absoluteIndex >= nextIndex) nextIndex = absoluteIndex + 1;
         allIndices.push(absoluteIndex);
       }
+      face.indexEnd = allIndices.length - 1;
     }
     this._geometry.setIndex(allIndices);
     this.resetBuffers();

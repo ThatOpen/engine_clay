@@ -129,7 +129,7 @@ export class Vertices implements Primitive {
   /**
    * Select or unselects the given vertices.
    * @param active Whether to select or unselect.
-   * @param ids List of vertices IDs to add to the selected set. If not
+   * @param ids List of vertices IDs to select or deselect. If not
    * defined, all vertices will be selected or deselected.
    */
   select(active: boolean, ids = this.idMap.ids as Iterable<number>) {
