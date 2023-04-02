@@ -64,7 +64,9 @@
         pointSelectionStart: 0,
         pointSelectionEnd: 0,
         faceSelectionStart: 0,
-        faceSelectionEnd: 0
+        faceSelectionEnd: 0,
+        baseColor: 0x888888,
+        selectColor: 0xff0000,
     }
 
     function setSelectedPoints() {
@@ -99,6 +101,20 @@
     gui.add(settings, "pointSelectionEnd").name("Point selection end").min(0).max(10).step(1).onChange(setSelectedPoints);
     gui.add(settings, "faceSelectionStart").name("Face selection start").min(0).max(6).step(1).onChange(setSelectedFaces);
     gui.add(settings, "faceSelectionEnd").name("Face selection end").min(0).max(6).step(1).onChange(setSelectedFaces);
+
+    const baseColor = new THREE.Color();
+    gui.addColor(settings, "baseColor").name("Base color").onChange(() => {
+        baseColor.set(settings.baseColor);
+        faces.baseColor = baseColor;
+        faces.vertices.baseColor = baseColor;
+    });
+
+    const selectColor = new THREE.Color();
+    gui.addColor(settings, "selectColor").name("Select color").onChange(() => {
+        selectColor.set(settings.selectColor);
+        faces.selectColor = selectColor;
+        faces.vertices.selectColor = selectColor;
+    });
 
 
 </script>

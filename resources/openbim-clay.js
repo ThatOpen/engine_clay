@@ -1059,17 +1059,49 @@ earcut.flatten = function (data) {
 };
 
 class Faces {
+    /**
+     * The color of all the points.
+     */
+    get baseColor() {
+        return this._baseColor;
+    }
+    /**
+     * The color of all the points.
+     */
+    set baseColor(color) {
+        this._baseColor.copy(color);
+        const allIDs = this._ids;
+        const notSelectedIDs = [];
+        for (const id of allIDs) {
+            if (!this._selected.has(id)) {
+                notSelectedIDs.push(id);
+            }
+        }
+        this.updateColor(notSelectedIDs);
+    }
+    /**
+     * The color of all the selected points.
+     */
+    get selectColor() {
+        return this._baseColor;
+    }
+    /**
+     * The color of all the selected points.
+     */
+    set selectColor(color) {
+        this._selectColor.copy(color);
+        this.updateColor(this._selected);
+    }
     get _geometry() {
         return this.mesh.geometry;
     }
     get _colorBuffer() {
         return this.mesh.geometry.attributes.color;
     }
-    get _allIDs() {
+    get _ids() {
         const ids = [];
         for (const id in this.faces) {
-            const face = this.faces[id];
-            ids.push(face.id);
+            ids.push(this.faces[id].id);
         }
         return ids;
     }
@@ -1206,7 +1238,7 @@ class Faces {
         const colorAttribute = new THREE.BufferAttribute(colorBuffer, 3);
         this._geometry.setAttribute("color", colorAttribute);
     }
-    updateColor(ids = this._allIDs) {
+    updateColor(ids = this._ids) {
         const colorAttribute = this._colorBuffer;
         for (const id of ids) {
             const face = this.faces[id];

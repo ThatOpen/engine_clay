@@ -45,6 +45,43 @@ export class Faces implements Primitive {
   private _baseColor = new THREE.Color(0.5, 0.5, 0.5);
   private _selectColor = new THREE.Color(1, 0, 0);
 
+  /**
+   * The color of all the points.
+   */
+  get baseColor() {
+    return this._baseColor;
+  }
+
+  /**
+   * The color of all the points.
+   */
+  set baseColor(color: THREE.Color) {
+    this._baseColor.copy(color);
+    const allIDs = this._ids;
+    const notSelectedIDs: number[] = [];
+    for (const id of allIDs) {
+      if (!this._selected.has(id)) {
+        notSelectedIDs.push(id);
+      }
+    }
+    this.updateColor(notSelectedIDs);
+  }
+
+  /**
+   * The color of all the selected points.
+   */
+  get selectColor() {
+    return this._baseColor;
+  }
+
+  /**
+   * The color of all the selected points.
+   */
+  set selectColor(color: THREE.Color) {
+    this._selectColor.copy(color);
+    this.updateColor(this._selected);
+  }
+
   private get _geometry() {
     return this.mesh.geometry;
   }
