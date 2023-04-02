@@ -10,7 +10,7 @@ export class Vertices implements Primitive {
   mesh: THREE.Points;
 
   /** The map between each vertex ID and its index. */
-  ids = new IdIndexMap();
+  idMap = new IdIndexMap();
 
   private _baseColor: THREE.Color = new THREE.Color(0.5, 0.5, 0.5);
   private _selectColor: THREE.Color = new THREE.Color(1, 0, 0);
@@ -37,7 +37,14 @@ export class Vertices implements Primitive {
    */
   set baseColor(color: THREE.Color) {
     this._baseColor.copy(color);
-    this.updateColor(false);
+    const allIDs = this.idMap.ids;
+    const notSelectedIDs: number[] = [];
+    for (const id of allIDs) {
+      if (!this._selected.has(id)) {
+        notSelectedIDs.push(id);
+      }
+    }
+    this.updateColor(notSelectedIDs);
   }
 
   /**
@@ -52,7 +59,7 @@ export class Vertices implements Primitive {
    */
   set selectColor(color: THREE.Color) {
     this._selectColor.copy(color);
-    this.updateColor(true);
+    this.updateColor(this._selected);
   }
 
   private get _positionBuffer() {
@@ -73,7 +80,12 @@ export class Vertices implements Primitive {
    */
   constructor(size: number = 0.1) {
     const geometry = new THREE.BufferGeometry();
-    const material = this.newPointsMaterial(size);
+
+    const material = new THREE.PointsMaterial({
+      size,
+      vertexColors: true,
+    });
+
     this.mesh = new THREE.Points(geometry, material);
     this.mesh.frustumCulled = false;
     this.resetAttributes();
@@ -84,7 +96,7 @@ export class Vertices implements Primitive {
    * @param id the id of the point to retrieve.
    */
   get(id: number) {
-    const index = this.ids.getIndex(id);
+    const index = this.idMap.getIndex(id);
     if (index === null) return null;
     return [
       this._positionBuffer.getX(index),
@@ -103,8 +115,8 @@ export class Vertices implements Primitive {
     const ids: number[] = [];
     const { r, g, b } = this._baseColor;
     for (let i = 0; i < coordinates.length; i++) {
-      const index = this.ids.add();
-      const id = this.ids.getId(index);
+      const index = this.idMap.add();
+      const id = this.idMap.getId(index);
       ids.push(id);
       const [x, y, z] = coordinates[i];
       this._positionBuffer.setXYZ(index, x, y, z);
@@ -120,13 +132,23 @@ export class Vertices implements Primitive {
    * @param ids List of vertices IDs to add to the selected set. If not
    * defined, all vertices will be selected or deselected.
    */
-  select(active: boolean, ids?: number[]) {
-    if (active) {
-      this.selectPoints(ids);
-    } else {
-      this.unselectPoints(ids);
+  select(active: boolean, ids = this.idMap.ids as Iterable<number>) {
+    const idsToUpdate: number[] = [];
+    for (const id of ids) {
+      const exists = this.idMap.getIndex(id) !== null;
+      if (!exists) continue;
+      const isAlreadySelected = this._selected.has(id);
+      if (active) {
+        if (isAlreadySelected) continue;
+        this._selected.add(id);
+        idsToUpdate.push(id);
+      } else {
+        if (!isAlreadySelected) continue;
+        this._selected.delete(id);
+        idsToUpdate.push(id);
+      }
     }
-    this._colorBuffer.needsUpdate = true;
+    this.updateColor(idsToUpdate);
   }
 
   /**
@@ -167,7 +189,7 @@ export class Vertices implements Primitive {
   transform(transformation: THREE.Matrix4) {
     const vector = new THREE.Vector3();
     for (const id of this._selected) {
-      const index = this.ids.getIndex(id);
+      const index = this.idMap.getIndex(id);
       if (index === null) continue;
       const x = this._positionBuffer.getX(index);
       const y = this._positionBuffer.getY(index);
@@ -185,54 +207,34 @@ export class Vertices implements Primitive {
   clear() {
     this.resetAttributes();
     this._selected.clear();
-    this.ids.reset();
+    this.idMap.reset();
   }
 
   /**
    * Removes the selected points from the list
    */
   remove() {
-    const selected = this._selected.values();
-    for (const id of selected) {
-      const index = this.ids.getIndex(id);
-      if (index === null) continue;
-      const lastIndex = this.ids.getLastIndex();
-      this.removeFromPositionBuffer(index, lastIndex);
-      this.removeFromColorBuffer(index, lastIndex);
-      this.ids.remove(id);
+    const position = this._positionBuffer;
+    const color = this._colorBuffer;
+    for (const id of this._selected) {
+      this._selected.delete(id);
+      this.removeFromBuffer(id, position);
+      this.removeFromBuffer(id, color);
+      this.idMap.remove(id);
     }
     this.updateBuffersCount();
-    this._positionBuffer.needsUpdate = true;
-    this._colorBuffer.needsUpdate = true;
-  }
-
-  private selectPoints(ids?: number[]) {
-    const selection = ids || this.ids.ids;
-    for (const id of selection) {
-      const index = this.ids.getIndex(id);
-      if (index === null) continue;
-      this._selected.add(id);
-      this._colorBuffer.setX(index, this._selectColor.r);
-      this._colorBuffer.setY(index, this._selectColor.g);
-      this._colorBuffer.setZ(index, this._selectColor.b);
-    }
-  }
-
-  private unselectPoints(ids?: number[]) {
-    this.removeSelectColor(ids);
-    if (!ids) {
-      this._selected.clear();
-      return;
-    }
-    for (const id of ids) {
-      this._selected.delete(id);
-    }
   }
 
   private updateBuffersCount() {
-    const size = this.ids.size;
-    this._positionBuffer.count = size;
-    this._colorBuffer.count = size;
+    const size = this.idMap.size;
+
+    const position = this._positionBuffer;
+    position.count = size;
+    position.needsUpdate = true;
+
+    const color = this._colorBuffer;
+    color.count = size;
+    color.needsUpdate = true;
   }
 
   private resetAttributes() {
@@ -243,22 +245,17 @@ export class Vertices implements Primitive {
     this._capacity = 0;
   }
 
-  private removeFromColorBuffer(index: number, lastIndex: number) {
-    this._colorBuffer.setXYZ(
-      index,
-      this._colorBuffer.getX(lastIndex),
-      this._colorBuffer.getY(lastIndex),
-      this._colorBuffer.getZ(lastIndex)
-    );
-  }
-
-  private removeFromPositionBuffer(index: number, lastIndex: number) {
-    this._positionBuffer.setXYZ(
-      index,
-      this._positionBuffer.getX(lastIndex),
-      this._positionBuffer.getY(lastIndex),
-      this._positionBuffer.getZ(lastIndex)
-    );
+  private removeFromBuffer(id: number, buffer: THREE.BufferAttribute) {
+    const lastIndex = this.idMap.getLastIndex();
+    const index = this.idMap.getIndex(id);
+    if (index !== null) {
+      buffer.setXYZ(
+        index,
+        buffer.getX(lastIndex),
+        buffer.getY(lastIndex),
+        buffer.getZ(lastIndex)
+      );
+    }
   }
 
   private resizeBufferIfNecessary(increase: number) {
@@ -298,36 +295,14 @@ export class Vertices implements Primitive {
     this._geometry.setAttribute(name, newBuffer);
   }
 
-  private updateColor(select: boolean) {
-    const allIDs = this.ids.ids;
-    for (const id of allIDs) {
+  private updateColor(ids = this.idMap.ids as Iterable<number>) {
+    for (const id of ids) {
       const isSelected = this._selected.has(id);
-      if (select !== isSelected) continue;
-      const index = this.ids.getIndex(id);
+      const index = this.idMap.getIndex(id);
       if (!index) continue;
-      const color = select ? this._selectColor : this._baseColor;
+      const color = isSelected ? this._selectColor : this._baseColor;
       this._colorBuffer.setXYZ(index, color.r, color.g, color.b);
     }
     this._colorBuffer.needsUpdate = true;
-  }
-
-  private removeSelectColor(ids = Array.from(this._selected)) {
-    for (const id of ids) {
-      const index = this.ids.getIndex(id);
-      if (index === null) return;
-      this._colorBuffer.setXYZ(
-        index,
-        this._baseColor.r,
-        this._baseColor.g,
-        this._baseColor.b
-      );
-    }
-  }
-
-  private newPointsMaterial(size: number) {
-    return new THREE.PointsMaterial({
-      size,
-      vertexColors: true,
-    });
   }
 }

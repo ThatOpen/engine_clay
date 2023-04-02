@@ -122,7 +122,14 @@ class Vertices {
      */
     set baseColor(color) {
         this._baseColor.copy(color);
-        this.updateColor(false);
+        const allIDs = this.idMap.ids;
+        const notSelectedIDs = [];
+        for (const id of allIDs) {
+            if (!this._selected.has(id)) {
+                notSelectedIDs.push(id);
+            }
+        }
+        this.updateColor(notSelectedIDs);
     }
     /**
      * The color of all the selected points.
@@ -135,7 +142,7 @@ class Vertices {
      */
     set selectColor(color) {
         this._selectColor.copy(color);
-        this.updateColor(true);
+        this.updateColor(this._selected);
     }
     get _positionBuffer() {
         return this._geometry.attributes.position;
@@ -154,13 +161,16 @@ class Vertices {
         /** Buffer increment when geometry size is exceeded, multiple of 3. */
         this.bufferIncrease = 300;
         /** The map between each vertex ID and its index. */
-        this.ids = new IdIndexMap();
+        this.idMap = new IdIndexMap();
         this._baseColor = new THREE.Color(0.5, 0.5, 0.5);
         this._selectColor = new THREE.Color(1, 0, 0);
         this._capacity = 0;
         this._selected = new Set();
         const geometry = new THREE.BufferGeometry();
-        const material = this.newPointsMaterial(size);
+        const material = new THREE.PointsMaterial({
+            size,
+            vertexColors: true,
+        });
         this.mesh = new THREE.Points(geometry, material);
         this.mesh.frustumCulled = false;
         this.resetAttributes();
@@ -170,7 +180,7 @@ class Vertices {
      * @param id the id of the point to retrieve.
      */
     get(id) {
-        const index = this.ids.getIndex(id);
+        const index = this.idMap.getIndex(id);
         if (index === null)
             return null;
         return [
@@ -189,8 +199,8 @@ class Vertices {
         const ids = [];
         const { r, g, b } = this._baseColor;
         for (let i = 0; i < coordinates.length; i++) {
-            const index = this.ids.add();
-            const id = this.ids.getId(index);
+            const index = this.idMap.add();
+            const id = this.idMap.getId(index);
             ids.push(id);
             const [x, y, z] = coordinates[i];
             this._positionBuffer.setXYZ(index, x, y, z);
@@ -205,14 +215,27 @@ class Vertices {
      * @param ids List of vertices IDs to add to the selected set. If not
      * defined, all vertices will be selected or deselected.
      */
-    select(active, ids) {
-        if (active) {
-            this.selectPoints(ids);
+    select(active, ids = this.idMap.ids) {
+        const idsToUpdate = [];
+        for (const id of ids) {
+            const exists = this.idMap.getIndex(id) !== null;
+            if (!exists)
+                continue;
+            const isAlreadySelected = this._selected.has(id);
+            if (active) {
+                if (isAlreadySelected)
+                    continue;
+                this._selected.add(id);
+                idsToUpdate.push(id);
+            }
+            else {
+                if (!isAlreadySelected)
+                    continue;
+                this._selected.delete(id);
+                idsToUpdate.push(id);
+            }
         }
-        else {
-            this.unselectPoints(ids);
-        }
-        this._colorBuffer.needsUpdate = true;
+        this.updateColor(idsToUpdate);
     }
     /**
      * Apply a displacement vector to the selected points
@@ -249,7 +272,7 @@ class Vertices {
     transform(transformation) {
         const vector = new THREE.Vector3();
         for (const id of this._selected) {
-            const index = this.ids.getIndex(id);
+            const index = this.idMap.getIndex(id);
             if (index === null)
                 continue;
             const x = this._positionBuffer.getX(index);
@@ -267,52 +290,30 @@ class Vertices {
     clear() {
         this.resetAttributes();
         this._selected.clear();
-        this.ids.reset();
+        this.idMap.reset();
     }
     /**
      * Removes the selected points from the list
      */
     remove() {
-        const selected = this._selected.values();
-        for (const id of selected) {
-            const index = this.ids.getIndex(id);
-            if (index === null)
-                continue;
-            const lastIndex = this.ids.getLastIndex();
-            this.removeFromPositionBuffer(index, lastIndex);
-            this.removeFromColorBuffer(index, lastIndex);
-            this.ids.remove(id);
+        const position = this._positionBuffer;
+        const color = this._colorBuffer;
+        for (const id of this._selected) {
+            this._selected.delete(id);
+            this.removeFromBuffer(id, position);
+            this.removeFromBuffer(id, color);
+            this.idMap.remove(id);
         }
         this.updateBuffersCount();
-        this._positionBuffer.needsUpdate = true;
-        this._colorBuffer.needsUpdate = true;
-    }
-    selectPoints(ids) {
-        const selection = ids || this.ids.ids;
-        for (const id of selection) {
-            const index = this.ids.getIndex(id);
-            if (index === null)
-                continue;
-            this._selected.add(id);
-            this._colorBuffer.setX(index, this._selectColor.r);
-            this._colorBuffer.setY(index, this._selectColor.g);
-            this._colorBuffer.setZ(index, this._selectColor.b);
-        }
-    }
-    unselectPoints(ids) {
-        this.removeSelectColor(ids);
-        if (!ids) {
-            this._selected.clear();
-            return;
-        }
-        for (const id of ids) {
-            this._selected.delete(id);
-        }
     }
     updateBuffersCount() {
-        const size = this.ids.size;
-        this._positionBuffer.count = size;
-        this._colorBuffer.count = size;
+        const size = this.idMap.size;
+        const position = this._positionBuffer;
+        position.count = size;
+        position.needsUpdate = true;
+        const color = this._colorBuffer;
+        color.count = size;
+        color.needsUpdate = true;
     }
     resetAttributes() {
         const positionBuffer = new THREE.BufferAttribute(new Float32Array(0), 3);
@@ -321,11 +322,12 @@ class Vertices {
         this._geometry.setAttribute("color", colorBuffer);
         this._capacity = 0;
     }
-    removeFromColorBuffer(index, lastIndex) {
-        this._colorBuffer.setXYZ(index, this._colorBuffer.getX(lastIndex), this._colorBuffer.getY(lastIndex), this._colorBuffer.getZ(lastIndex));
-    }
-    removeFromPositionBuffer(index, lastIndex) {
-        this._positionBuffer.setXYZ(index, this._positionBuffer.getX(lastIndex), this._positionBuffer.getY(lastIndex), this._positionBuffer.getZ(lastIndex));
+    removeFromBuffer(id, buffer) {
+        const lastIndex = this.idMap.getLastIndex();
+        const index = this.idMap.getIndex(id);
+        if (index !== null) {
+            buffer.setXYZ(index, buffer.getX(lastIndex), buffer.getY(lastIndex), buffer.getZ(lastIndex));
+        }
     }
     resizeBufferIfNecessary(increase) {
         const position = this._geometry.getAttribute("position");
@@ -361,33 +363,16 @@ class Vertices {
         newBuffer.count = count;
         this._geometry.setAttribute(name, newBuffer);
     }
-    updateColor(select) {
-        const allIDs = this.ids.ids;
-        for (const id of allIDs) {
+    updateColor(ids = this.idMap.ids) {
+        for (const id of ids) {
             const isSelected = this._selected.has(id);
-            if (select !== isSelected)
-                continue;
-            const index = this.ids.getIndex(id);
+            const index = this.idMap.getIndex(id);
             if (!index)
                 continue;
-            const color = select ? this._selectColor : this._baseColor;
+            const color = isSelected ? this._selectColor : this._baseColor;
             this._colorBuffer.setXYZ(index, color.r, color.g, color.b);
         }
         this._colorBuffer.needsUpdate = true;
-    }
-    removeSelectColor(ids = Array.from(this._selected)) {
-        for (const id of ids) {
-            const index = this.ids.getIndex(id);
-            if (index === null)
-                return;
-            this._colorBuffer.setXYZ(index, this._baseColor.r, this._baseColor.g, this._baseColor.b);
-        }
-    }
-    newPointsMaterial(size) {
-        return new THREE.PointsMaterial({
-            size,
-            vertexColors: true,
-        });
     }
 }
 
@@ -1149,17 +1134,18 @@ class Faces {
         const faceIDs = ids || Object.values(this.faces).map((face) => face.id);
         const idsToUpdate = [];
         for (const id of faceIDs) {
+            const isAlreadySelected = this._selected.has(id);
             if (active) {
-                if (!this._selected.has(id)) {
-                    idsToUpdate.push(id);
-                }
+                if (isAlreadySelected)
+                    continue;
                 this._selected.add(id);
+                idsToUpdate.push(id);
             }
             else {
-                if (this._selected.has(id)) {
-                    idsToUpdate.push(id);
-                }
+                if (!isAlreadySelected)
+                    continue;
                 this._selected.delete(id);
+                idsToUpdate.push(id);
             }
         }
         this.updateColor(idsToUpdate);
@@ -1227,7 +1213,7 @@ class Faces {
             const isSelected = this._selected.has(face.id);
             const { r, g, b } = isSelected ? this._selectColor : this._baseColor;
             for (const vertexID of face.vertices) {
-                const index = this.vertices.ids.getIndex(vertexID);
+                const index = this.vertices.idMap.getIndex(vertexID);
                 if (index === null)
                     continue;
                 colorAttribute.setXYZ(index, r, g, b);

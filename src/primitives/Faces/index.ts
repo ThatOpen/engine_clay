@@ -53,11 +53,10 @@ export class Faces implements Primitive {
     return this.mesh.geometry.attributes.color as THREE.BufferAttribute;
   }
 
-  private get _allIDs() {
+  private get _ids() {
     const ids: number[] = [];
     for (const id in this.faces) {
-      const face = this.faces[id];
-      ids.push(face.id);
+      ids.push(this.faces[id].id);
     }
     return ids;
   }
@@ -104,16 +103,15 @@ export class Faces implements Primitive {
     const faceIDs = ids || Object.values(this.faces).map((face) => face.id);
     const idsToUpdate: number[] = [];
     for (const id of faceIDs) {
+      const isAlreadySelected = this._selected.has(id);
       if (active) {
-        if (!this._selected.has(id)) {
-          idsToUpdate.push(id);
-        }
+        if (isAlreadySelected) continue;
         this._selected.add(id);
+        idsToUpdate.push(id);
       } else {
-        if (this._selected.has(id)) {
-          idsToUpdate.push(id);
-        }
+        if (!isAlreadySelected) continue;
         this._selected.delete(id);
+        idsToUpdate.push(id);
       }
     }
     this.updateColor(idsToUpdate);
@@ -177,14 +175,14 @@ export class Faces implements Primitive {
     this._geometry.setAttribute("color", colorAttribute);
   }
 
-  private updateColor(ids = this._allIDs) {
+  private updateColor(ids = this._ids as Iterable<number>) {
     const colorAttribute = this._colorBuffer;
     for (const id of ids) {
       const face = this.faces[id];
       const isSelected = this._selected.has(face.id);
       const { r, g, b } = isSelected ? this._selectColor : this._baseColor;
       for (const vertexID of face.vertices) {
-        const index = this.vertices.ids.getIndex(vertexID);
+        const index = this.vertices.idMap.getIndex(vertexID);
         if (index === null) continue;
         colorAttribute.setXYZ(index, r, g, b);
       }
