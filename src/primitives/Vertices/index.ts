@@ -9,11 +9,13 @@ export class Vertices implements Primitive {
   /** {@link Primitive.mesh } */
   mesh: THREE.Points;
 
+  /** The map between each vertex ID and its index. */
+  ids = new IdIndexMap();
+
   private _baseColor: THREE.Color = new THREE.Color(0.5, 0.5, 0.5);
   private _selectColor: THREE.Color = new THREE.Color(1, 0, 0);
   private _capacity = 0;
   private _selected = new Set<number>();
-  private _items = new IdIndexMap();
 
   /**
    * Number of points
@@ -58,7 +60,7 @@ export class Vertices implements Primitive {
   }
 
   private get _colorBuffer() {
-    return this._geometry.attributes.color as THREE.BufferAttribute;
+    return this.mesh.geometry.attributes.color as THREE.BufferAttribute;
   }
 
   private get _geometry() {
@@ -82,7 +84,7 @@ export class Vertices implements Primitive {
    * @param id the id of the point to retrieve.
    */
   get(id: number) {
-    const index = this._items.getIndex(id);
+    const index = this.ids.getIndex(id);
     if (index === null) return null;
     return [
       this._positionBuffer.getX(index),
@@ -99,13 +101,13 @@ export class Vertices implements Primitive {
   add(coordinates: [number, number, number][]) {
     this.resizeBufferIfNecessary(coordinates.length);
     const ids: number[] = [];
+    const { r, g, b } = this._baseColor;
     for (let i = 0; i < coordinates.length; i++) {
-      const index = this._items.add();
-      const id = this._items.getId(index);
+      const index = this.ids.add();
+      const id = this.ids.getId(index);
       ids.push(id);
       const [x, y, z] = coordinates[i];
       this._positionBuffer.setXYZ(index, x, y, z);
-      const { r, g, b } = this._baseColor;
       this._colorBuffer.setXYZ(index, r, g, b);
     }
     this.updateBuffersCount();
@@ -113,10 +115,10 @@ export class Vertices implements Primitive {
   }
 
   /**
-   * Creates a set of selected points
-   * @param active When true we will select, when false we will unselect
-   * @param ids List of point IDs to add to the selected set. If not
-   * defined, all items will be selected or deselected.
+   * Select or unselects the given vertices.
+   * @param active Whether to select or unselect.
+   * @param ids List of vertices IDs to add to the selected set. If not
+   * defined, all vertices will be selected or deselected.
    */
   select(active: boolean, ids?: number[]) {
     if (active) {
@@ -165,7 +167,7 @@ export class Vertices implements Primitive {
   transform(transformation: THREE.Matrix4) {
     const vector = new THREE.Vector3();
     for (const id of this._selected) {
-      const index = this._items.getIndex(id);
+      const index = this.ids.getIndex(id);
       if (index === null) continue;
       const x = this._positionBuffer.getX(index);
       const y = this._positionBuffer.getY(index);
@@ -183,7 +185,7 @@ export class Vertices implements Primitive {
   clear() {
     this.resetAttributes();
     this._selected.clear();
-    this._items.reset();
+    this.ids.reset();
   }
 
   /**
@@ -192,12 +194,12 @@ export class Vertices implements Primitive {
   remove() {
     const selected = this._selected.values();
     for (const id of selected) {
-      const index = this._items.getIndex(id);
+      const index = this.ids.getIndex(id);
       if (index === null) continue;
-      const lastIndex = this._items.getLastIndex();
+      const lastIndex = this.ids.getLastIndex();
       this.removeFromPositionBuffer(index, lastIndex);
       this.removeFromColorBuffer(index, lastIndex);
-      this._items.remove(id);
+      this.ids.remove(id);
     }
     this.updateBuffersCount();
     this._positionBuffer.needsUpdate = true;
@@ -205,9 +207,9 @@ export class Vertices implements Primitive {
   }
 
   private selectPoints(ids?: number[]) {
-    const selection = ids || this._items.ids;
+    const selection = ids || this.ids.ids;
     for (const id of selection) {
-      const index = this._items.getIndex(id);
+      const index = this.ids.getIndex(id);
       if (index === null) continue;
       this._selected.add(id);
       this._colorBuffer.setX(index, this._selectColor.r);
@@ -228,7 +230,7 @@ export class Vertices implements Primitive {
   }
 
   private updateBuffersCount() {
-    const size = this._items.size;
+    const size = this.ids.size;
     this._positionBuffer.count = size;
     this._colorBuffer.count = size;
   }
@@ -297,11 +299,11 @@ export class Vertices implements Primitive {
   }
 
   private updateColor(select: boolean) {
-    const allIDs = this._items.ids;
+    const allIDs = this.ids.ids;
     for (const id of allIDs) {
       const isSelected = this._selected.has(id);
       if (select !== isSelected) continue;
-      const index = this._items.getIndex(id);
+      const index = this.ids.getIndex(id);
       if (!index) continue;
       const color = select ? this._selectColor : this._baseColor;
       this._colorBuffer.setXYZ(index, color.r, color.g, color.b);
@@ -311,7 +313,7 @@ export class Vertices implements Primitive {
 
   private removeSelectColor(ids = Array.from(this._selected)) {
     for (const id of ids) {
-      const index = this._items.getIndex(id);
+      const index = this.ids.getIndex(id);
       if (index === null) return;
       this._colorBuffer.setXYZ(
         index,

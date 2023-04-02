@@ -141,7 +141,7 @@ class Vertices {
         return this._geometry.attributes.position;
     }
     get _colorBuffer() {
-        return this._geometry.attributes.color;
+        return this.mesh.geometry.attributes.color;
     }
     get _geometry() {
         return this.mesh.geometry;
@@ -153,11 +153,12 @@ class Vertices {
     constructor(size = 0.1) {
         /** Buffer increment when geometry size is exceeded, multiple of 3. */
         this.bufferIncrease = 300;
+        /** The map between each vertex ID and its index. */
+        this.ids = new IdIndexMap();
         this._baseColor = new THREE.Color(0.5, 0.5, 0.5);
         this._selectColor = new THREE.Color(1, 0, 0);
         this._capacity = 0;
         this._selected = new Set();
-        this._items = new IdIndexMap();
         const geometry = new THREE.BufferGeometry();
         const material = this.newPointsMaterial(size);
         this.mesh = new THREE.Points(geometry, material);
@@ -169,7 +170,7 @@ class Vertices {
      * @param id the id of the point to retrieve.
      */
     get(id) {
-        const index = this._items.getIndex(id);
+        const index = this.ids.getIndex(id);
         if (index === null)
             return null;
         return [
@@ -186,23 +187,23 @@ class Vertices {
     add(coordinates) {
         this.resizeBufferIfNecessary(coordinates.length);
         const ids = [];
+        const { r, g, b } = this._baseColor;
         for (let i = 0; i < coordinates.length; i++) {
-            const index = this._items.add();
-            const id = this._items.getId(index);
+            const index = this.ids.add();
+            const id = this.ids.getId(index);
             ids.push(id);
             const [x, y, z] = coordinates[i];
             this._positionBuffer.setXYZ(index, x, y, z);
-            const { r, g, b } = this._baseColor;
             this._colorBuffer.setXYZ(index, r, g, b);
         }
         this.updateBuffersCount();
         return ids;
     }
     /**
-     * Creates a set of selected points
-     * @param active When true we will select, when false we will unselect
-     * @param ids List of point IDs to add to the selected set. If not
-     * defined, all items will be selected or deselected.
+     * Select or unselects the given vertices.
+     * @param active Whether to select or unselect.
+     * @param ids List of vertices IDs to add to the selected set. If not
+     * defined, all vertices will be selected or deselected.
      */
     select(active, ids) {
         if (active) {
@@ -248,7 +249,7 @@ class Vertices {
     transform(transformation) {
         const vector = new THREE.Vector3();
         for (const id of this._selected) {
-            const index = this._items.getIndex(id);
+            const index = this.ids.getIndex(id);
             if (index === null)
                 continue;
             const x = this._positionBuffer.getX(index);
@@ -266,7 +267,7 @@ class Vertices {
     clear() {
         this.resetAttributes();
         this._selected.clear();
-        this._items.reset();
+        this.ids.reset();
     }
     /**
      * Removes the selected points from the list
@@ -274,22 +275,22 @@ class Vertices {
     remove() {
         const selected = this._selected.values();
         for (const id of selected) {
-            const index = this._items.getIndex(id);
+            const index = this.ids.getIndex(id);
             if (index === null)
                 continue;
-            const lastIndex = this._items.getLastIndex();
+            const lastIndex = this.ids.getLastIndex();
             this.removeFromPositionBuffer(index, lastIndex);
             this.removeFromColorBuffer(index, lastIndex);
-            this._items.remove(id);
+            this.ids.remove(id);
         }
         this.updateBuffersCount();
         this._positionBuffer.needsUpdate = true;
         this._colorBuffer.needsUpdate = true;
     }
     selectPoints(ids) {
-        const selection = ids || this._items.ids;
+        const selection = ids || this.ids.ids;
         for (const id of selection) {
-            const index = this._items.getIndex(id);
+            const index = this.ids.getIndex(id);
             if (index === null)
                 continue;
             this._selected.add(id);
@@ -309,7 +310,7 @@ class Vertices {
         }
     }
     updateBuffersCount() {
-        const size = this._items.size;
+        const size = this.ids.size;
         this._positionBuffer.count = size;
         this._colorBuffer.count = size;
     }
@@ -361,12 +362,12 @@ class Vertices {
         this._geometry.setAttribute(name, newBuffer);
     }
     updateColor(select) {
-        const allIDs = this._items.ids;
+        const allIDs = this.ids.ids;
         for (const id of allIDs) {
             const isSelected = this._selected.has(id);
             if (select !== isSelected)
                 continue;
-            const index = this._items.getIndex(id);
+            const index = this.ids.getIndex(id);
             if (!index)
                 continue;
             const color = select ? this._selectColor : this._baseColor;
@@ -376,7 +377,7 @@ class Vertices {
     }
     removeSelectColor(ids = Array.from(this._selected)) {
         for (const id of ids) {
-            const index = this._items.getIndex(id);
+            const index = this.ids.getIndex(id);
             if (index === null)
                 return;
             this._colorBuffer.setXYZ(index, this._baseColor.r, this._baseColor.g, this._baseColor.b);
@@ -1076,6 +1077,17 @@ class Faces {
     get _geometry() {
         return this.mesh.geometry;
     }
+    get _colorBuffer() {
+        return this.mesh.geometry.attributes.color;
+    }
+    get _allIDs() {
+        const ids = [];
+        for (const id in this.faces) {
+            const face = this.faces[id];
+            ids.push(face.id);
+        }
+        return ids;
+    }
     constructor() {
         /** {@link Primitive.mesh } */
         this.mesh = new THREE.Mesh();
@@ -1090,16 +1102,22 @@ class Faces {
          * TODO: Implement inner points.
          */
         this.faces = {};
+        /**
+         * The geometric representation of the vertices that define this instance of faces.
+         */
+        this.vertices = new Vertices();
         this._faceIdGenerator = 0;
         this._pointIdGenerator = 0;
-        this._vertices = new Vertices();
-        this._baseMaterial = new THREE.MeshLambertMaterial({
+        this._selected = new Set();
+        this._baseColor = new THREE.Color(0.5, 0.5, 0.5);
+        this._selectColor = new THREE.Color(1, 0, 0);
+        this.resetBuffers();
+        const material = new THREE.MeshLambertMaterial({
             side: THREE.DoubleSide,
-            color: 0x888888,
+            vertexColors: true,
         });
-        this.updatePositionBuffer();
         const geometry = new THREE.BufferGeometry();
-        this.mesh = new THREE.Mesh(geometry, this._baseMaterial);
+        this.mesh = new THREE.Mesh(geometry, material);
     }
     /**
      * Adds a face.
@@ -1108,8 +1126,10 @@ class Faces {
     add(ids) {
         const id = this._faceIdGenerator++;
         this.faces[id] = {
+            id,
             position: id,
-            points: ids,
+            vertices: new Set(),
+            points: new Set(ids),
         };
     }
     /**
@@ -1119,15 +1139,54 @@ class Faces {
         for (const [x, y, z] of points) {
             const id = this._pointIdGenerator++;
             this.points[id] = {
+                id,
                 coordinates: [x, y, z],
-                verticesIDs: new Set(),
+                vertices: new Set(),
             };
         }
     }
+    select(active, ids) {
+        const faceIDs = ids || Object.values(this.faces).map((face) => face.id);
+        const idsToUpdate = [];
+        for (const id of faceIDs) {
+            if (active) {
+                if (!this._selected.has(id)) {
+                    idsToUpdate.push(id);
+                }
+                this._selected.add(id);
+            }
+            else {
+                if (this._selected.has(id)) {
+                    idsToUpdate.push(id);
+                }
+                this._selected.delete(id);
+            }
+        }
+        this.updateColor(idsToUpdate);
+    }
+    /**
+     * Selects or unselects the given points.
+     * @param active When true we will select, when false we will unselect
+     * @param ids List of point IDs to add to the selected set. If not
+     * defined, all points will be selected or deselected.
+     */
+    selectPoints(active, ids) {
+        const pointsIDs = ids || Object.values(this.points).map((p) => p.id);
+        const vertices = [];
+        for (const id of pointsIDs) {
+            const point = this.points[id];
+            if (!point)
+                continue;
+            for (const id of point.vertices) {
+                vertices.push(id);
+            }
+        }
+        this.vertices.select(active, vertices);
+    }
     regenerate() {
-        this._vertices.clear();
+        this.vertices.clear();
         this._geometry.deleteAttribute("position");
-        this.updatePositionBuffer();
+        this.resetBuffers();
         const allIndices = [];
         let nextIndex = 0;
         for (const faceID in this.faces) {
@@ -1136,8 +1195,9 @@ class Faces {
             for (const pointID of face.points) {
                 const point = this.points[pointID];
                 flatCoordinates.push(...point.coordinates);
-                const [id] = this._vertices.add([point.coordinates]);
-                point.verticesIDs.add(id);
+                const [id] = this.vertices.add([point.coordinates]);
+                point.vertices.add(id);
+                face.vertices.add(id);
             }
             const faceIndices = this.triangulate(flatCoordinates);
             const offset = nextIndex;
@@ -1149,12 +1209,31 @@ class Faces {
             }
         }
         this._geometry.setIndex(allIndices);
-        this.updatePositionBuffer();
+        this.resetBuffers();
+        this.updateColor();
         this._geometry.computeVertexNormals();
     }
-    updatePositionBuffer() {
-        const positionBuffer = this._vertices.mesh.geometry.attributes.position;
+    resetBuffers() {
+        const positionBuffer = this.vertices.mesh.geometry.attributes.position;
         this._geometry.setAttribute("position", positionBuffer);
+        const colorBuffer = new Float32Array(positionBuffer.count * 3);
+        const colorAttribute = new THREE.BufferAttribute(colorBuffer, 3);
+        this._geometry.setAttribute("color", colorAttribute);
+    }
+    updateColor(ids = this._allIDs) {
+        const colorAttribute = this._colorBuffer;
+        for (const id of ids) {
+            const face = this.faces[id];
+            const isSelected = this._selected.has(face.id);
+            const { r, g, b } = isSelected ? this._selectColor : this._baseColor;
+            for (const vertexID of face.vertices) {
+                const index = this.vertices.ids.getIndex(vertexID);
+                if (index === null)
+                    continue;
+                colorAttribute.setXYZ(index, r, g, b);
+            }
+        }
+        colorAttribute.needsUpdate = true;
     }
     triangulate(coordinates) {
         // Earcut only supports 2d triangulations, so let's project the face

@@ -1,15 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta
-          name="viewport"
-          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"
-  />
-  <meta http-equiv="X-UA-Compatible" content="ie=edge" />
-  <link rel="stylesheet" href="../../../resources/styles.css" />
-  <link rel="icon" type="image/x-icon" href="../../../resources/favicon.ico" />
-  <title>Components | Hello world</title>
+    <meta charset="UTF-8"/>
+    <meta
+            name="viewport"
+            content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"
+    />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge"/>
+    <link rel="stylesheet" href="../../../resources/styles.css"/>
+    <link rel="icon" type="image/x-icon" href="../../../resources/favicon.ico"/>
+    <title>Components | Hello world</title>
 </head>
 <body>
 <canvas class="full-screen" id="container"></canvas>
@@ -26,123 +26,124 @@
           "three/examples/controls/TransformControls.js": "https://unpkg.com/three@0.135.0/examples/jsm/controls/TransformControls.js"
         }
       }
-    </script>
+
+</script>
 <script type="module">
-	import * as THREE from "three";
-	import { SimpleThreeScene } from "../../../resources/simple-three-scene.js";
-	import { TransformControls } from "three/examples/controls/TransformControls.js";
-	import * as OBC from "../../../resources/openbim-clay.js";
-	import * as dat from "three/examples/jsm/libs/lil-gui.module.min";
+    import * as THREE from "three";
+    import {SimpleThreeScene} from "../../../resources/simple-three-scene.js";
+    import {TransformControls} from "three/examples/controls/TransformControls.js";
+    import * as OBC from "../../../resources/openbim-clay.js";
+    import * as dat from "three/examples/jsm/libs/lil-gui.module.min";
 
-	const canvas = document.getElementById("container");
-	const world = new SimpleThreeScene(canvas);
+    const canvas = document.getElementById("container");
+    const world = new SimpleThreeScene(canvas);
 
-	const settings = {
-		numberOfPoints: 10,
-    selectionStart: 0,
-    selectionEnd: 5,
-    baseColor: 0x888888,
-    selectColor: 0xff0000,
-    transformMode: "translate",
-    distance: 0.2,
-    pointSize: 0.1,
-    remove: removeVertices
-	}
+    const settings = {
+        numberOfPoints: 10,
+        selectionStart: 0,
+        selectionEnd: 5,
+        baseColor: 0x888888,
+        selectColor: 0xff0000,
+        transformMode: "translate",
+        distance: 0.2,
+        pointSize: 0.1,
+        remove: removeVertices
+    }
 
-	// Set up the vertices
+    // Set up the vertices
 
-	const vertices = new OBC.Vertices(0.05);
-	world.scene.add(vertices.mesh);
+    const vertices = new OBC.Vertices(0.05);
+    world.scene.add(vertices.mesh);
 
-	// Set up the controls to move them around
+    // Set up the controls to move them around
 
-	const control = new TransformControls(world.camera, world.renderer.domElement);
-	const helper = new THREE.Object3D();
-	let transform = new THREE.Matrix4();
-	world.scene.add(helper);
-	control.attach(helper);
-	world.scene.add(control);
+    const control = new TransformControls(world.camera, world.renderer.domElement);
+    const helper = new THREE.Object3D();
+    let transform = new THREE.Matrix4();
+    world.scene.add(helper);
+    control.attach(helper);
+    world.scene.add(control);
 
-	setPoints();
+    setPoints();
 
-	function setPoints() {
-		vertices.clear();
-		resetControls();
-		const newVertices = [];
-		for (let i = 0; i < settings.numberOfPoints; i++) {
-			const offset = i * settings.distance;
-			newVertices.push([offset, offset, offset]);
-		}
-		vertices.add(newVertices);
-		setSelected();
-  }
+    function setPoints() {
+        vertices.clear();
+        resetControls();
+        const newVertices = [];
+        for (let i = 0; i < settings.numberOfPoints; i++) {
+            const offset = i * settings.distance;
+            newVertices.push([offset, offset, offset]);
+        }
+        vertices.add(newVertices);
+        setSelected();
+    }
 
-	function setSelected() {
-    const min = Math.min(settings.numberOfPoints, settings.selectionEnd);
-		const selection = [];
-		for (let i = settings.selectionStart; i < min; i++) {
-			selection.push(i);
-		}
-		vertices.select(false);
-		vertices.select(true, selection);
-  }
+    function setSelected() {
+        const min = Math.min(settings.numberOfPoints, settings.selectionEnd);
+        const selection = [];
+        for (let i = settings.selectionStart; i < min; i++) {
+            selection.push(i);
+        }
+        vertices.select(false);
+        vertices.select(true, selection);
+    }
 
-  // Control logic
+    // Control logic
 
-	function resetControls() {
-		control.detach();
+    function resetControls() {
+        control.detach();
 
-		helper.position.set(0, 0, 0);
-		helper.rotation.set(0, 0, 0);
-		helper.scale.set(1, 1, 1);
-		control.attach(helper);
-  }
+        helper.position.set(0, 0, 0);
+        helper.rotation.set(0, 0, 0);
+        helper.scale.set(1, 1, 1);
+        control.attach(helper);
+    }
 
-	control.addEventListener("dragging-changed", (event) => world.controls.enabled = ! event.value);
-	control.addEventListener( 'change', () => {
-		  helper.updateMatrix();
-			const temp = helper.matrix.clone();
-		  temp.multiply(transform.invert());
-      vertices.transform(temp);
-			transform = helper.matrix.clone();
-  });
+    control.addEventListener("dragging-changed", (event) => world.controls.enabled = !event.value);
+    control.addEventListener('change', () => {
+        helper.updateMatrix();
+        const temp = helper.matrix.clone();
+        temp.multiply(transform.invert());
+        vertices.transform(temp);
+        transform = helper.matrix.clone();
+    });
 
-	function removeVertices() {
-		vertices.remove();
-  }
+    function removeVertices() {
+        vertices.remove();
+    }
 
 
-	// Set up GUI
+    // Set up GUI
 
-	const gui = new dat.GUI();
-  gui.add(settings, "numberOfPoints").name("Number of points").min(0).max(10).step(1).onChange(setPoints);
-	gui.add(settings, "selectionStart").name("Selection start").min(0).max(10).step(1).onChange(setSelected);
-	gui.add(settings, "selectionEnd").name("Selection end").min(0).max(10).step(1).onChange(setSelected);
-	gui.add(settings, "distance").name("Distance").min(0.1).max(1).step(0.01).onChange(setPoints);
-	gui.add(settings, "pointSize").name("Point size").min(0.1).max(1).step(0.05).onChange(() => {
-		vertices.mesh.material.size = settings.pointSize;
-  });
+    const gui = new dat.GUI();
+    gui.add(settings, "numberOfPoints").name("Number of points").min(0).max(10).step(1).onChange(setPoints);
+    gui.add(settings, "selectionStart").name("Selection start").min(0).max(10).step(1).onChange(setSelected);
+    gui.add(settings, "selectionEnd").name("Selection end").min(0).max(10).step(1).onChange(setSelected);
+    gui.add(settings, "distance").name("Distance").min(0.1).max(1).step(0.01).onChange(setPoints);
+    gui.add(settings, "pointSize").name("Point size").min(0.1).max(1).step(0.05).onChange(() => {
+        vertices.mesh.material.size = settings.pointSize;
+    });
 
-	const baseColor = new THREE.Color();
-	gui.addColor(settings, "baseColor").name("Base color").onChange(() => {
-		baseColor.set(settings.baseColor);
-		vertices.baseColor = baseColor;
-  });
+    const baseColor = new THREE.Color();
+    gui.addColor(settings, "baseColor").name("Base color").onChange(() => {
+        baseColor.set(settings.baseColor);
+        vertices.baseColor = baseColor;
+    });
 
-	const selectColor = new THREE.Color();
-	gui.addColor(settings, "selectColor").name("Select color").onChange(() => {
-		selectColor.set(settings.selectColor);
-		vertices.selectColor = selectColor;
-	});
+    const selectColor = new THREE.Color();
+    gui.addColor(settings, "selectColor").name("Select color").onChange(() => {
+        selectColor.set(settings.selectColor);
+        vertices.selectColor = selectColor;
+    });
 
-	// gui.add(settings, "selectionColor").name("Selection color").min(0).max(1000).onChange(setSelected);
+    // gui.add(settings, "selectionColor").name("Selection color").min(0).max(1000).onChange(setSelected);
 
-	gui.add(settings, "transformMode", {translate: "translate", rotate: "rotate", scale: "scale"})
-    .name("Transform mode").min(0).max(1000).onChange((result) => {
-			control.setMode(result);
-  });
+    gui.add(settings, "transformMode", {translate: "translate", rotate: "rotate", scale: "scale"})
+        .name("Transform mode").min(0).max(1000).onChange((result) => {
+        control.setMode(result);
+    });
 
-	gui.add(settings, "remove").name("Remove selected");
+    gui.add(settings, "remove").name("Remove selected");
 
 
 </script>
