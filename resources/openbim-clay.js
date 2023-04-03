@@ -367,7 +367,7 @@ class Vertices {
         for (const id of ids) {
             const isSelected = this._selected.has(id);
             const index = this.idMap.getIndex(id);
-            if (!index)
+            if (index === null)
                 continue;
             const color = isSelected ? this._selectColor : this._baseColor;
             this._colorBuffer.setXYZ(index, color.r, color.g, color.b);
@@ -1144,11 +1144,9 @@ class Faces {
         const id = this._faceIdGenerator++;
         this.faces[id] = {
             id,
-            position: id,
             vertices: new Set(),
             points: new Set(ids),
             indexStart: -1,
-            indexEnd: -1,
         };
     }
     /**
@@ -1211,7 +1209,6 @@ class Faces {
     }
     regenerate() {
         this.vertices.clear();
-        this._geometry.deleteAttribute("position");
         this.resetBuffers();
         const allIndices = [];
         let nextIndex = 0;
@@ -1234,7 +1231,6 @@ class Faces {
                     nextIndex = absoluteIndex + 1;
                 allIndices.push(absoluteIndex);
             }
-            face.indexEnd = allIndices.length - 1;
         }
         this._geometry.setIndex(allIndices);
         this.resetBuffers();

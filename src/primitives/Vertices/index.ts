@@ -299,7 +299,7 @@ export class Vertices implements Primitive {
     for (const id of ids) {
       const isSelected = this._selected.has(id);
       const index = this.idMap.getIndex(id);
-      if (!index) continue;
+      if (index === null) continue;
       const color = isSelected ? this._selectColor : this._baseColor;
       this._colorBuffer.setXYZ(index, color.r, color.g, color.b);
     }

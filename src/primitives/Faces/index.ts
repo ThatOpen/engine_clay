@@ -27,11 +27,9 @@ export class Faces implements Primitive {
   faces: {
     [id: number]: {
       id: number;
-      position: number;
       vertices: Set<number>;
       points: Set<number>;
       indexStart: number;
-      indexEnd: number;
     };
   } = {};
 
@@ -118,11 +116,9 @@ export class Faces implements Primitive {
     const id = this._faceIdGenerator++;
     this.faces[id] = {
       id,
-      position: id,
       vertices: new Set(),
       points: new Set(ids),
       indexStart: -1,
-      indexEnd: -1,
     };
   }
 
@@ -185,7 +181,6 @@ export class Faces implements Primitive {
 
   regenerate() {
     this.vertices.clear();
-    this._geometry.deleteAttribute("position");
     this.resetBuffers();
     const allIndices: number[] = [];
     let nextIndex = 0;
@@ -207,7 +202,6 @@ export class Faces implements Primitive {
         if (absoluteIndex >= nextIndex) nextIndex = absoluteIndex + 1;
         allIndices.push(absoluteIndex);
       }
-      face.indexEnd = allIndices.length - 1;
     }
     this._geometry.setIndex(allIndices);
     this.resetBuffers();

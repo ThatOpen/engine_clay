@@ -115,6 +115,7 @@
     // Set up GUI
 
     const gui = new dat.GUI();
+
     gui.add(settings, "numberOfPoints").name("Number of points").min(0).max(10).step(1).onChange(setPoints);
     gui.add(settings, "selectionStart").name("Selection start").min(0).max(10).step(1).onChange(setSelected);
     gui.add(settings, "selectionEnd").name("Selection end").min(0).max(10).step(1).onChange(setSelected);
