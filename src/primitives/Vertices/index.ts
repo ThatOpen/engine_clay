@@ -213,15 +213,15 @@ export class Vertices implements Primitive {
   /**
    * Removes the selected points from the list
    */
-  remove() {
+  remove(ids = this._selected as Iterable<number>) {
     const position = this._positionBuffer;
     const color = this._colorBuffer;
-    for (const id of this._selected) {
-      this._selected.delete(id);
+    for (const id of ids) {
       this.removeFromBuffer(id, position);
       this.removeFromBuffer(id, color);
       this.idMap.remove(id);
     }
+    this.select(false, ids);
     this.updateBuffersCount();
   }
 

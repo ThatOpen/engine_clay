@@ -80,6 +80,7 @@
         faceSelectionEnd: 0,
         baseColor: 0x888888,
         selectColor: 0xff0000,
+        delete: deleteSelectedFaces
     }
 
     function setSelectedPoints() {
@@ -98,6 +99,10 @@
         }
         faces.select(false);
         faces.select(true, selection);
+    }
+
+    function deleteSelectedFaces() {
+        faces.remove();
     }
 
     const gui = new dat.GUI();
@@ -128,6 +133,8 @@
         faces.selectColor = selectColor;
         faces.vertices.selectColor = selectColor;
     });
+
+    gui.add(settings, "delete").name("Delete selected faces").onChange(deleteSelectedFaces);
 
 
 </script>

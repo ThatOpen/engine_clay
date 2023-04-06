@@ -29,7 +29,6 @@ export class Faces implements Primitive {
       id: number;
       vertices: Set<number>;
       points: Set<number>;
-      indexStart: number;
     };
   } = {};
 
@@ -98,6 +97,13 @@ export class Faces implements Primitive {
     return ids;
   }
 
+  private get _index() {
+    if (!this.mesh.geometry.index) {
+      throw new Error("Geometery must be indexed!");
+    }
+    return this.mesh.geometry.index;
+  }
+
   constructor() {
     this.resetBuffers();
     const material = new THREE.MeshLambertMaterial({
@@ -118,8 +124,57 @@ export class Faces implements Primitive {
       id,
       vertices: new Set(),
       points: new Set(ids),
-      indexStart: -1,
     };
+  }
+
+  remove(ids = this._selected as Iterable<number>) {
+    const verticesToRemove: number[] = [];
+    for (const id of ids) {
+      const face = this.faces[id];
+      for (const vertex of face.vertices) {
+        verticesToRemove.push(vertex);
+      }
+      delete this.faces[id];
+    }
+
+    for (const id of ids) {
+      this._selected.delete(id);
+    }
+
+    const indexMap = new Map<number, number>();
+    const indicesToRemove = new Set<number>();
+    let counter = this.vertices.idMap.size - 1;
+    for (const vertex of verticesToRemove) {
+      const indexToRemove = this.vertices.idMap.getIndex(vertex);
+      if (indexToRemove === null) {
+        throw new Error(`Error getting the index for the vertex ${vertex}`);
+      }
+      indicesToRemove.add(indexToRemove);
+      indexMap.set(counter, indexToRemove);
+      counter--;
+    }
+
+    this.vertices.remove(verticesToRemove);
+    this.resetBuffers();
+    this.updateColor();
+
+    const newIndex: number[] = [];
+    const oldIndex = this._index.array as number[];
+    for (const index of oldIndex) {
+      const wasVertexDeleted = indicesToRemove.has(index);
+      const wasVertexRelocated = indexMap.has(index);
+      if (wasVertexDeleted) {
+        continue;
+      } else if (wasVertexRelocated) {
+        const substitutingIndex = indexMap.get(index)!;
+        newIndex.push(substitutingIndex);
+      } else {
+        newIndex.push(index);
+      }
+    }
+
+    this.mesh.geometry.setIndex(newIndex);
+    this.mesh.geometry.computeVertexNormals();
   }
 
   /**
@@ -132,6 +187,9 @@ export class Faces implements Primitive {
     const faceIDs = ids || Object.values(this.faces).map((face) => face.id);
     const idsToUpdate: number[] = [];
     for (const id of faceIDs) {
+      const exists = this.faces[id] !== undefined;
+      if (!exists) continue;
+
       const isAlreadySelected = this._selected.has(id);
       if (active) {
         if (isAlreadySelected) continue;
@@ -194,7 +252,6 @@ export class Faces implements Primitive {
         point.vertices.add(id);
         face.vertices.add(id);
       }
-      face.indexStart = allIndices.length;
       const faceIndices = this.triangulate(flatCoordinates);
       const offset = nextIndex;
       for (const faceIndex of faceIndices) {

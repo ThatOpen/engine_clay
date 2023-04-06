@@ -295,15 +295,15 @@ class Vertices {
     /**
      * Removes the selected points from the list
      */
-    remove() {
+    remove(ids = this._selected) {
         const position = this._positionBuffer;
         const color = this._colorBuffer;
-        for (const id of this._selected) {
-            this._selected.delete(id);
+        for (const id of ids) {
             this.removeFromBuffer(id, position);
             this.removeFromBuffer(id, color);
             this.idMap.remove(id);
         }
+        this.select(false, ids);
         this.updateBuffersCount();
     }
     updateBuffersCount() {
@@ -1105,6 +1105,12 @@ class Faces {
         }
         return ids;
     }
+    get _index() {
+        if (!this.mesh.geometry.index) {
+            throw new Error("Geometery must be indexed!");
+        }
+        return this.mesh.geometry.index;
+    }
     constructor() {
         /** {@link Primitive.mesh } */
         this.mesh = new THREE.Mesh();
@@ -1146,8 +1152,53 @@ class Faces {
             id,
             vertices: new Set(),
             points: new Set(ids),
-            indexStart: -1,
         };
+    }
+    remove(ids = this._selected) {
+        const verticesToRemove = [];
+        for (const id of ids) {
+            const face = this.faces[id];
+            for (const vertex of face.vertices) {
+                verticesToRemove.push(vertex);
+            }
+            delete this.faces[id];
+        }
+        for (const id of ids) {
+            this._selected.delete(id);
+        }
+        const indexMap = new Map();
+        const indicesToRemove = new Set();
+        let counter = this.vertices.idMap.size - 1;
+        for (const vertex of verticesToRemove) {
+            const indexToRemove = this.vertices.idMap.getIndex(vertex);
+            if (indexToRemove === null) {
+                throw new Error(`Error getting the index for the vertex ${vertex}`);
+            }
+            indicesToRemove.add(indexToRemove);
+            indexMap.set(counter, indexToRemove);
+            counter--;
+        }
+        this.vertices.remove(verticesToRemove);
+        this.resetBuffers();
+        this.updateColor();
+        const newIndex = [];
+        const oldIndex = this._index.array;
+        for (const index of oldIndex) {
+            const wasVertexDeleted = indicesToRemove.has(index);
+            const wasVertexRelocated = indexMap.has(index);
+            if (wasVertexDeleted) {
+                continue;
+            }
+            else if (wasVertexRelocated) {
+                const substitutingIndex = indexMap.get(index);
+                newIndex.push(substitutingIndex);
+            }
+            else {
+                newIndex.push(index);
+            }
+        }
+        this.mesh.geometry.setIndex(newIndex);
+        this.mesh.geometry.computeVertexNormals();
     }
     /**
      * Select or unselects the given faces.
@@ -1159,6 +1210,9 @@ class Faces {
         const faceIDs = ids || Object.values(this.faces).map((face) => face.id);
         const idsToUpdate = [];
         for (const id of faceIDs) {
+            const exists = this.faces[id] !== undefined;
+            if (!exists)
+                continue;
             const isAlreadySelected = this._selected.has(id);
             if (active) {
                 if (isAlreadySelected)
@@ -1222,7 +1276,6 @@ class Faces {
                 point.vertices.add(id);
                 face.vertices.add(id);
             }
-            face.indexStart = allIndices.length;
             const faceIndices = this.triangulate(flatCoordinates);
             const offset = nextIndex;
             for (const faceIndex of faceIndices) {
