@@ -269,6 +269,26 @@ export class Faces implements Primitive {
     this.vertices.select(active, vertices);
   }
 
+  transform(matrix: THREE.Matrix4) {
+    const vertices = new Set<number>();
+    for (const id of this.selected) {
+      const face = this.faces[id];
+      for (const pointID of face.points) {
+        const point = this.points[pointID];
+        for (const vertex of point.vertices) {
+          vertices.add(vertex);
+        }
+      }
+    }
+    for (const id of this.selectedPoints) {
+      const point = this.points[id];
+      for (const vertex of point.vertices) {
+        vertices.add(vertex);
+      }
+    }
+    this.vertices.transform(matrix, vertices);
+  }
+
   regenerate() {
     this.vertices.clear();
     this.resetBuffers();

@@ -155,42 +155,49 @@ export class Vertices implements Primitive {
 
   /**
    * Apply a displacement vector to the selected points
-   * @param displacement Displacement vector
+   * @param displacement Displacement vector.
+   * @param ids IDs of the vertices to move.
    */
-  move(displacement: THREE.Vector3) {
+  move(displacement: THREE.Vector3, ids = this.selected as Iterable<number>) {
     const transform = new THREE.Matrix4();
     transform.setPosition(displacement);
-    this.transform(transform);
+    this.transform(transform, ids);
   }
 
   /**
    * Rotate the selected points
-   * @param rotation euler rotation
+   * @param rotation euler rotation.
+   * @param ids IDs of the vertices to rotate.
    */
-  rotate(rotation: THREE.Vector3) {
+  rotate(rotation: THREE.Vector3, ids = this.selected as Iterable<number>) {
     const transform = new THREE.Matrix4();
     const { x, y, z } = rotation;
     transform.makeRotationFromEuler(new THREE.Euler(x, y, z));
-    this.transform(transform);
+    this.transform(transform, ids);
   }
 
   /**
    * Scale the selected points
-   * @param scale Scale vector
+   * @param scale Scale vector.
+   * @param ids IDs of the vertices to scale.
    */
-  scale(scale: THREE.Vector3) {
+  scale(scale: THREE.Vector3, ids = this.selected as Iterable<number>) {
     const transform = new THREE.Matrix4();
     transform.scale(scale);
-    this.transform(transform);
+    this.transform(transform, ids);
   }
 
   /**
    * Applies a transformation to the selected vertices.
    * @param transformation Transformation matrix to apply.
+   * @param ids IDs of the vertices to transform.
    */
-  transform(transformation: THREE.Matrix4) {
+  transform(
+    transformation: THREE.Matrix4,
+    ids = this.selected as Iterable<number>
+  ) {
     const vector = new THREE.Vector3();
-    for (const id of this.selected) {
+    for (const id of ids) {
       const index = this.idMap.getIndex(id);
       if (index === null) continue;
       const x = this._positionBuffer.getX(index);

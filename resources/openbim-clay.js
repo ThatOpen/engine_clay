@@ -246,39 +246,43 @@ class Vertices {
     }
     /**
      * Apply a displacement vector to the selected points
-     * @param displacement Displacement vector
+     * @param displacement Displacement vector.
+     * @param ids IDs of the vertices to move.
      */
-    move(displacement) {
+    move(displacement, ids = this.selected) {
         const transform = new THREE.Matrix4();
         transform.setPosition(displacement);
-        this.transform(transform);
+        this.transform(transform, ids);
     }
     /**
      * Rotate the selected points
-     * @param rotation euler rotation
+     * @param rotation euler rotation.
+     * @param ids IDs of the vertices to rotate.
      */
-    rotate(rotation) {
+    rotate(rotation, ids = this.selected) {
         const transform = new THREE.Matrix4();
         const { x, y, z } = rotation;
         transform.makeRotationFromEuler(new THREE.Euler(x, y, z));
-        this.transform(transform);
+        this.transform(transform, ids);
     }
     /**
      * Scale the selected points
-     * @param scale Scale vector
+     * @param scale Scale vector.
+     * @param ids IDs of the vertices to scale.
      */
-    scale(scale) {
+    scale(scale, ids = this.selected) {
         const transform = new THREE.Matrix4();
         transform.scale(scale);
-        this.transform(transform);
+        this.transform(transform, ids);
     }
     /**
      * Applies a transformation to the selected vertices.
      * @param transformation Transformation matrix to apply.
+     * @param ids IDs of the vertices to transform.
      */
-    transform(transformation) {
+    transform(transformation, ids = this.selected) {
         const vector = new THREE.Vector3();
-        for (const id of this.selected) {
+        for (const id of ids) {
             const index = this.idMap.getIndex(id);
             if (index === null)
                 continue;
@@ -1295,6 +1299,25 @@ class Faces {
             }
         }
         this.vertices.select(active, vertices);
+    }
+    transform(matrix) {
+        const vertices = new Set();
+        for (const id of this.selected) {
+            const face = this.faces[id];
+            for (const pointID of face.points) {
+                const point = this.points[pointID];
+                for (const vertex of point.vertices) {
+                    vertices.add(vertex);
+                }
+            }
+        }
+        for (const id of this.selectedPoints) {
+            const point = this.points[id];
+            for (const vertex of point.vertices) {
+                vertices.add(vertex);
+            }
+        }
+        this.vertices.transform(matrix, vertices);
     }
     regenerate() {
         this.vertices.clear();
