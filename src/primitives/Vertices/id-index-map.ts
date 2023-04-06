@@ -99,9 +99,16 @@ export class IdIndexMap {
   }
 
   /**
-   * Gets the last ID of the geometry buffer.
+   * Gets the last index of the geometry buffer.
    */
   getLastIndex() {
     return this.size - 1;
+  }
+
+  /**
+   * Gets the last ID in the geometry buffer.
+   */
+  getLastID() {
+    return this._ids[this._ids.length - 1];
   }
 }

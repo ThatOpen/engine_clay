@@ -96,10 +96,16 @@ class IdIndexMap {
         return this._indices[id];
     }
     /**
-     * Gets the last ID of the geometry buffer.
+     * Gets the last index of the geometry buffer.
      */
     getLastIndex() {
         return this.size - 1;
+    }
+    /**
+     * Gets the last ID in the geometry buffer.
+     */
+    getLastID() {
+        return this._ids[this._ids.length - 1];
     }
 }
 
@@ -125,7 +131,7 @@ class Vertices {
         const allIDs = this.idMap.ids;
         const notSelectedIDs = [];
         for (const id of allIDs) {
-            if (!this._selected.has(id)) {
+            if (!this.selected.has(id)) {
                 notSelectedIDs.push(id);
             }
         }
@@ -142,7 +148,7 @@ class Vertices {
      */
     set selectColor(color) {
         this._selectColor.copy(color);
-        this.updateColor(this._selected);
+        this.updateColor(this.selected);
     }
     get _positionBuffer() {
         return this._geometry.attributes.position;
@@ -162,10 +168,11 @@ class Vertices {
         this.bufferIncrease = 300;
         /** The map between each vertex ID and its index. */
         this.idMap = new IdIndexMap();
+        /** The IDs of the selected vertices. */
+        this.selected = new Set();
         this._baseColor = new THREE.Color(0.5, 0.5, 0.5);
         this._selectColor = new THREE.Color(1, 0, 0);
         this._capacity = 0;
-        this._selected = new Set();
         const geometry = new THREE.BufferGeometry();
         const material = new THREE.PointsMaterial({
             size,
@@ -221,17 +228,17 @@ class Vertices {
             const exists = this.idMap.getIndex(id) !== null;
             if (!exists)
                 continue;
-            const isAlreadySelected = this._selected.has(id);
+            const isAlreadySelected = this.selected.has(id);
             if (active) {
                 if (isAlreadySelected)
                     continue;
-                this._selected.add(id);
+                this.selected.add(id);
                 idsToUpdate.push(id);
             }
             else {
                 if (!isAlreadySelected)
                     continue;
-                this._selected.delete(id);
+                this.selected.delete(id);
                 idsToUpdate.push(id);
             }
         }
@@ -271,7 +278,7 @@ class Vertices {
      */
     transform(transformation) {
         const vector = new THREE.Vector3();
-        for (const id of this._selected) {
+        for (const id of this.selected) {
             const index = this.idMap.getIndex(id);
             if (index === null)
                 continue;
@@ -289,13 +296,13 @@ class Vertices {
      */
     clear() {
         this.resetAttributes();
-        this._selected.clear();
+        this.selected.clear();
         this.idMap.reset();
     }
     /**
      * Removes the selected points from the list
      */
-    remove(ids = this._selected) {
+    remove(ids = this.selected) {
         const position = this._positionBuffer;
         const color = this._colorBuffer;
         for (const id of ids) {
@@ -365,7 +372,7 @@ class Vertices {
     }
     updateColor(ids = this.idMap.ids) {
         for (const id of ids) {
-            const isSelected = this._selected.has(id);
+            const isSelected = this.selected.has(id);
             const index = this.idMap.getIndex(id);
             if (index === null)
                 continue;
@@ -1073,7 +1080,7 @@ class Faces {
         const allIDs = this._ids;
         const notSelectedIDs = [];
         for (const id of allIDs) {
-            if (!this._selected.has(id)) {
+            if (!this.selected.has(id)) {
                 notSelectedIDs.push(id);
             }
         }
@@ -1090,7 +1097,7 @@ class Faces {
      */
     set selectColor(color) {
         this._selectColor.copy(color);
-        this.updateColor(this._selected);
+        this.updateColor(this.selected);
     }
     get _geometry() {
         return this.mesh.geometry;
@@ -1129,9 +1136,12 @@ class Faces {
          * The geometric representation of the vertices that define this instance of faces.
          */
         this.vertices = new Vertices();
+        /** The IDs of the selected faces. */
+        this.selected = new Set();
+        /** The IDs of the selected points. */
+        this.selectedPoints = new Set();
         this._faceIdGenerator = 0;
         this._pointIdGenerator = 0;
-        this._selected = new Set();
         this._baseColor = new THREE.Color(0.5, 0.5, 0.5);
         this._selectColor = new THREE.Color(1, 0, 0);
         this.resetBuffers();
@@ -1148,57 +1158,70 @@ class Faces {
      */
     add(ids) {
         const id = this._faceIdGenerator++;
+        for (const pointID of ids) {
+            const point = this.points[pointID];
+            point.faces.add(id);
+        }
         this.faces[id] = {
             id,
             vertices: new Set(),
             points: new Set(ids),
         };
     }
-    remove(ids = this._selected) {
-        const verticesToRemove = [];
+    /**
+     * Removes faces.
+     * @param ids List of faces to remove. If no face is specified,
+     * removes all the selected faces.
+     */
+    remove(ids = this.selected) {
+        const verticesToRemove = new Set();
         for (const id of ids) {
             const face = this.faces[id];
             for (const vertex of face.vertices) {
-                verticesToRemove.push(vertex);
+                verticesToRemove.add(vertex);
+            }
+            for (const pointID of face.points) {
+                const point = this.points[pointID];
+                if (point) {
+                    point.faces.delete(id);
+                }
             }
             delete this.faces[id];
         }
         for (const id of ids) {
-            this._selected.delete(id);
+            this.selected.delete(id);
         }
-        const indexMap = new Map();
-        const indicesToRemove = new Set();
-        let counter = this.vertices.idMap.size - 1;
-        for (const vertex of verticesToRemove) {
-            const indexToRemove = this.vertices.idMap.getIndex(vertex);
-            if (indexToRemove === null) {
-                throw new Error(`Error getting the index for the vertex ${vertex}`);
-            }
-            indicesToRemove.add(indexToRemove);
-            indexMap.set(counter, indexToRemove);
-            counter--;
-        }
-        this.vertices.remove(verticesToRemove);
-        this.resetBuffers();
-        this.updateColor();
-        const newIndex = [];
+        const idsArray = [];
         const oldIndex = this._index.array;
         for (const index of oldIndex) {
-            const wasVertexDeleted = indicesToRemove.has(index);
-            const wasVertexRelocated = indexMap.has(index);
-            if (wasVertexDeleted) {
-                continue;
-            }
-            else if (wasVertexRelocated) {
-                const substitutingIndex = indexMap.get(index);
-                newIndex.push(substitutingIndex);
-            }
-            else {
+            const id = this.vertices.idMap.getId(index);
+            idsArray.push(id);
+        }
+        this.vertices.remove(verticesToRemove);
+        const newIndex = [];
+        for (const id of idsArray) {
+            const index = this.vertices.idMap.getIndex(id);
+            if (index !== null) {
                 newIndex.push(index);
             }
         }
+        this.resetBuffers();
+        this.updateColor();
         this.mesh.geometry.setIndex(newIndex);
         this.mesh.geometry.computeVertexNormals();
+    }
+    removePoints(ids = this.selectedPoints) {
+        const facesToRemove = new Set();
+        for (const id of ids) {
+            const point = this.points[id];
+            if (!point)
+                continue;
+            for (const face of point.faces) {
+                facesToRemove.add(face);
+            }
+            delete this.points[id];
+        }
+        this.remove(facesToRemove);
     }
     /**
      * Select or unselects the given faces.
@@ -1213,17 +1236,17 @@ class Faces {
             const exists = this.faces[id] !== undefined;
             if (!exists)
                 continue;
-            const isAlreadySelected = this._selected.has(id);
+            const isAlreadySelected = this.selected.has(id);
             if (active) {
                 if (isAlreadySelected)
                     continue;
-                this._selected.add(id);
+                this.selected.add(id);
                 idsToUpdate.push(id);
             }
             else {
                 if (!isAlreadySelected)
                     continue;
-                this._selected.delete(id);
+                this.selected.delete(id);
                 idsToUpdate.push(id);
             }
         }
@@ -1239,6 +1262,7 @@ class Faces {
                 id,
                 coordinates: [x, y, z],
                 vertices: new Set(),
+                faces: new Set(),
             };
         }
     }
@@ -1253,8 +1277,19 @@ class Faces {
         const vertices = [];
         for (const id of pointsIDs) {
             const point = this.points[id];
-            if (!point)
+            if (point === undefined)
                 continue;
+            const isAlreadySelected = this.selectedPoints.has(id);
+            if (active) {
+                if (isAlreadySelected)
+                    continue;
+                this.selectedPoints.add(id);
+            }
+            else {
+                if (!isAlreadySelected)
+                    continue;
+                this.selectedPoints.delete(id);
+            }
             for (const id of point.vertices) {
                 vertices.push(id);
             }
@@ -1301,7 +1336,7 @@ class Faces {
         const colorAttribute = this._colorBuffer;
         for (const id of ids) {
             const face = this.faces[id];
-            const isSelected = this._selected.has(face.id);
+            const isSelected = this.selected.has(face.id);
             const { r, g, b } = isSelected ? this._selectColor : this._baseColor;
             for (const vertexID of face.vertices) {
                 const index = this.vertices.idMap.getIndex(vertexID);

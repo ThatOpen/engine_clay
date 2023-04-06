@@ -62,9 +62,6 @@
     // Edit faces
     // faces.set(1, [3, 2, 1, 4, 5])
 
-    // Remove faces
-    // faces.remove([1, 2]);
-
     // Remove points
     // faces.removePoints([2, 3])
 
@@ -80,7 +77,8 @@
         faceSelectionEnd: 0,
         baseColor: 0x888888,
         selectColor: 0xff0000,
-        delete: deleteSelectedFaces
+        delete: deleteSelectedFaces,
+        deletePoints: deleteSelectedPoints
     }
 
     function setSelectedPoints() {
@@ -103,6 +101,10 @@
 
     function deleteSelectedFaces() {
         faces.remove();
+    }
+
+    function deleteSelectedPoints() {
+        faces.removePoints();
     }
 
     const gui = new dat.GUI();
@@ -135,6 +137,7 @@
     });
 
     gui.add(settings, "delete").name("Delete selected faces").onChange(deleteSelectedFaces);
+    gui.add(settings, "deletePoints").name("Delete selected points").onChange(deleteSelectedPoints);
 
 
 </script>

@@ -12,10 +12,12 @@ export class Vertices implements Primitive {
   /** The map between each vertex ID and its index. */
   idMap = new IdIndexMap();
 
+  /** The IDs of the selected vertices. */
+  selected = new Set<number>();
+
   private _baseColor: THREE.Color = new THREE.Color(0.5, 0.5, 0.5);
   private _selectColor: THREE.Color = new THREE.Color(1, 0, 0);
   private _capacity = 0;
-  private _selected = new Set<number>();
 
   /**
    * Number of points
@@ -40,7 +42,7 @@ export class Vertices implements Primitive {
     const allIDs = this.idMap.ids;
     const notSelectedIDs: number[] = [];
     for (const id of allIDs) {
-      if (!this._selected.has(id)) {
+      if (!this.selected.has(id)) {
         notSelectedIDs.push(id);
       }
     }
@@ -59,7 +61,7 @@ export class Vertices implements Primitive {
    */
   set selectColor(color: THREE.Color) {
     this._selectColor.copy(color);
-    this.updateColor(this._selected);
+    this.updateColor(this.selected);
   }
 
   private get _positionBuffer() {
@@ -137,14 +139,14 @@ export class Vertices implements Primitive {
     for (const id of ids) {
       const exists = this.idMap.getIndex(id) !== null;
       if (!exists) continue;
-      const isAlreadySelected = this._selected.has(id);
+      const isAlreadySelected = this.selected.has(id);
       if (active) {
         if (isAlreadySelected) continue;
-        this._selected.add(id);
+        this.selected.add(id);
         idsToUpdate.push(id);
       } else {
         if (!isAlreadySelected) continue;
-        this._selected.delete(id);
+        this.selected.delete(id);
         idsToUpdate.push(id);
       }
     }
@@ -188,7 +190,7 @@ export class Vertices implements Primitive {
    */
   transform(transformation: THREE.Matrix4) {
     const vector = new THREE.Vector3();
-    for (const id of this._selected) {
+    for (const id of this.selected) {
       const index = this.idMap.getIndex(id);
       if (index === null) continue;
       const x = this._positionBuffer.getX(index);
@@ -206,14 +208,14 @@ export class Vertices implements Primitive {
    */
   clear() {
     this.resetAttributes();
-    this._selected.clear();
+    this.selected.clear();
     this.idMap.reset();
   }
 
   /**
    * Removes the selected points from the list
    */
-  remove(ids = this._selected as Iterable<number>) {
+  remove(ids = this.selected as Iterable<number>) {
     const position = this._positionBuffer;
     const color = this._colorBuffer;
     for (const id of ids) {
@@ -297,7 +299,7 @@ export class Vertices implements Primitive {
 
   private updateColor(ids = this.idMap.ids as Iterable<number>) {
     for (const id of ids) {
-      const isSelected = this._selected.has(id);
+      const isSelected = this.selected.has(id);
       const index = this.idMap.getIndex(id);
       if (index === null) continue;
       const color = isSelected ? this._selectColor : this._baseColor;

@@ -17,6 +17,7 @@ export class Faces implements Primitive {
       coordinates: [number, number, number];
       vertices: Set<number>;
       id: number;
+      faces: Set<number>;
     };
   } = {};
 
@@ -37,9 +38,14 @@ export class Faces implements Primitive {
    */
   vertices: Vertices = new Vertices();
 
+  /** The IDs of the selected faces. */
+  selected = new Set<number>();
+
+  /** The IDs of the selected points. */
+  selectedPoints = new Set<number>();
+
   private _faceIdGenerator = 0;
   private _pointIdGenerator = 0;
-  private _selected = new Set<number>();
 
   private _baseColor = new THREE.Color(0.5, 0.5, 0.5);
   private _selectColor = new THREE.Color(1, 0, 0);
@@ -59,7 +65,7 @@ export class Faces implements Primitive {
     const allIDs = this._ids;
     const notSelectedIDs: number[] = [];
     for (const id of allIDs) {
-      if (!this._selected.has(id)) {
+      if (!this.selected.has(id)) {
         notSelectedIDs.push(id);
       }
     }
@@ -78,7 +84,7 @@ export class Faces implements Primitive {
    */
   set selectColor(color: THREE.Color) {
     this._selectColor.copy(color);
-    this.updateColor(this._selected);
+    this.updateColor(this.selected);
   }
 
   private get _geometry() {
@@ -120,6 +126,10 @@ export class Faces implements Primitive {
    */
   add(ids: number[]) {
     const id = this._faceIdGenerator++;
+    for (const pointID of ids) {
+      const point = this.points[pointID];
+      point.faces.add(id);
+    }
     this.faces[id] = {
       id,
       vertices: new Set(),
@@ -127,54 +137,65 @@ export class Faces implements Primitive {
     };
   }
 
-  remove(ids = this._selected as Iterable<number>) {
-    const verticesToRemove: number[] = [];
+  /**
+   * Removes faces.
+   * @param ids List of faces to remove. If no face is specified,
+   * removes all the selected faces.
+   */
+  remove(ids = this.selected as Iterable<number>) {
+    const verticesToRemove = new Set<number>();
     for (const id of ids) {
       const face = this.faces[id];
       for (const vertex of face.vertices) {
-        verticesToRemove.push(vertex);
+        verticesToRemove.add(vertex);
+      }
+      for (const pointID of face.points) {
+        const point = this.points[pointID];
+        if (point) {
+          point.faces.delete(id);
+        }
       }
       delete this.faces[id];
     }
 
     for (const id of ids) {
-      this._selected.delete(id);
+      this.selected.delete(id);
     }
 
-    const indexMap = new Map<number, number>();
-    const indicesToRemove = new Set<number>();
-    let counter = this.vertices.idMap.size - 1;
-    for (const vertex of verticesToRemove) {
-      const indexToRemove = this.vertices.idMap.getIndex(vertex);
-      if (indexToRemove === null) {
-        throw new Error(`Error getting the index for the vertex ${vertex}`);
-      }
-      indicesToRemove.add(indexToRemove);
-      indexMap.set(counter, indexToRemove);
-      counter--;
+    const idsArray: number[] = [];
+    const oldIndex = this._index.array as number[];
+    for (const index of oldIndex) {
+      const id = this.vertices.idMap.getId(index);
+      idsArray.push(id);
     }
 
     this.vertices.remove(verticesToRemove);
-    this.resetBuffers();
-    this.updateColor();
 
     const newIndex: number[] = [];
-    const oldIndex = this._index.array as number[];
-    for (const index of oldIndex) {
-      const wasVertexDeleted = indicesToRemove.has(index);
-      const wasVertexRelocated = indexMap.has(index);
-      if (wasVertexDeleted) {
-        continue;
-      } else if (wasVertexRelocated) {
-        const substitutingIndex = indexMap.get(index)!;
-        newIndex.push(substitutingIndex);
-      } else {
+    for (const id of idsArray) {
+      const index = this.vertices.idMap.getIndex(id);
+      if (index !== null) {
         newIndex.push(index);
       }
     }
 
+    this.resetBuffers();
+    this.updateColor();
     this.mesh.geometry.setIndex(newIndex);
     this.mesh.geometry.computeVertexNormals();
+  }
+
+  removePoints(ids = this.selectedPoints as Iterable<number>) {
+    const facesToRemove = new Set<number>();
+    for (const id of ids) {
+      const point = this.points[id];
+      if (!point) continue;
+      for (const face of point.faces) {
+        facesToRemove.add(face);
+      }
+      delete this.points[id];
+    }
+    this.remove(facesToRemove);
   }
 
   /**
@@ -190,14 +211,14 @@ export class Faces implements Primitive {
       const exists = this.faces[id] !== undefined;
       if (!exists) continue;
 
-      const isAlreadySelected = this._selected.has(id);
+      const isAlreadySelected = this.selected.has(id);
       if (active) {
         if (isAlreadySelected) continue;
-        this._selected.add(id);
+        this.selected.add(id);
         idsToUpdate.push(id);
       } else {
         if (!isAlreadySelected) continue;
-        this._selected.delete(id);
+        this.selected.delete(id);
         idsToUpdate.push(id);
       }
     }
@@ -214,6 +235,7 @@ export class Faces implements Primitive {
         id,
         coordinates: [x, y, z],
         vertices: new Set<number>(),
+        faces: new Set<number>(),
       };
     }
   }
@@ -229,7 +251,17 @@ export class Faces implements Primitive {
     const vertices: number[] = [];
     for (const id of pointsIDs) {
       const point = this.points[id];
-      if (!point) continue;
+      if (point === undefined) continue;
+
+      const isAlreadySelected = this.selectedPoints.has(id);
+      if (active) {
+        if (isAlreadySelected) continue;
+        this.selectedPoints.add(id);
+      } else {
+        if (!isAlreadySelected) continue;
+        this.selectedPoints.delete(id);
+      }
+
       for (const id of point.vertices) {
         vertices.push(id);
       }
@@ -279,7 +311,7 @@ export class Faces implements Primitive {
     const colorAttribute = this._colorBuffer;
     for (const id of ids) {
       const face = this.faces[id];
-      const isSelected = this._selected.has(face.id);
+      const isSelected = this.selected.has(face.id);
       const { r, g, b } = isSelected ? this._selectColor : this._baseColor;
       for (const vertexID of face.vertices) {
         const index = this.vertices.idMap.getIndex(vertexID);
