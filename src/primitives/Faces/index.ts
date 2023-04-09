@@ -25,7 +25,7 @@ export class Faces implements Primitive {
    * The list of faces. Each face is defined by a list of outer points.
    * TODO: Implement inner points.
    */
-  faces: {
+  list: {
     [id: number]: {
       id: number;
       vertices: Set<number>;
@@ -97,8 +97,8 @@ export class Faces implements Primitive {
 
   private get _ids() {
     const ids: number[] = [];
-    for (const id in this.faces) {
-      ids.push(this.faces[id].id);
+    for (const id in this.list) {
+      ids.push(this.list[id].id);
     }
     return ids;
   }
@@ -130,12 +130,14 @@ export class Faces implements Primitive {
       const point = this.points[pointID];
       point.faces.add(id);
     }
-    this.faces[id] = {
+    this.list[id] = {
       id,
       vertices: new Set(),
       points: new Set(ids),
     };
   }
+
+  // TODO: setFace(), regenerateFace()
 
   /**
    * Removes faces.
@@ -145,7 +147,7 @@ export class Faces implements Primitive {
   remove(ids = this.selected as Iterable<number>) {
     const verticesToRemove = new Set<number>();
     for (const id of ids) {
-      const face = this.faces[id];
+      const face = this.list[id];
       for (const vertex of face.vertices) {
         verticesToRemove.add(vertex);
       }
@@ -155,7 +157,7 @@ export class Faces implements Primitive {
           point.faces.delete(id);
         }
       }
-      delete this.faces[id];
+      delete this.list[id];
     }
 
     for (const id of ids) {
@@ -201,14 +203,13 @@ export class Faces implements Primitive {
   /**
    * Select or unselects the given faces.
    * @param active Whether to select or unselect.
-   * @param ids List of faces IDs to add to select or unselect. If not
-   * defined, all vertices will be selected or deselected.
+   * @param ids List of faces IDs to select or unselect. If not
+   * defined, all faces will be selected or deselected.
    */
-  select(active: boolean, ids?: number[]) {
-    const faceIDs = ids || Object.values(this.faces).map((face) => face.id);
+  select(active: boolean, ids = this._ids) {
     const idsToUpdate: number[] = [];
-    for (const id of faceIDs) {
-      const exists = this.faces[id] !== undefined;
+    for (const id of ids) {
+      const exists = this.list[id] !== undefined;
       if (!exists) continue;
 
       const isAlreadySelected = this.selected.has(id);
@@ -272,7 +273,7 @@ export class Faces implements Primitive {
   transform(matrix: THREE.Matrix4) {
     const vertices = new Set<number>();
     for (const id of this.selected) {
-      const face = this.faces[id];
+      const face = this.list[id];
       for (const pointID of face.points) {
         const point = this.points[pointID];
         for (const vertex of point.vertices) {
@@ -294,8 +295,8 @@ export class Faces implements Primitive {
     this.resetBuffers();
     const allIndices: number[] = [];
     let nextIndex = 0;
-    for (const faceID in this.faces) {
-      const face = this.faces[faceID];
+    for (const faceID in this.list) {
+      const face = this.list[faceID];
       const flatCoordinates: number[] = [];
       for (const pointID of face.points) {
         const point = this.points[pointID];
@@ -330,7 +331,7 @@ export class Faces implements Primitive {
   private updateColor(ids = this._ids as Iterable<number>) {
     const colorAttribute = this._colorBuffer;
     for (const id of ids) {
-      const face = this.faces[id];
+      const face = this.list[id];
       const isSelected = this.selected.has(face.id);
       const { r, g, b } = isSelected ? this._selectColor : this._baseColor;
       for (const vertexID of face.vertices) {

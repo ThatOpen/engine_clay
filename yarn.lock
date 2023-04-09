@@ -1681,6 +1681,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"bim-fragment@npm:0.0.15":
+  version: 0.0.15
+  resolution: "bim-fragment@npm:0.0.15"
+  dependencies:
+    flatbuffers: ^23.3.3
+    three: 0.135
+    three-mesh-bvh: ^0.5.14
+  checksum: 6a523a278f87cecfc2182e91bc43d5f8e351df38b3009298238dea12d00f9ffd6b768958fbac9be72ef5e837befcf64f48b0d9566959e79975c9fa3b941b822b
+  languageName: node
+  linkType: hard
+
 "brace-expansion@npm:^1.1.7":
   version: 1.1.11
   resolution: "brace-expansion@npm:1.1.11"
@@ -1869,6 +1880,15 @@ __metadata:
   version: 6.3.0
   resolution: "camelcase@npm:6.3.0"
   checksum: 8c96818a9076434998511251dcb2761a94817ea17dbdc37f47ac080bd088fc62c7369429a19e2178b993497132c8cbcf5cc1f44ba963e76782ba469c0474938d
+  languageName: node
+  linkType: hard
+
+"camera-controls@npm:^1.36.0":
+  version: 1.38.2
+  resolution: "camera-controls@npm:1.38.2"
+  peerDependencies:
+    three: ">=0.126.1"
+  checksum: c452c8342cb35af296acd688d5a99cdf11faf59d4d13b1666353b36ff1dee8e2adad8b6f90ad48862c7bfe3e863d98a35da30ea2e8cb3a2900ed263c7a7c94a4
   languageName: node
   linkType: hard
 
@@ -3015,6 +3035,13 @@ __metadata:
     flatted: ^3.1.0
     rimraf: ^3.0.2
   checksum: 4fdd10ecbcbf7d520f9040dd1340eb5dfe951e6f0ecf2252edeec03ee68d989ec8b9a20f4434270e71bcfd57800dc09b3344fca3966b2eb8f613072c7d9a2365
+  languageName: node
+  linkType: hard
+
+"flatbuffers@npm:^23.3.3":
+  version: 23.3.3
+  resolution: "flatbuffers@npm:23.3.3"
+  checksum: 7d8352e233cc81942e36b2ccfd7f3baf5d9a5e9614ebd83e9f4bc4accaebd43cb824788bd76334f5a61a8c2a74ddfd8f87ca7ac01cc522ad2774ae66c276dff1
   languageName: node
   linkType: hard
 
@@ -5342,6 +5369,7 @@ __metadata:
     eslint-plugin-import: ^2.23.4
     eslint-plugin-prettier: ^3.4.0
     jest: ^27.0.4
+    openbim-components: ^0.0.51
     prettier: ^2.3.1
     rollup: ^2.79.1
     three: ^0.146.0
@@ -5350,6 +5378,20 @@ __metadata:
     typescript: ^4.3.2
   languageName: unknown
   linkType: soft
+
+"openbim-components@npm:^0.0.51":
+  version: 0.0.51
+  resolution: "openbim-components@npm:0.0.51"
+  dependencies:
+    bim-fragment: 0.0.15
+    camera-controls: ^1.36.0
+    stats.js: ^0.17.0
+    three: 0.135
+    three-mesh-bvh: ^0.5.15
+    web-ifc: ^0.0.36
+  checksum: 026669925e38950fe6cc0645bf207239f281ab7bf2dd44d108793f4e0886f382083ada4c00ab0f141973e290d9d051c85c552becbab2f51c22b1de59c8bab1e3
+  languageName: node
+  linkType: hard
 
 "optionator@npm:^0.8.1":
   version: 0.8.3
@@ -6322,6 +6364,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"stats.js@npm:^0.17.0":
+  version: 0.17.0
+  resolution: "stats.js@npm:0.17.0"
+  checksum: 62d55d9e28e701f5638eac312ab45f66da8cc14b43d4eba4d3ab5a26f444a91d3e0dd1f52e8fc182b03cae955dae4af471d54f1975525cc1e47dfa89a54a47c6
+  languageName: node
+  linkType: hard
+
 "string-length@npm:^4.0.1":
   version: 4.0.2
   resolution: "string-length@npm:4.0.2"
@@ -6523,6 +6572,22 @@ __metadata:
   version: 0.2.0
   resolution: "text-table@npm:0.2.0"
   checksum: b6937a38c80c7f84d9c11dd75e49d5c44f71d95e810a3250bd1f1797fc7117c57698204adf676b71497acc205d769d65c16ae8fa10afad832ae1322630aef10a
+  languageName: node
+  linkType: hard
+
+"three-mesh-bvh@npm:^0.5.14, three-mesh-bvh@npm:^0.5.15":
+  version: 0.5.23
+  resolution: "three-mesh-bvh@npm:0.5.23"
+  peerDependencies:
+    three: ">= 0.123.0"
+  checksum: 40f582140994c6d8e7ec0d8ab990215483b08c7245963b778e6c2389c7a8f7b6287dbecb071f8a5351b2c91b7e31aae717b0dfcd6aace0c6b6d67d09927218f4
+  languageName: node
+  linkType: hard
+
+"three@npm:0.135":
+  version: 0.135.0
+  resolution: "three@npm:0.135.0"
+  checksum: bd7e195932587a5be0c887947adf2b3898c6fa71722800432562aed10beddb2f448d0f237d937824805eebf90e625fc22ed57054618121f47811a8e82b528507
   languageName: node
   linkType: hard
 
@@ -6984,6 +7049,13 @@ __metadata:
   dependencies:
     makeerror: 1.0.12
   checksum: ad7a257ea1e662e57ef2e018f97b3c02a7240ad5093c392186ce0bcf1f1a60bbadd520d073b9beb921ed99f64f065efb63dfc8eec689a80e569f93c1c5d5e16c
+  languageName: node
+  linkType: hard
+
+"web-ifc@npm:^0.0.36":
+  version: 0.0.36
+  resolution: "web-ifc@npm:0.0.36"
+  checksum: 930ad124c22527454888644940ec97b5e5990690d1ba9d8c2eea08d1f8429fbf614a32c3881f38184ceb6f18d5be845420dd2f90d06603a1e556f10d2a825402
   languageName: node
   linkType: hard
 

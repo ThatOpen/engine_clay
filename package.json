@@ -34,6 +34,7 @@
   },
   "dependencies": {
     "earcut": "^2.2.4",
+    "openbim-components": "^0.0.51",
     "three": "^0.146.0"
   }
 }

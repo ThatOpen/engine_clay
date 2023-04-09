@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta
+            name="viewport"
+            content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"
+    />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge"/>
+    <link rel="stylesheet" href="../../../resources/styles.css"/>
+    <link rel="icon" type="image/x-icon" href="../../../resources/favicon.ico"/>
+    <title>Components | Hello world</title>
+</head>
+<body>
+<canvas class="full-screen" id="container"></canvas>
+
+<script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.135.0/build/three.module.js",
+          "three/examples/jsm/libs/lil-gui.module.min": "https://unpkg.com/three@0.135.0/examples/jsm/libs/lil-gui.module.min.js",
+          "three/examples/jsm/controls/OrbitControls": "https://unpkg.com/three@0.135.0/examples/jsm/controls/OrbitControls.js",
+          "three/examples/jsm/controls/TransformControls": "https://unpkg.com/three@0.135.0/examples/jsm/controls/TransformControls.js",
+          "stats.js/src/Stats.js": "https://unpkg.com/stats-js@1.0.1/src/Stats.js",
+          "client-zip": "https://unpkg.com/client-zip@2.3.0/index.js"
+        }
+      }
+
+</script>
+<script type="module">
+    import * as THREE from "three";
+    import {SimpleThreeScene} from "../../../resources/simple-three-scene.js";
+    import {TransformControls} from "three/examples/jsm/controls/TransformControls";
+    import * as OBC from "../../../resources/openbim-clay.js";
+    import * as dat from "three/examples/jsm/libs/lil-gui.module.min";
+
+
+    const canvas = document.getElementById("container");
+    const world = new SimpleThreeScene(canvas);
+
+    const settings = {
+        pointsVisible: false,
+        pointSelectionStart: 0,
+        pointSelectionEnd: 0,
+        lineSelectionStart: 0,
+        lineSelectionEnd: 0,
+    }
+
+    const lines = new OBC.Lines();
+    world.scene.add(lines.mesh);
+
+    lines.addPoints([
+        [0, 0, 0],
+        [1, 0, 1],
+        [2, 0, 0],
+        [2, 1, 0],
+        [-1, 1, 0],
+        [-1, 1, 1],
+    ]);
+
+    lines.add([0, 1, 2, 3]);
+    lines.add([4, 5]);
+    lines.regenerate();
+
+    function setSelectedPoints() {
+        const selection = [];
+        for (let i = settings.pointSelectionStart; i < settings.pointSelectionEnd; i++) {
+            selection.push(i);
+        }
+        lines.selectPoints(false);
+        lines.selectPoints(true, selection);
+    }
+
+    function setSelectedLines() {
+        const selection = [];
+        for (let i = settings.lineSelectionStart; i < settings.lineSelectionEnd; i++) {
+            selection.push(i);
+        }
+        lines.select(false);
+        lines.select(true, selection);
+    }
+
+    const gui = new dat.GUI();
+    gui.add(settings, "pointsVisible").name("Points visible").onChange(() => {
+        if(settings.pointsVisible) {
+            world.scene.add(lines.vertices.mesh);
+        } else {
+            lines.vertices.mesh.removeFromParent();
+        }
+    });
+
+    gui.add(settings, "pointSelectionStart").name("Point selection start").min(0).max(10).step(1).onChange(setSelectedPoints);
+    gui.add(settings, "pointSelectionEnd").name("Point selection end").min(0).max(10).step(1).onChange(setSelectedPoints);
+    gui.add(settings, "lineSelectionStart").name("Line selection start").min(0).max(6).step(1).onChange(setSelectedLines);
+    gui.add(settings, "lineSelectionEnd").name("Line selection end").min(0).max(6).step(1).onChange(setSelectedLines);
+
+</script>
+</body>
+</html>
