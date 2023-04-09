@@ -109,13 +109,60 @@ class IdIndexMap {
     }
 }
 
-class Vertices {
+class Selector {
+    constructor() {
+        this.data = new Set();
+    }
     /**
-     * Number of points
-     * @returns Number corresponding to the length
+     * Select or unselects the given faces.
+     * @param active Whether to select or unselect.
+     * @param ids List of faces IDs to select or unselect. If not
+     * defined, all faces will be selected or deselected.
+     * @param allItems all the existing items.
      */
-    get size() {
-        return this._positionBuffer.count;
+    select(active, ids, allItems) {
+        const all = new Set(allItems);
+        const idsToUpdate = [];
+        for (const id of ids) {
+            const exists = all.has(id);
+            if (!exists)
+                continue;
+            const isAlreadySelected = this.data.has(id);
+            if (active) {
+                if (isAlreadySelected)
+                    continue;
+                this.data.add(id);
+                idsToUpdate.push(id);
+            }
+            else {
+                if (!isAlreadySelected)
+                    continue;
+                this.data.delete(id);
+                idsToUpdate.push(id);
+            }
+        }
+        return idsToUpdate;
+    }
+    getUnselected(ids) {
+        const notSelectedIDs = [];
+        for (const id of ids) {
+            if (!this.data.has(id)) {
+                notSelectedIDs.push(id);
+            }
+        }
+        return notSelectedIDs;
+    }
+}
+
+class Primitive {
+    constructor() {
+        /**
+         * All the selected items within this primitive.
+         */
+        this.selected = new Selector();
+        this._baseColor = new THREE.Color(0.5, 0.5, 0.5);
+        this._selectColor = new THREE.Color(1, 0, 0);
+        this.list = {};
     }
     /**
      * The color of all the points.
@@ -128,50 +175,61 @@ class Vertices {
      */
     set baseColor(color) {
         this._baseColor.copy(color);
-        const allIDs = this.idMap.ids;
-        const notSelectedIDs = [];
-        for (const id of allIDs) {
-            if (!this.selected.has(id)) {
-                notSelectedIDs.push(id);
-            }
-        }
-        this.updateColor(notSelectedIDs);
     }
     /**
      * The color of all the selected points.
      */
     get selectColor() {
-        return this._baseColor;
+        return this._selectColor;
     }
     /**
      * The color of all the selected points.
      */
     set selectColor(color) {
         this._selectColor.copy(color);
-        this.updateColor(this.selected);
     }
     get _positionBuffer() {
-        return this._geometry.attributes.position;
+        return this.mesh.geometry.attributes.position;
     }
     get _colorBuffer() {
         return this.mesh.geometry.attributes.color;
     }
-    get _geometry() {
-        return this.mesh.geometry;
+    get _ids() {
+        const ids = [];
+        for (const id in this.list) {
+            ids.push(this.list[id].id);
+        }
+        return ids;
+    }
+}
+
+class Vertices extends Primitive {
+    /**
+     * The color of all the points.
+     */
+    set baseColor(color) {
+        super.baseColor = color;
+        const allIDs = this.idMap.ids;
+        const unselected = this.selected.getUnselected(allIDs);
+        this.updateColor(unselected);
+    }
+    /**
+     * The color of all the selected points.
+     */
+    set selectColor(color) {
+        super.selectColor = color;
+        this.updateColor(this.selected.data);
     }
     /**
      * Creates a new instance of vertices
      * @param size Visualization point size
      */
     constructor(size = 0.1) {
+        super();
         /** Buffer increment when geometry size is exceeded, multiple of 3. */
         this.bufferIncrease = 300;
         /** The map between each vertex ID and its index. */
         this.idMap = new IdIndexMap();
-        /** The IDs of the selected vertices. */
-        this.selected = new Set();
-        this._baseColor = new THREE.Color(0.5, 0.5, 0.5);
-        this._selectColor = new THREE.Color(1, 0, 0);
         this._capacity = 0;
         const geometry = new THREE.BufferGeometry();
         const material = new THREE.PointsMaterial({
@@ -223,25 +281,7 @@ class Vertices {
      * defined, all vertices will be selected or deselected.
      */
     select(active, ids = this.idMap.ids) {
-        const idsToUpdate = [];
-        for (const id of ids) {
-            const exists = this.idMap.getIndex(id) !== null;
-            if (!exists)
-                continue;
-            const isAlreadySelected = this.selected.has(id);
-            if (active) {
-                if (isAlreadySelected)
-                    continue;
-                this.selected.add(id);
-                idsToUpdate.push(id);
-            }
-            else {
-                if (!isAlreadySelected)
-                    continue;
-                this.selected.delete(id);
-                idsToUpdate.push(id);
-            }
-        }
+        const idsToUpdate = this.selected.select(active, ids, this.idMap.ids);
         this.updateColor(idsToUpdate);
     }
     /**
@@ -249,7 +289,7 @@ class Vertices {
      * @param displacement Displacement vector.
      * @param ids IDs of the vertices to move.
      */
-    move(displacement, ids = this.selected) {
+    move(displacement, ids = this.selected.data) {
         const transform = new THREE.Matrix4();
         transform.setPosition(displacement);
         this.transform(transform, ids);
@@ -259,7 +299,7 @@ class Vertices {
      * @param rotation euler rotation.
      * @param ids IDs of the vertices to rotate.
      */
-    rotate(rotation, ids = this.selected) {
+    rotate(rotation, ids = this.selected.data) {
         const transform = new THREE.Matrix4();
         const { x, y, z } = rotation;
         transform.makeRotationFromEuler(new THREE.Euler(x, y, z));
@@ -270,7 +310,7 @@ class Vertices {
      * @param scale Scale vector.
      * @param ids IDs of the vertices to scale.
      */
-    scale(scale, ids = this.selected) {
+    scale(scale, ids = this.selected.data) {
         const transform = new THREE.Matrix4();
         transform.scale(scale);
         this.transform(transform, ids);
@@ -280,7 +320,7 @@ class Vertices {
      * @param transformation Transformation matrix to apply.
      * @param ids IDs of the vertices to transform.
      */
-    transform(transformation, ids = this.selected) {
+    transform(transformation, ids = this.selected.data) {
         const vector = new THREE.Vector3();
         for (const id of ids) {
             const index = this.idMap.getIndex(id);
@@ -300,13 +340,13 @@ class Vertices {
      */
     clear() {
         this.resetAttributes();
-        this.selected.clear();
+        this.selected.data.clear();
         this.idMap.reset();
     }
     /**
      * Removes the selected points from the list
      */
-    remove(ids = this.selected) {
+    remove(ids = this.selected.data) {
         const position = this._positionBuffer;
         const color = this._colorBuffer;
         for (const id of ids) {
@@ -329,8 +369,8 @@ class Vertices {
     resetAttributes() {
         const positionBuffer = new THREE.BufferAttribute(new Float32Array(0), 3);
         const colorBuffer = new THREE.BufferAttribute(new Float32Array(0), 3);
-        this._geometry.setAttribute("position", positionBuffer);
-        this._geometry.setAttribute("color", colorBuffer);
+        this.mesh.geometry.setAttribute("position", positionBuffer);
+        this.mesh.geometry.setAttribute("color", colorBuffer);
         this._capacity = 0;
     }
     removeFromBuffer(id, buffer) {
@@ -341,7 +381,7 @@ class Vertices {
         }
     }
     resizeBufferIfNecessary(increase) {
-        const position = this._geometry.getAttribute("position");
+        const position = this.mesh.geometry.getAttribute("position");
         const size = position.count * 3 + increase * 3;
         const difference = size - this._capacity;
         if (difference >= 0) {
@@ -351,8 +391,8 @@ class Vertices {
     }
     resizeBuffers(increase = this.bufferIncrease) {
         this._capacity += increase;
-        const oldPositionArray = this._geometry.getAttribute("position").array;
-        const oldColorArray = this._geometry.getAttribute("color").array;
+        const oldPositionArray = this.mesh.geometry.getAttribute("position").array;
+        const oldColorArray = this.mesh.geometry.getAttribute("color").array;
         this.resizeAttribute("position", this._positionBuffer);
         this.resizeAttribute("color", this._colorBuffer);
         for (let i = 0; i < this._positionBuffer.count; i++) {
@@ -368,40 +408,29 @@ class Vertices {
     }
     resizeAttribute(name, buffer) {
         const count = buffer.count;
-        this._geometry.deleteAttribute(name);
+        this.mesh.geometry.deleteAttribute(name);
         const array = new Float32Array(this._capacity);
         const newBuffer = new THREE.BufferAttribute(array, 3);
         newBuffer.count = count;
-        this._geometry.setAttribute(name, newBuffer);
+        this.mesh.geometry.setAttribute(name, newBuffer);
     }
     updateColor(ids = this.idMap.ids) {
+        const colorBuffer = this._colorBuffer;
         for (const id of ids) {
-            const isSelected = this.selected.has(id);
+            const isSelected = this.selected.data.has(id);
             const index = this.idMap.getIndex(id);
             if (index === null)
                 continue;
             const color = isSelected ? this._selectColor : this._baseColor;
-            this._colorBuffer.setXYZ(index, color.r, color.g, color.b);
+            colorBuffer.setXYZ(index, color.r, color.g, color.b);
         }
-        this._colorBuffer.needsUpdate = true;
+        colorBuffer.needsUpdate = true;
     }
 }
 
-class Lines {
-    get _positionBuffer() {
-        return this.mesh.geometry.attributes.position;
-    }
-    get _colorBuffer() {
-        return this.mesh.geometry.attributes.color;
-    }
-    get _ids() {
-        const ids = [];
-        for (const id in this.list) {
-            ids.push(this.list[id].id);
-        }
-        return ids;
-    }
+class Lines extends Primitive {
     constructor() {
+        super();
         /** {@link Primitive.mesh } */
         this.mesh = new THREE.LineSegments();
         /**
@@ -418,13 +447,8 @@ class Lines {
          * The geometric representation of the vertices that define this instance of lines.
          */
         this.vertices = new Vertices();
-        /** The IDs of the selected lines. */
-        this.selected = new Set();
-        // private _faceIdGenerator = 0;
         this._pointIdGenerator = 0;
         this._lineIdGenerator = 0;
-        this._baseColor = new THREE.Color(0.5, 0.5, 0.5);
-        this._selectColor = new THREE.Color(1, 0, 0);
         this._segmentCount = 0;
         this.resetBuffers();
         const material = new THREE.LineBasicMaterial({ vertexColors: true });
@@ -476,26 +500,9 @@ class Lines {
      * defined, all lines will be selected or deselected.
      */
     select(active, ids = this._ids) {
-        const lineIDs = ids || Object.values(this.list).map((face) => face.id);
-        const idsToUpdate = [];
-        for (const id of lineIDs) {
-            const exists = this.list[id] !== undefined;
-            if (!exists)
-                continue;
-            const isAlreadySelected = this.selected.has(id);
-            if (active) {
-                if (isAlreadySelected)
-                    continue;
-                this.selected.add(id);
-                idsToUpdate.push(id);
-            }
-            else {
-                if (!isAlreadySelected)
-                    continue;
-                this.selected.delete(id);
-                idsToUpdate.push(id);
-            }
-        }
+        const allLines = Object.values(this.list).map((face) => face.id);
+        const lineIDs = ids || allLines;
+        const idsToUpdate = this.selected.select(active, lineIDs, allLines);
         this.updateColor(idsToUpdate);
     }
     selectPoints(active, ids) {
@@ -536,7 +543,7 @@ class Lines {
         const colorAttribute = this._colorBuffer;
         for (const id of ids) {
             const line = this.list[id];
-            const isSelected = this.selected.has(line.id);
+            const isSelected = this.selected.data.has(line.id);
             const { r, g, b } = isSelected ? this._selectColor : this._baseColor;
             for (const index of line.indices) {
                 colorAttribute.setXYZ(index * 2, r, g, b);
@@ -1229,52 +1236,21 @@ earcut.flatten = function (data) {
     return result;
 };
 
-class Faces {
-    /**
-     * The color of all the points.
-     */
-    get baseColor() {
-        return this._baseColor;
-    }
+class Faces extends Primitive {
     /**
      * The color of all the points.
      */
     set baseColor(color) {
-        this._baseColor.copy(color);
-        const allIDs = this._ids;
-        const notSelectedIDs = [];
-        for (const id of allIDs) {
-            if (!this.selected.has(id)) {
-                notSelectedIDs.push(id);
-            }
-        }
-        this.updateColor(notSelectedIDs);
-    }
-    /**
-     * The color of all the selected points.
-     */
-    get selectColor() {
-        return this._baseColor;
+        super.baseColor = color;
+        const unselected = this.selected.getUnselected(this._ids);
+        this.updateColor(unselected);
     }
     /**
      * The color of all the selected points.
      */
     set selectColor(color) {
-        this._selectColor.copy(color);
-        this.updateColor(this.selected);
-    }
-    get _geometry() {
-        return this.mesh.geometry;
-    }
-    get _colorBuffer() {
-        return this.mesh.geometry.attributes.color;
-    }
-    get _ids() {
-        const ids = [];
-        for (const id in this.list) {
-            ids.push(this.list[id].id);
-        }
-        return ids;
+        super.selectColor = color;
+        this.updateColor(this.selected.data);
     }
     get _index() {
         if (!this.mesh.geometry.index) {
@@ -1283,6 +1259,7 @@ class Faces {
         return this.mesh.geometry.index;
     }
     constructor() {
+        super();
         /** {@link Primitive.mesh } */
         this.mesh = new THREE.Mesh();
         /**
@@ -1300,14 +1277,9 @@ class Faces {
          * The geometric representation of the vertices that define this instance of faces.
          */
         this.vertices = new Vertices();
-        /** The IDs of the selected faces. */
-        this.selected = new Set();
-        /** The IDs of the selected points. */
-        this.selectedPoints = new Set();
+        this.selectedPoints = new Selector();
         this._faceIdGenerator = 0;
         this._pointIdGenerator = 0;
-        this._baseColor = new THREE.Color(0.5, 0.5, 0.5);
-        this._selectColor = new THREE.Color(1, 0, 0);
         this.resetBuffers();
         const material = new THREE.MeshLambertMaterial({
             side: THREE.DoubleSide,
@@ -1338,7 +1310,7 @@ class Faces {
      * @param ids List of faces to remove. If no face is specified,
      * removes all the selected faces.
      */
-    remove(ids = this.selected) {
+    remove(ids = this.selected.data) {
         const verticesToRemove = new Set();
         for (const id of ids) {
             const face = this.list[id];
@@ -1354,7 +1326,7 @@ class Faces {
             delete this.list[id];
         }
         for (const id of ids) {
-            this.selected.delete(id);
+            this.selected.data.delete(id);
         }
         const idsArray = [];
         const oldIndex = this._index.array;
@@ -1375,7 +1347,7 @@ class Faces {
         this.mesh.geometry.setIndex(newIndex);
         this.mesh.geometry.computeVertexNormals();
     }
-    removePoints(ids = this.selectedPoints) {
+    removePoints(ids = this.selectedPoints.data) {
         const facesToRemove = new Set();
         for (const id of ids) {
             const point = this.points[id];
@@ -1386,6 +1358,9 @@ class Faces {
             }
             delete this.points[id];
         }
+        for (const id of ids) {
+            this.selectedPoints.data.delete(id);
+        }
         this.remove(facesToRemove);
     }
     /**
@@ -1395,25 +1370,7 @@ class Faces {
      * defined, all faces will be selected or deselected.
      */
     select(active, ids = this._ids) {
-        const idsToUpdate = [];
-        for (const id of ids) {
-            const exists = this.list[id] !== undefined;
-            if (!exists)
-                continue;
-            const isAlreadySelected = this.selected.has(id);
-            if (active) {
-                if (isAlreadySelected)
-                    continue;
-                this.selected.add(id);
-                idsToUpdate.push(id);
-            }
-            else {
-                if (!isAlreadySelected)
-                    continue;
-                this.selected.delete(id);
-                idsToUpdate.push(id);
-            }
-        }
+        const idsToUpdate = this.selected.select(active, ids, this._ids);
         this.updateColor(idsToUpdate);
     }
     /**
@@ -1437,23 +1394,14 @@ class Faces {
      * defined, all points will be selected or deselected.
      */
     selectPoints(active, ids) {
-        const pointsIDs = ids || Object.values(this.points).map((p) => p.id);
+        const allPoints = Object.values(this.points).map((p) => p.id);
+        const pointsIDs = ids || allPoints;
+        this.selectedPoints.select(active, pointsIDs, allPoints);
         const vertices = [];
         for (const id of pointsIDs) {
             const point = this.points[id];
             if (point === undefined)
                 continue;
-            const isAlreadySelected = this.selectedPoints.has(id);
-            if (active) {
-                if (isAlreadySelected)
-                    continue;
-                this.selectedPoints.add(id);
-            }
-            else {
-                if (!isAlreadySelected)
-                    continue;
-                this.selectedPoints.delete(id);
-            }
             for (const id of point.vertices) {
                 vertices.push(id);
             }
@@ -1462,7 +1410,7 @@ class Faces {
     }
     transform(matrix) {
         const vertices = new Set();
-        for (const id of this.selected) {
+        for (const id of this.selected.data) {
             const face = this.list[id];
             for (const pointID of face.points) {
                 const point = this.points[pointID];
@@ -1471,7 +1419,7 @@ class Faces {
                 }
             }
         }
-        for (const id of this.selectedPoints) {
+        for (const id of this.selectedPoints.data) {
             const point = this.points[id];
             for (const vertex of point.vertices) {
                 vertices.add(vertex);
@@ -1503,23 +1451,23 @@ class Faces {
                 allIndices.push(absoluteIndex);
             }
         }
-        this._geometry.setIndex(allIndices);
+        this.mesh.geometry.setIndex(allIndices);
         this.resetBuffers();
         this.updateColor();
-        this._geometry.computeVertexNormals();
+        this.mesh.geometry.computeVertexNormals();
     }
     resetBuffers() {
         const positionBuffer = this.vertices.mesh.geometry.attributes.position;
-        this._geometry.setAttribute("position", positionBuffer);
+        this.mesh.geometry.setAttribute("position", positionBuffer);
         const colorBuffer = new Float32Array(positionBuffer.count * 3);
         const colorAttribute = new THREE.BufferAttribute(colorBuffer, 3);
-        this._geometry.setAttribute("color", colorAttribute);
+        this.mesh.geometry.setAttribute("color", colorAttribute);
     }
     updateColor(ids = this._ids) {
         const colorAttribute = this._colorBuffer;
         for (const id of ids) {
             const face = this.list[id];
-            const isSelected = this.selected.has(face.id);
+            const isSelected = this.selected.data.has(face.id);
             const { r, g, b } = isSelected ? this._selectColor : this._baseColor;
             for (const vertexID of face.vertices) {
                 const index = this.vertices.idMap.getIndex(vertexID);

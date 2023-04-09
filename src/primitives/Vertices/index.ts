@@ -1,8 +1,8 @@
 import * as THREE from "three";
 import { IdIndexMap } from "./id-index-map";
-import { Primitive } from "../types";
+import { Primitive } from "../Primitive";
 
-export class Vertices implements Primitive {
+export class Vertices extends Primitive {
   /** Buffer increment when geometry size is exceeded, multiple of 3. */
   bufferIncrease = 300;
 
@@ -12,68 +12,24 @@ export class Vertices implements Primitive {
   /** The map between each vertex ID and its index. */
   idMap = new IdIndexMap();
 
-  /** The IDs of the selected vertices. */
-  selected = new Set<number>();
-
-  private _baseColor: THREE.Color = new THREE.Color(0.5, 0.5, 0.5);
-  private _selectColor: THREE.Color = new THREE.Color(1, 0, 0);
   private _capacity = 0;
-
-  /**
-   * Number of points
-   * @returns Number corresponding to the length
-   */
-  get size() {
-    return this._positionBuffer.count;
-  }
-
-  /**
-   * The color of all the points.
-   */
-  get baseColor() {
-    return this._baseColor;
-  }
 
   /**
    * The color of all the points.
    */
   set baseColor(color: THREE.Color) {
-    this._baseColor.copy(color);
+    super.baseColor = color;
     const allIDs = this.idMap.ids;
-    const notSelectedIDs: number[] = [];
-    for (const id of allIDs) {
-      if (!this.selected.has(id)) {
-        notSelectedIDs.push(id);
-      }
-    }
-    this.updateColor(notSelectedIDs);
-  }
-
-  /**
-   * The color of all the selected points.
-   */
-  get selectColor() {
-    return this._baseColor;
+    const unselected = this.selected.getUnselected(allIDs);
+    this.updateColor(unselected);
   }
 
   /**
    * The color of all the selected points.
    */
   set selectColor(color: THREE.Color) {
-    this._selectColor.copy(color);
-    this.updateColor(this.selected);
-  }
-
-  private get _positionBuffer() {
-    return this._geometry.attributes.position as THREE.BufferAttribute;
-  }
-
-  private get _colorBuffer() {
-    return this.mesh.geometry.attributes.color as THREE.BufferAttribute;
-  }
-
-  private get _geometry() {
-    return this.mesh.geometry;
+    super.selectColor = color;
+    this.updateColor(this.selected.data);
   }
 
   /**
@@ -81,8 +37,8 @@ export class Vertices implements Primitive {
    * @param size Visualization point size
    */
   constructor(size: number = 0.1) {
+    super();
     const geometry = new THREE.BufferGeometry();
-
     const material = new THREE.PointsMaterial({
       size,
       vertexColors: true,
@@ -135,21 +91,7 @@ export class Vertices implements Primitive {
    * defined, all vertices will be selected or deselected.
    */
   select(active: boolean, ids = this.idMap.ids as Iterable<number>) {
-    const idsToUpdate: number[] = [];
-    for (const id of ids) {
-      const exists = this.idMap.getIndex(id) !== null;
-      if (!exists) continue;
-      const isAlreadySelected = this.selected.has(id);
-      if (active) {
-        if (isAlreadySelected) continue;
-        this.selected.add(id);
-        idsToUpdate.push(id);
-      } else {
-        if (!isAlreadySelected) continue;
-        this.selected.delete(id);
-        idsToUpdate.push(id);
-      }
-    }
+    const idsToUpdate = this.selected.select(active, ids, this.idMap.ids);
     this.updateColor(idsToUpdate);
   }
 
@@ -158,7 +100,7 @@ export class Vertices implements Primitive {
    * @param displacement Displacement vector.
    * @param ids IDs of the vertices to move.
    */
-  move(displacement: THREE.Vector3, ids = this.selected as Iterable<number>) {
+  move(displacement: THREE.Vector3, ids = this.selected.data) {
     const transform = new THREE.Matrix4();
     transform.setPosition(displacement);
     this.transform(transform, ids);
@@ -169,7 +111,7 @@ export class Vertices implements Primitive {
    * @param rotation euler rotation.
    * @param ids IDs of the vertices to rotate.
    */
-  rotate(rotation: THREE.Vector3, ids = this.selected as Iterable<number>) {
+  rotate(rotation: THREE.Vector3, ids = this.selected.data) {
     const transform = new THREE.Matrix4();
     const { x, y, z } = rotation;
     transform.makeRotationFromEuler(new THREE.Euler(x, y, z));
@@ -181,7 +123,7 @@ export class Vertices implements Primitive {
    * @param scale Scale vector.
    * @param ids IDs of the vertices to scale.
    */
-  scale(scale: THREE.Vector3, ids = this.selected as Iterable<number>) {
+  scale(scale: THREE.Vector3, ids = this.selected.data) {
     const transform = new THREE.Matrix4();
     transform.scale(scale);
     this.transform(transform, ids);
@@ -192,10 +134,7 @@ export class Vertices implements Primitive {
    * @param transformation Transformation matrix to apply.
    * @param ids IDs of the vertices to transform.
    */
-  transform(
-    transformation: THREE.Matrix4,
-    ids = this.selected as Iterable<number>
-  ) {
+  transform(transformation: THREE.Matrix4, ids = this.selected.data) {
     const vector = new THREE.Vector3();
     for (const id of ids) {
       const index = this.idMap.getIndex(id);
@@ -215,14 +154,14 @@ export class Vertices implements Primitive {
    */
   clear() {
     this.resetAttributes();
-    this.selected.clear();
+    this.selected.data.clear();
     this.idMap.reset();
   }
 
   /**
    * Removes the selected points from the list
    */
-  remove(ids = this.selected as Iterable<number>) {
+  remove(ids = this.selected.data) {
     const position = this._positionBuffer;
     const color = this._colorBuffer;
     for (const id of ids) {
@@ -249,8 +188,8 @@ export class Vertices implements Primitive {
   private resetAttributes() {
     const positionBuffer = new THREE.BufferAttribute(new Float32Array(0), 3);
     const colorBuffer = new THREE.BufferAttribute(new Float32Array(0), 3);
-    this._geometry.setAttribute("position", positionBuffer);
-    this._geometry.setAttribute("color", colorBuffer);
+    this.mesh.geometry.setAttribute("position", positionBuffer);
+    this.mesh.geometry.setAttribute("color", colorBuffer);
     this._capacity = 0;
   }
 
@@ -268,7 +207,7 @@ export class Vertices implements Primitive {
   }
 
   private resizeBufferIfNecessary(increase: number) {
-    const position = this._geometry.getAttribute("position");
+    const position = this.mesh.geometry.getAttribute("position");
     const size = position.count * 3 + increase * 3;
     const difference = size - this._capacity;
     if (difference >= 0) {
@@ -279,8 +218,8 @@ export class Vertices implements Primitive {
 
   private resizeBuffers(increase = this.bufferIncrease) {
     this._capacity += increase;
-    const oldPositionArray = this._geometry.getAttribute("position").array;
-    const oldColorArray = this._geometry.getAttribute("color").array;
+    const oldPositionArray = this.mesh.geometry.getAttribute("position").array;
+    const oldColorArray = this.mesh.geometry.getAttribute("color").array;
     this.resizeAttribute("position", this._positionBuffer);
     this.resizeAttribute("color", this._colorBuffer);
     for (let i = 0; i < this._positionBuffer.count; i++) {
@@ -297,21 +236,22 @@ export class Vertices implements Primitive {
 
   private resizeAttribute(name: string, buffer: THREE.BufferAttribute) {
     const count = buffer.count;
-    this._geometry.deleteAttribute(name);
+    this.mesh.geometry.deleteAttribute(name);
     const array = new Float32Array(this._capacity);
     const newBuffer = new THREE.BufferAttribute(array, 3);
     newBuffer.count = count;
-    this._geometry.setAttribute(name, newBuffer);
+    this.mesh.geometry.setAttribute(name, newBuffer);
   }
 
   private updateColor(ids = this.idMap.ids as Iterable<number>) {
+    const colorBuffer = this._colorBuffer;
     for (const id of ids) {
-      const isSelected = this.selected.has(id);
+      const isSelected = this.selected.data.has(id);
       const index = this.idMap.getIndex(id);
       if (index === null) continue;
       const color = isSelected ? this._selectColor : this._baseColor;
-      this._colorBuffer.setXYZ(index, color.r, color.g, color.b);
+      colorBuffer.setXYZ(index, color.r, color.g, color.b);
     }
-    this._colorBuffer.needsUpdate = true;
+    colorBuffer.needsUpdate = true;
   }
 }

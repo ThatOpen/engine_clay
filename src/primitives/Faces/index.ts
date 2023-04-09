@@ -1,9 +1,9 @@
 import * as THREE from "three";
 import earcut from "earcut";
 import { Vertices } from "../Vertices";
-import { Primitive } from "../types";
+import { Primitive, Selector } from "../Primitive";
 
-export class Faces implements Primitive {
+export class Faces extends Primitive {
   /** {@link Primitive.mesh } */
   mesh: THREE.Mesh = new THREE.Mesh();
 
@@ -38,69 +38,26 @@ export class Faces implements Primitive {
    */
   vertices: Vertices = new Vertices();
 
-  /** The IDs of the selected faces. */
-  selected = new Set<number>();
-
-  /** The IDs of the selected points. */
-  selectedPoints = new Set<number>();
+  selectedPoints = new Selector();
 
   private _faceIdGenerator = 0;
   private _pointIdGenerator = 0;
-
-  private _baseColor = new THREE.Color(0.5, 0.5, 0.5);
-  private _selectColor = new THREE.Color(1, 0, 0);
-
-  /**
-   * The color of all the points.
-   */
-  get baseColor() {
-    return this._baseColor;
-  }
 
   /**
    * The color of all the points.
    */
   set baseColor(color: THREE.Color) {
-    this._baseColor.copy(color);
-    const allIDs = this._ids;
-    const notSelectedIDs: number[] = [];
-    for (const id of allIDs) {
-      if (!this.selected.has(id)) {
-        notSelectedIDs.push(id);
-      }
-    }
-    this.updateColor(notSelectedIDs);
-  }
-
-  /**
-   * The color of all the selected points.
-   */
-  get selectColor() {
-    return this._baseColor;
+    super.baseColor = color;
+    const unselected = this.selected.getUnselected(this._ids);
+    this.updateColor(unselected);
   }
 
   /**
    * The color of all the selected points.
    */
   set selectColor(color: THREE.Color) {
-    this._selectColor.copy(color);
-    this.updateColor(this.selected);
-  }
-
-  private get _geometry() {
-    return this.mesh.geometry;
-  }
-
-  private get _colorBuffer() {
-    return this.mesh.geometry.attributes.color as THREE.BufferAttribute;
-  }
-
-  private get _ids() {
-    const ids: number[] = [];
-    for (const id in this.list) {
-      ids.push(this.list[id].id);
-    }
-    return ids;
+    super.selectColor = color;
+    this.updateColor(this.selected.data);
   }
 
   private get _index() {
@@ -111,6 +68,7 @@ export class Faces implements Primitive {
   }
 
   constructor() {
+    super();
     this.resetBuffers();
     const material = new THREE.MeshLambertMaterial({
       side: THREE.DoubleSide,
@@ -144,7 +102,7 @@ export class Faces implements Primitive {
    * @param ids List of faces to remove. If no face is specified,
    * removes all the selected faces.
    */
-  remove(ids = this.selected as Iterable<number>) {
+  remove(ids = this.selected.data) {
     const verticesToRemove = new Set<number>();
     for (const id of ids) {
       const face = this.list[id];
@@ -161,7 +119,7 @@ export class Faces implements Primitive {
     }
 
     for (const id of ids) {
-      this.selected.delete(id);
+      this.selected.data.delete(id);
     }
 
     const idsArray: number[] = [];
@@ -187,7 +145,7 @@ export class Faces implements Primitive {
     this.mesh.geometry.computeVertexNormals();
   }
 
-  removePoints(ids = this.selectedPoints as Iterable<number>) {
+  removePoints(ids = this.selectedPoints.data) {
     const facesToRemove = new Set<number>();
     for (const id of ids) {
       const point = this.points[id];
@@ -196,6 +154,9 @@ export class Faces implements Primitive {
         facesToRemove.add(face);
       }
       delete this.points[id];
+    }
+    for (const id of ids) {
+      this.selectedPoints.data.delete(id);
     }
     this.remove(facesToRemove);
   }
@@ -207,22 +168,7 @@ export class Faces implements Primitive {
    * defined, all faces will be selected or deselected.
    */
   select(active: boolean, ids = this._ids) {
-    const idsToUpdate: number[] = [];
-    for (const id of ids) {
-      const exists = this.list[id] !== undefined;
-      if (!exists) continue;
-
-      const isAlreadySelected = this.selected.has(id);
-      if (active) {
-        if (isAlreadySelected) continue;
-        this.selected.add(id);
-        idsToUpdate.push(id);
-      } else {
-        if (!isAlreadySelected) continue;
-        this.selected.delete(id);
-        idsToUpdate.push(id);
-      }
-    }
+    const idsToUpdate = this.selected.select(active, ids, this._ids);
     this.updateColor(idsToUpdate);
   }
 
@@ -248,21 +194,13 @@ export class Faces implements Primitive {
    * defined, all points will be selected or deselected.
    */
   selectPoints(active: boolean, ids?: number[]) {
-    const pointsIDs = ids || Object.values(this.points).map((p) => p.id);
+    const allPoints = Object.values(this.points).map((p) => p.id);
+    const pointsIDs = ids || allPoints;
+    this.selectedPoints.select(active, pointsIDs, allPoints);
     const vertices: number[] = [];
     for (const id of pointsIDs) {
       const point = this.points[id];
       if (point === undefined) continue;
-
-      const isAlreadySelected = this.selectedPoints.has(id);
-      if (active) {
-        if (isAlreadySelected) continue;
-        this.selectedPoints.add(id);
-      } else {
-        if (!isAlreadySelected) continue;
-        this.selectedPoints.delete(id);
-      }
-
       for (const id of point.vertices) {
         vertices.push(id);
       }
@@ -272,7 +210,7 @@ export class Faces implements Primitive {
 
   transform(matrix: THREE.Matrix4) {
     const vertices = new Set<number>();
-    for (const id of this.selected) {
+    for (const id of this.selected.data) {
       const face = this.list[id];
       for (const pointID of face.points) {
         const point = this.points[pointID];
@@ -281,7 +219,7 @@ export class Faces implements Primitive {
         }
       }
     }
-    for (const id of this.selectedPoints) {
+    for (const id of this.selectedPoints.data) {
       const point = this.points[id];
       for (const vertex of point.vertices) {
         vertices.add(vertex);
@@ -313,26 +251,26 @@ export class Faces implements Primitive {
         allIndices.push(absoluteIndex);
       }
     }
-    this._geometry.setIndex(allIndices);
+    this.mesh.geometry.setIndex(allIndices);
     this.resetBuffers();
     this.updateColor();
-    this._geometry.computeVertexNormals();
+    this.mesh.geometry.computeVertexNormals();
   }
 
   private resetBuffers() {
     const positionBuffer = this.vertices.mesh.geometry.attributes.position;
-    this._geometry.setAttribute("position", positionBuffer);
+    this.mesh.geometry.setAttribute("position", positionBuffer);
 
     const colorBuffer = new Float32Array(positionBuffer.count * 3);
     const colorAttribute = new THREE.BufferAttribute(colorBuffer, 3);
-    this._geometry.setAttribute("color", colorAttribute);
+    this.mesh.geometry.setAttribute("color", colorAttribute);
   }
 
   private updateColor(ids = this._ids as Iterable<number>) {
     const colorAttribute = this._colorBuffer;
     for (const id of ids) {
       const face = this.list[id];
-      const isSelected = this.selected.has(face.id);
+      const isSelected = this.selected.data.has(face.id);
       const { r, g, b } = isSelected ? this._selectColor : this._baseColor;
       for (const vertexID of face.vertices) {
         const index = this.vertices.idMap.getIndex(vertexID);

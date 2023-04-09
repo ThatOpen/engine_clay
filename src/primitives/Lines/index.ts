@@ -1,8 +1,8 @@
 import * as THREE from "three";
 import { Vertices } from "../Vertices";
-import { Primitive } from "../types";
+import { Primitive } from "../Primitive";
 
-export class Lines implements Primitive {
+export class Lines extends Primitive {
   /** {@link Primitive.mesh } */
   mesh = new THREE.LineSegments();
 
@@ -36,34 +36,12 @@ export class Lines implements Primitive {
    */
   vertices: Vertices = new Vertices();
 
-  /** The IDs of the selected lines. */
-  selected = new Set<number>();
-
-  // private _faceIdGenerator = 0;
   private _pointIdGenerator = 0;
   private _lineIdGenerator = 0;
-
-  private _baseColor = new THREE.Color(0.5, 0.5, 0.5);
-  private _selectColor = new THREE.Color(1, 0, 0);
   private _segmentCount = 0;
 
-  private get _positionBuffer() {
-    return this.mesh.geometry.attributes.position as THREE.BufferAttribute;
-  }
-
-  private get _colorBuffer() {
-    return this.mesh.geometry.attributes.color as THREE.BufferAttribute;
-  }
-
-  private get _ids() {
-    const ids: number[] = [];
-    for (const id in this.list) {
-      ids.push(this.list[id].id);
-    }
-    return ids;
-  }
-
   constructor() {
+    super();
     this.resetBuffers();
     const material = new THREE.LineBasicMaterial({ vertexColors: true });
     const geometry = new THREE.BufferGeometry();
@@ -120,23 +98,9 @@ export class Lines implements Primitive {
    * defined, all lines will be selected or deselected.
    */
   select(active: boolean, ids = this._ids) {
-    const lineIDs = ids || Object.values(this.list).map((face) => face.id);
-    const idsToUpdate: number[] = [];
-    for (const id of lineIDs) {
-      const exists = this.list[id] !== undefined;
-      if (!exists) continue;
-
-      const isAlreadySelected = this.selected.has(id);
-      if (active) {
-        if (isAlreadySelected) continue;
-        this.selected.add(id);
-        idsToUpdate.push(id);
-      } else {
-        if (!isAlreadySelected) continue;
-        this.selected.delete(id);
-        idsToUpdate.push(id);
-      }
-    }
+    const allLines = Object.values(this.list).map((face) => face.id);
+    const lineIDs = ids || allLines;
+    const idsToUpdate = this.selected.select(active, lineIDs, allLines);
     this.updateColor(idsToUpdate);
   }
 
@@ -182,7 +146,7 @@ export class Lines implements Primitive {
     const colorAttribute = this._colorBuffer;
     for (const id of ids) {
       const line = this.list[id];
-      const isSelected = this.selected.has(line.id);
+      const isSelected = this.selected.data.has(line.id);
       const { r, g, b } = isSelected ? this._selectColor : this._baseColor;
       for (const index of line.indices) {
         colorAttribute.setXYZ(index * 2, r, g, b);
