@@ -44,6 +44,7 @@
         pointSelectionEnd: 0,
         lineSelectionStart: 0,
         lineSelectionEnd: 0,
+        transformMode: "translate",
     }
 
     const lines = new OBC.Lines();
@@ -80,6 +81,22 @@
         lines.select(true, selection);
     }
 
+    const control = new TransformControls(world.camera, world.renderer.domElement);
+    const helper = new THREE.Object3D();
+    let transform = new THREE.Matrix4();
+    world.scene.add(helper);
+    control.attach(helper);
+    world.scene.add(control);
+
+    control.addEventListener("dragging-changed", (event) => world.controls.enabled = !event.value);
+    control.addEventListener('change', () => {
+        helper.updateMatrix();
+        const temp = helper.matrix.clone();
+        temp.multiply(transform.invert());
+        lines.transform(temp);
+        transform = helper.matrix.clone();
+    });
+
     const gui = new dat.GUI();
     gui.add(settings, "pointsVisible").name("Points visible").onChange(() => {
         if(settings.pointsVisible) {
@@ -93,6 +110,11 @@
     gui.add(settings, "pointSelectionEnd").name("Point selection end").min(0).max(10).step(1).onChange(setSelectedPoints);
     gui.add(settings, "lineSelectionStart").name("Line selection start").min(0).max(6).step(1).onChange(setSelectedLines);
     gui.add(settings, "lineSelectionEnd").name("Line selection end").min(0).max(6).step(1).onChange(setSelectedLines);
+
+    gui.add(settings, "transformMode", {translate: "translate", rotate: "rotate", scale: "scale"})
+        .name("Transform mode").min(0).max(1000).onChange((result) => {
+        control.setMode(result);
+    });
 
 </script>
 </body>

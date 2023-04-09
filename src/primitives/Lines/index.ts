@@ -7,15 +7,12 @@ export class Lines extends Primitive {
   mesh = new THREE.LineSegments();
 
   /**
-   * The list of points that define the lines. Each point corresponds to a set of {@link Vertices}. This way,
-   * we can provide an API of lines that share vertices, but under the hood the vertices are duplicated per line
-   * (and thus being compatible with [THREE.EdgesGeometry](https://threejs.org/docs/#api/en/geometries/EdgesGeometry)).
+   * The list of points that define the lines.
    */
   points: {
     [id: number]: {
       coordinates: [number, number, number];
       id: number;
-      lines: Set<number>;
       vertices: Set<number>;
     };
   } = {};
@@ -54,10 +51,6 @@ export class Lines extends Primitive {
    */
   add(ids: number[]) {
     const id = this._lineIdGenerator++;
-    for (const pointID of ids) {
-      const point = this.points[pointID];
-      point.lines.add(id);
-    }
 
     const indices: number[] = [];
     const newSegmentCount = this._segmentCount + ids.length - 1;
@@ -65,11 +58,18 @@ export class Lines extends Primitive {
       indices.push(i);
     }
 
-    this.list[id] = {
-      id,
-      points: new Set(ids),
-      indices: new Set(indices),
-    };
+    this.list[id] = { id, points: new Set(ids), indices: new Set(indices) };
+
+    for (let i = 0; i < ids.length; i++) {
+      const id = ids[i];
+      const point = this.points[id];
+      if (i !== ids.length - 1) {
+        point.vertices.add(indices[i] * 2);
+      }
+      if (i !== 0) {
+        point.vertices.add(indices[i - 1] * 2 + 1);
+      }
+    }
 
     this._segmentCount = newSegmentCount;
   }
@@ -85,7 +85,6 @@ export class Lines extends Primitive {
         id,
         coordinates: [x, y, z],
         vertices: new Set<number>(),
-        lines: new Set<number>(),
       };
     }
     this.vertices.add(points);
@@ -108,6 +107,30 @@ export class Lines extends Primitive {
     this.vertices.select(active, ids);
   }
 
+  transform(matrix: THREE.Matrix4) {
+    const indices = new Set<number>();
+    const points = new Set<number>();
+    for (const id of this.selected.data) {
+      const line = this.list[id];
+      for (const index of line.indices) {
+        indices.add(index * 2);
+        indices.add(index * 2 + 1);
+      }
+      for (const pointID of line.points) {
+        points.add(pointID);
+      }
+    }
+    for (const id of this.vertices.selected.data) {
+      points.add(id);
+      const point = this.points[id];
+      for (const index of point.vertices) {
+        indices.add(index);
+      }
+    }
+    this.transformLines(matrix, indices);
+    this.vertices.transform(matrix, points);
+  }
+
   regenerate() {
     this.resetBuffers();
     const position = this._positionBuffer;
@@ -128,6 +151,19 @@ export class Lines extends Primitive {
     }
     position.needsUpdate = true;
     this.updateColor();
+  }
+
+  private transformLines(matrix: THREE.Matrix4, indices: Iterable<number>) {
+    const vector = new THREE.Vector3();
+    for (const index of indices) {
+      const x = this._positionBuffer.getX(index);
+      const y = this._positionBuffer.getY(index);
+      const z = this._positionBuffer.getZ(index);
+      vector.set(x, y, z);
+      vector.applyMatrix4(matrix);
+      this._positionBuffer.setXYZ(index, vector.x, vector.y, vector.z);
+    }
+    this._positionBuffer.needsUpdate = true;
   }
 
   private resetBuffers() {
