@@ -33,6 +33,26 @@ export class Lines extends Primitive {
   private _points: { [id: number]: { start: Set<number>; end: Set<number> } } =
     {};
 
+  /**
+   * The color of all the points.
+   */
+  set baseColor(color: THREE.Color) {
+    super.baseColor = color;
+    const allIDs = this.idMap.ids;
+    const unselected = this.selected.getUnselected(allIDs);
+    this.updateColor(unselected);
+    this.vertices.baseColor = color;
+  }
+
+  /**
+   * The color of all the selected points.
+   */
+  set selectColor(color: THREE.Color) {
+    super.selectColor = color;
+    this.updateColor(this.selected.data);
+    this.vertices.selectColor = color;
+  }
+
   constructor() {
     super();
     this.resetBuffers();
@@ -100,6 +120,10 @@ export class Lines extends Primitive {
     //
   }
 
+  removePoints() {
+    //
+  }
+
   transform(matrix: THREE.Matrix4) {
     const indices = new Set<number>();
     const points = new Set<number>();
@@ -163,7 +187,7 @@ export class Lines extends Primitive {
     this.mesh.geometry.setAttribute("color", colorAttribute);
   }
 
-  private updateColor(ids = this._ids) {
+  private updateColor(ids = this._ids as Iterable<number>) {
     const colorAttribute = this._colorBuffer;
     for (const id of ids) {
       const line = this.list[id];

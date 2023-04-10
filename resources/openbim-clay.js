@@ -429,6 +429,24 @@ class Vertices extends Primitive {
 }
 
 class Lines extends Primitive {
+    /**
+     * The color of all the points.
+     */
+    set baseColor(color) {
+        super.baseColor = color;
+        const allIDs = this.idMap.ids;
+        const unselected = this.selected.getUnselected(allIDs);
+        this.updateColor(unselected);
+        this.vertices.baseColor = color;
+    }
+    /**
+     * The color of all the selected points.
+     */
+    set selectColor(color) {
+        super.selectColor = color;
+        this.updateColor(this.selected.data);
+        this.vertices.selectColor = color;
+    }
     constructor() {
         super();
         /** {@link Primitive.mesh } */
@@ -504,6 +522,9 @@ class Lines extends Primitive {
         this.vertices.select(active, ids);
     }
     remove() {
+        //
+    }
+    removePoints() {
         //
     }
     transform(matrix) {
@@ -1273,6 +1294,7 @@ class Faces extends Primitive {
         super.baseColor = color;
         const unselected = this.selected.getUnselected(this._ids);
         this.updateColor(unselected);
+        this.vertices.baseColor = color;
     }
     /**
      * The color of all the selected points.
@@ -1280,6 +1302,7 @@ class Faces extends Primitive {
     set selectColor(color) {
         super.selectColor = color;
         this.updateColor(this.selected.data);
+        this.vertices.selectColor = color;
     }
     get _index() {
         if (!this.mesh.geometry.index) {

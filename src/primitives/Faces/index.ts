@@ -50,6 +50,7 @@ export class Faces extends Primitive {
     super.baseColor = color;
     const unselected = this.selected.getUnselected(this._ids);
     this.updateColor(unselected);
+    this.vertices.baseColor = color;
   }
 
   /**
@@ -58,6 +59,7 @@ export class Faces extends Primitive {
   set selectColor(color: THREE.Color) {
     super.selectColor = color;
     this.updateColor(this.selected.data);
+    this.vertices.selectColor = color;
   }
 
   private get _index() {

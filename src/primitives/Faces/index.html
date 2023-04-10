@@ -73,7 +73,7 @@
         selectColor: 0xff0000,
         transformMode: "translate",
         delete: deleteSelectedFaces,
-        deletePoints: deleteSelectedPoints
+        deletePoints: deleteSelectedPoints,
     }
 
     function setSelectedPoints() {
@@ -139,14 +139,12 @@
     gui.addColor(settings, "baseColor").name("Base color").onChange(() => {
         baseColor.set(settings.baseColor);
         faces.baseColor = baseColor;
-        faces.vertices.baseColor = baseColor;
     });
 
     const selectColor = new THREE.Color();
     gui.addColor(settings, "selectColor").name("Select color").onChange(() => {
         selectColor.set(settings.selectColor);
         faces.selectColor = selectColor;
-        faces.vertices.selectColor = selectColor;
     });
 
     gui.add(settings, "transformMode", {translate: "translate", rotate: "rotate", scale: "scale"})

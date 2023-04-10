@@ -45,6 +45,8 @@
         lineSelectionStart: 0,
         lineSelectionEnd: 0,
         transformMode: "translate",
+        baseColor: 0x888888,
+        selectColor: 0xff0000,
     }
 
     const lines = new OBC.Lines();
@@ -114,6 +116,18 @@
     gui.add(settings, "pointSelectionEnd").name("Point selection end").min(0).max(10).step(1).onChange(setSelectedPoints);
     gui.add(settings, "lineSelectionStart").name("Line selection start").min(0).max(6).step(1).onChange(setSelectedLines);
     gui.add(settings, "lineSelectionEnd").name("Line selection end").min(0).max(6).step(1).onChange(setSelectedLines);
+
+    const baseColor = new THREE.Color();
+    gui.addColor(settings, "baseColor").name("Base color").onChange(() => {
+        baseColor.set(settings.baseColor);
+        lines.baseColor = baseColor;
+    });
+
+    const selectColor = new THREE.Color();
+    gui.addColor(settings, "selectColor").name("Select color").onChange(() => {
+        selectColor.set(settings.selectColor);
+        lines.selectColor = selectColor;
+    });
 
     gui.add(settings, "transformMode", {translate: "translate", rotate: "rotate", scale: "scale"})
         .name("Transform mode").min(0).max(1000).onChange((result) => {
