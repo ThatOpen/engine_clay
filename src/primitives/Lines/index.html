@@ -47,6 +47,7 @@
         transformMode: "translate",
         baseColor: 0x888888,
         selectColor: 0xff0000,
+        delete: deleteSelectedLines
     }
 
     const lines = new OBC.Lines();
@@ -85,6 +86,10 @@
         }
         lines.select(false);
         lines.select(true, selection);
+    }
+
+    function deleteSelectedLines() {
+        lines.remove();
     }
 
     const control = new TransformControls(world.camera, world.renderer.domElement);
@@ -133,6 +138,8 @@
         .name("Transform mode").min(0).max(1000).onChange((result) => {
         control.setMode(result);
     });
+
+    gui.add(settings, "delete").name("Delete selected lines");
 
 </script>
 </body>

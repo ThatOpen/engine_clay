@@ -104,7 +104,7 @@ export class Lines extends Primitive {
     const idsToUpdate = this.selected.select(active, lineIDs, allLines);
     this.updateColor(idsToUpdate);
     const points: number[] = [];
-    for (const id of ids) {
+    for (const id of idsToUpdate) {
       const line = this.list[id];
       points.push(line.start);
       points.push(line.end);
@@ -116,8 +116,31 @@ export class Lines extends Primitive {
     this.vertices.select(active, ids);
   }
 
-  remove() {
-    //
+  /**
+   * Removes lines.
+   * @param ids List of lines to remove. If no line is specified,
+   * removes all the selected faces.
+   */
+  remove(ids = this.selected.data) {
+    const position = this._positionBuffer;
+    const color = this._colorBuffer;
+    const points: number[] = [];
+    for (const id of ids) {
+      const line = this.list[id];
+      if (line === undefined) continue;
+      this.removeFromBuffer(id, position);
+      this.removeFromBuffer(id, color);
+      this.idMap.remove(id);
+      const startPoint = this._points[line.start];
+      points.push(line.start, line.end);
+      startPoint.start.delete(id);
+      const endPoint = this._points[line.end];
+      endPoint.end.delete(id);
+      delete this.list[id];
+    }
+    position.needsUpdate = true;
+    color.needsUpdate = true;
+    this.selectPoints(false, points);
   }
 
   removePoints() {
@@ -160,6 +183,23 @@ export class Lines extends Primitive {
     }
     position.needsUpdate = true;
     this.updateColor();
+  }
+
+  private removeFromBuffer(id: number, buffer: THREE.BufferAttribute) {
+    const index = this.idMap.getIndex(id);
+    if (index === null) return;
+    const lastIndex = this.idMap.getLastIndex();
+    const indices = [index * 2, index * 2 + 1];
+    const lastIndices = [lastIndex * 2, lastIndex * 2 + 1];
+
+    for (let i = 0; i < 2; i++) {
+      const x = buffer.getX(lastIndices[i]);
+      const y = buffer.getY(lastIndices[i]);
+      const z = buffer.getZ(lastIndices[i]);
+      buffer.setXYZ(indices[i], x, y, z);
+    }
+
+    buffer.count -= 2;
   }
 
   private transformLines(matrix: THREE.Matrix4, indices: Iterable<number>) {
