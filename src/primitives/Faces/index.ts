@@ -169,7 +169,7 @@ export class Faces extends Primitive {
    * @param ids List of faces IDs to select or unselect. If not
    * defined, all faces will be selected or deselected.
    */
-  select(active: boolean, ids = this._ids) {
+  select(active: boolean, ids = this._ids as Iterable<number>) {
     const idsToUpdate = this.selected.select(active, ids, this._ids);
     this.updateColor(idsToUpdate);
     const points: number[] = [];
@@ -227,9 +227,18 @@ export class Faces extends Primitive {
       }
     }
     this.vertices.transform(matrix, vertices);
+    for (const pointID of this.selectedPoints.data) {
+      const point = this.points[pointID];
+      const vertexID = point.vertices.values().next().value;
+      const coords = this.vertices.get(vertexID);
+      if (coords === null) continue;
+      point.coordinates = coords;
+    }
   }
 
   regenerate() {
+    const selectedVerts = Array.from(this.vertices.selected.data);
+    const selectedFaces = Array.from(this.selected.data);
     this.vertices.clear();
     this.resetBuffers();
     const allIndices: number[] = [];
@@ -254,6 +263,10 @@ export class Faces extends Primitive {
     }
     this.mesh.geometry.setIndex(allIndices);
     this.resetBuffers();
+
+    this.vertices.select(true, selectedVerts);
+    this.select(true, selectedFaces);
+
     this.updateColor();
     this.mesh.geometry.computeVertexNormals();
   }

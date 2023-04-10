@@ -1477,8 +1477,18 @@ class Faces extends Primitive {
             }
         }
         this.vertices.transform(matrix, vertices);
+        for (const pointID of this.selectedPoints.data) {
+            const point = this.points[pointID];
+            const vertexID = point.vertices.values().next().value;
+            const coords = this.vertices.get(vertexID);
+            if (coords === null)
+                continue;
+            point.coordinates = coords;
+        }
     }
     regenerate() {
+        const selectedVerts = Array.from(this.vertices.selected.data);
+        const selectedFaces = Array.from(this.selected.data);
         this.vertices.clear();
         this.resetBuffers();
         const allIndices = [];
@@ -1504,6 +1514,8 @@ class Faces extends Primitive {
         }
         this.mesh.geometry.setIndex(allIndices);
         this.resetBuffers();
+        this.vertices.select(true, selectedVerts);
+        this.select(true, selectedFaces);
         this.updateColor();
         this.mesh.geometry.computeVertexNormals();
     }

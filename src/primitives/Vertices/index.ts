@@ -59,7 +59,7 @@ export class Vertices extends Primitive {
       this._positionBuffer.getX(index),
       this._positionBuffer.getY(index),
       this._positionBuffer.getZ(index),
-    ];
+    ] as [number, number, number];
   }
 
   /**

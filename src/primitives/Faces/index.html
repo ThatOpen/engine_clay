@@ -74,6 +74,11 @@
         transformMode: "translate",
         delete: deleteSelectedFaces,
         deletePoints: deleteSelectedPoints,
+        regenerate: regenerate
+    }
+
+    function regenerate() {
+        faces.regenerate();
     }
 
     function setSelectedPoints() {
@@ -154,6 +159,7 @@
 
     gui.add(settings, "delete").name("Delete selected faces").onChange(deleteSelectedFaces);
     gui.add(settings, "deletePoints").name("Delete selected points").onChange(deleteSelectedPoints);
+    gui.add(settings, "regenerate").name("Regenerate geometry").onChange(regenerate);
 
 
 </script>
