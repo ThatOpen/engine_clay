@@ -1,5 +1,50 @@
 import * as THREE from 'https://unpkg.com/three@0.135.0/build/three.module.js';
 
+class Selector {
+    constructor() {
+        this.data = new Set();
+    }
+    /**
+     * Select or unselects the given faces.
+     * @param active Whether to select or unselect.
+     * @param ids List of faces IDs to select or unselect. If not
+     * defined, all faces will be selected or deselected.
+     * @param allItems all the existing items.
+     */
+    select(active, ids, allItems) {
+        const all = new Set(allItems);
+        const idsToUpdate = [];
+        for (const id of ids) {
+            const exists = all.has(id);
+            if (!exists)
+                continue;
+            const isAlreadySelected = this.data.has(id);
+            if (active) {
+                if (isAlreadySelected)
+                    continue;
+                this.data.add(id);
+                idsToUpdate.push(id);
+            }
+            else {
+                if (!isAlreadySelected)
+                    continue;
+                this.data.delete(id);
+                idsToUpdate.push(id);
+            }
+        }
+        return idsToUpdate;
+    }
+    getUnselected(ids) {
+        const notSelectedIDs = [];
+        for (const id of ids) {
+            if (!this.data.has(id)) {
+                notSelectedIDs.push(id);
+            }
+        }
+        return notSelectedIDs;
+    }
+}
+
 /**
  * An object to keep track of entities and its position in a geometric buffer.
  */
@@ -106,51 +151,6 @@ class IdIndexMap {
      */
     getLastID() {
         return this._ids[this._ids.length - 1];
-    }
-}
-
-class Selector {
-    constructor() {
-        this.data = new Set();
-    }
-    /**
-     * Select or unselects the given faces.
-     * @param active Whether to select or unselect.
-     * @param ids List of faces IDs to select or unselect. If not
-     * defined, all faces will be selected or deselected.
-     * @param allItems all the existing items.
-     */
-    select(active, ids, allItems) {
-        const all = new Set(allItems);
-        const idsToUpdate = [];
-        for (const id of ids) {
-            const exists = all.has(id);
-            if (!exists)
-                continue;
-            const isAlreadySelected = this.data.has(id);
-            if (active) {
-                if (isAlreadySelected)
-                    continue;
-                this.data.add(id);
-                idsToUpdate.push(id);
-            }
-            else {
-                if (!isAlreadySelected)
-                    continue;
-                this.data.delete(id);
-                idsToUpdate.push(id);
-            }
-        }
-        return idsToUpdate;
-    }
-    getUnselected(ids) {
-        const notSelectedIDs = [];
-        for (const id of ids) {
-            if (!this.data.has(id)) {
-                notSelectedIDs.push(id);
-            }
-        }
-        return notSelectedIDs;
     }
 }
 
@@ -434,63 +434,52 @@ class Lines extends Primitive {
         /** {@link Primitive.mesh } */
         this.mesh = new THREE.LineSegments();
         /**
-         * The list of points that define the lines.
-         */
-        this.points = {};
-        /**
-         * The list of lines.
+         * The list of segments.
          */
         this.list = {};
         /**
          * The geometric representation of the vertices that define this instance of lines.
          */
         this.vertices = new Vertices();
-        this._pointIdGenerator = 0;
-        this._lineIdGenerator = 0;
-        this._segmentCount = 0;
+        /**
+         * The map that keeps track of the segments ID and their position in the geometric buffer.
+         */
+        this.idMap = new IdIndexMap();
+        /**
+         * The list of points that define the lines.
+         */
+        this._points = {};
         this.resetBuffers();
         const material = new THREE.LineBasicMaterial({ vertexColors: true });
         const geometry = new THREE.BufferGeometry();
         this.mesh = new THREE.LineSegments(geometry, material);
     }
     /**
-     * Adds a line.
-     * @param ids - the IDs of the {@link points} that define that line.
+     * Adds a segment between two {@link _points}.
+     * @param ids - the IDs of the {@link _points} that define the segments.
      */
     add(ids) {
-        const id = this._lineIdGenerator++;
-        const indices = [];
-        const newSegmentCount = this._segmentCount + ids.length - 1;
-        for (let i = this._segmentCount; i < newSegmentCount; i++) {
-            indices.push(i);
+        for (let i = 0; i < ids.length - 1; i++) {
+            const index = this.idMap.add();
+            const id = this.idMap.getId(index);
+            const start = ids[i];
+            const end = ids[i + 1];
+            const startPoint = this._points[start];
+            const endPoint = this._points[end];
+            startPoint.start.add(id);
+            endPoint.end.add(id);
+            this.list[id] = { id, start, end };
         }
-        this.list[id] = { id, points: new Set(ids), indices: new Set(indices) };
-        for (let i = 0; i < ids.length; i++) {
-            const id = ids[i];
-            const point = this.points[id];
-            if (i !== ids.length - 1) {
-                point.vertices.add(indices[i] * 2);
-            }
-            if (i !== 0) {
-                point.vertices.add(indices[i - 1] * 2 + 1);
-            }
-        }
-        this._segmentCount = newSegmentCount;
     }
     /**
      * Adds the points that can be used by one or many lines.
      * @param points the list of (x, y, z) coordinates of the points.
      */
     addPoints(points) {
-        for (const [x, y, z] of points) {
-            const id = this._pointIdGenerator++;
-            this.points[id] = {
-                id,
-                coordinates: [x, y, z],
-                vertices: new Set(),
-            };
+        const ids = this.vertices.add(points);
+        for (const id of ids) {
+            this._points[id] = { start: new Set(), end: new Set() };
         }
-        this.vertices.add(points);
     }
     /**
      * Select or unselects the given lines.
@@ -499,32 +488,41 @@ class Lines extends Primitive {
      * defined, all lines will be selected or deselected.
      */
     select(active, ids = this._ids) {
-        const allLines = Object.values(this.list).map((face) => face.id);
+        const allLines = this.idMap.ids;
         const lineIDs = ids || allLines;
         const idsToUpdate = this.selected.select(active, lineIDs, allLines);
         this.updateColor(idsToUpdate);
+        const points = [];
+        for (const id of ids) {
+            const line = this.list[id];
+            points.push(line.start);
+            points.push(line.end);
+        }
+        this.selectPoints(active, points);
     }
     selectPoints(active, ids) {
         this.vertices.select(active, ids);
     }
+    remove() {
+        //
+    }
     transform(matrix) {
         const indices = new Set();
         const points = new Set();
-        for (const id of this.selected.data) {
-            const line = this.list[id];
-            for (const index of line.indices) {
-                indices.add(index * 2);
-                indices.add(index * 2 + 1);
-            }
-            for (const pointID of line.points) {
-                points.add(pointID);
-            }
-        }
         for (const id of this.vertices.selected.data) {
             points.add(id);
-            const point = this.points[id];
-            for (const index of point.vertices) {
-                indices.add(index);
+            const point = this._points[id];
+            for (const id of point.start) {
+                const index = this.idMap.getIndex(id);
+                if (index === null)
+                    continue;
+                indices.add(index * 2);
+            }
+            for (const id of point.end) {
+                const index = this.idMap.getIndex(id);
+                if (index === null)
+                    continue;
+                indices.add(index * 2 + 1);
             }
         }
         this.transformLines(matrix, indices);
@@ -533,20 +531,16 @@ class Lines extends Primitive {
     regenerate() {
         this.resetBuffers();
         const position = this._positionBuffer;
-        let i = 0;
         for (const lineID in this.list) {
             const line = this.list[lineID];
-            let previous = null;
-            for (const pointID of line.points) {
-                const point = this.points[pointID];
-                const coords = point.coordinates;
-                if (previous) {
-                    position.setXYZ(i++, previous[0], previous[1], previous[2]);
-                    position.setXYZ(i++, coords[0], coords[1], coords[2]);
-                    position.count += 2;
-                }
-                previous = coords;
-            }
+            const index = this.idMap.getIndex(line.id);
+            const start = this.vertices.get(line.start);
+            const end = this.vertices.get(line.end);
+            if (index === null || start === null || end === null)
+                continue;
+            position.setXYZ(index * 2, start[0], start[1], start[2]);
+            position.setXYZ(index * 2 + 1, end[0], end[1], end[2]);
+            position.count += 2;
         }
         position.needsUpdate = true;
         this.updateColor();
@@ -564,7 +558,7 @@ class Lines extends Primitive {
         this._positionBuffer.needsUpdate = true;
     }
     resetBuffers() {
-        const vertexCount = this._segmentCount * 2;
+        const vertexCount = this.idMap.size * 2;
         const positionBuffer = new Float32Array(vertexCount * 3);
         const positionAttribute = new THREE.BufferAttribute(positionBuffer, 3);
         positionAttribute.count = 0;
@@ -579,10 +573,11 @@ class Lines extends Primitive {
             const line = this.list[id];
             const isSelected = this.selected.data.has(line.id);
             const { r, g, b } = isSelected ? this._selectColor : this._baseColor;
-            for (const index of line.indices) {
-                colorAttribute.setXYZ(index * 2, r, g, b);
-                colorAttribute.setXYZ(index * 2 + 1, r, g, b);
-            }
+            const index = this.idMap.getIndex(id);
+            if (index === null)
+                continue;
+            colorAttribute.setXYZ(index * 2, r, g, b);
+            colorAttribute.setXYZ(index * 2 + 1, r, g, b);
         }
         colorAttribute.needsUpdate = true;
     }
@@ -1406,6 +1401,14 @@ class Faces extends Primitive {
     select(active, ids = this._ids) {
         const idsToUpdate = this.selected.select(active, ids, this._ids);
         this.updateColor(idsToUpdate);
+        const points = [];
+        for (const id of ids) {
+            const face = this.list[id];
+            if (face) {
+                points.push(...face.points);
+            }
+        }
+        this.selectPoints(active, points);
     }
     /**
      * Adds the points that can be used by one or many faces
@@ -1444,15 +1447,6 @@ class Faces extends Primitive {
     }
     transform(matrix) {
         const vertices = new Set();
-        for (const id of this.selected.data) {
-            const face = this.list[id];
-            for (const pointID of face.points) {
-                const point = this.points[pointID];
-                for (const vertex of point.vertices) {
-                    vertices.add(vertex);
-                }
-            }
-        }
         for (const id of this.selectedPoints.data) {
             const point = this.points[id];
             for (const vertex of point.vertices) {

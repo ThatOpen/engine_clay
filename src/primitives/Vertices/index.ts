@@ -1,6 +1,5 @@
 import * as THREE from "three";
-import { IdIndexMap } from "./id-index-map";
-import { Primitive } from "../Primitive";
+import { Primitive, IdIndexMap } from "../Primitive";
 
 export class Vertices extends Primitive {
   /** Buffer increment when geometry size is exceeded, multiple of 3. */

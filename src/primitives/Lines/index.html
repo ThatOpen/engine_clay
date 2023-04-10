@@ -39,7 +39,7 @@
     const world = new SimpleThreeScene(canvas);
 
     const settings = {
-        pointsVisible: false,
+        pointsVisible: true,
         pointSelectionStart: 0,
         pointSelectionEnd: 0,
         lineSelectionStart: 0,
@@ -49,6 +49,7 @@
 
     const lines = new OBC.Lines();
     world.scene.add(lines.mesh);
+    world.scene.add(lines.vertices.mesh);
 
     lines.addPoints([
         [0, 0, 0],

@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { Selector } from "./selector";
 
 export * from "./selector";
+export * from "./id-index-map";
 
 export abstract class Primitive {
   /** Physical object with a geometry and one or many materials that can be placed in the scene. */

@@ -170,6 +170,14 @@ export class Faces extends Primitive {
   select(active: boolean, ids = this._ids) {
     const idsToUpdate = this.selected.select(active, ids, this._ids);
     this.updateColor(idsToUpdate);
+    const points: number[] = [];
+    for (const id of ids) {
+      const face = this.list[id];
+      if (face) {
+        points.push(...face.points);
+      }
+    }
+    this.selectPoints(active, points);
   }
 
   /**
@@ -210,15 +218,6 @@ export class Faces extends Primitive {
 
   transform(matrix: THREE.Matrix4) {
     const vertices = new Set<number>();
-    for (const id of this.selected.data) {
-      const face = this.list[id];
-      for (const pointID of face.points) {
-        const point = this.points[pointID];
-        for (const vertex of point.vertices) {
-          vertices.add(vertex);
-        }
-      }
-    }
     for (const id of this.selectedPoints.data) {
       const point = this.points[id];
       for (const vertex of point.vertices) {
