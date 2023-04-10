@@ -522,9 +522,9 @@ class Lines extends Primitive {
         this.vertices.select(active, ids);
     }
     /**
-     * Removes lines.
+     * Removes the specified lines.
      * @param ids List of lines to remove. If no line is specified,
-     * removes all the selected faces.
+     * removes all the selected lines.
      */
     remove(ids = this.selected.data) {
         const position = this._positionBuffer;
@@ -543,13 +543,32 @@ class Lines extends Primitive {
             const endPoint = this._points[line.end];
             endPoint.end.delete(id);
             delete this.list[id];
+            this.selected.data.delete(id);
         }
         position.needsUpdate = true;
         color.needsUpdate = true;
         this.selectPoints(false, points);
     }
-    removePoints() {
-        //
+    /**
+     * Removes the specified points and all lines that use them.
+     * @param ids List of points to remove. If no point is specified,
+     * removes all the selected points.
+     */
+    removePoints(ids = this.vertices.selected.data) {
+        const lines = new Set();
+        for (const id of ids) {
+            const point = this._points[id];
+            if (!point)
+                continue;
+            for (const id of point.start) {
+                lines.add(id);
+            }
+            for (const id of point.end) {
+                lines.add(id);
+            }
+        }
+        this.vertices.remove(ids);
+        this.remove(lines);
     }
     transform(matrix) {
         const indices = new Set();

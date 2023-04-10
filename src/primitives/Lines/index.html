@@ -47,7 +47,8 @@
         transformMode: "translate",
         baseColor: 0x888888,
         selectColor: 0xff0000,
-        delete: deleteSelectedLines
+        delete: deleteSelectedLines,
+        deletePoints: deleteSelectedPoints
     }
 
     const lines = new OBC.Lines();
@@ -90,6 +91,10 @@
 
     function deleteSelectedLines() {
         lines.remove();
+    }
+
+    function deleteSelectedPoints() {
+        lines.removePoints();
     }
 
     const control = new TransformControls(world.camera, world.renderer.domElement);
@@ -140,6 +145,7 @@
     });
 
     gui.add(settings, "delete").name("Delete selected lines");
+    gui.add(settings, "deletePoints").name("Delete selected points");
 
 </script>
 </body>
