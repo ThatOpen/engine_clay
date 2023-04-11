@@ -194,6 +194,9 @@ class Primitive {
     get _colorBuffer() {
         return this.mesh.geometry.attributes.color;
     }
+    get _normalBuffer() {
+        return this.mesh.geometry.attributes.normal;
+    }
     get _ids() {
         const ids = [];
         for (const id in this.list) {
@@ -1390,6 +1393,7 @@ class Faces extends Primitive {
         this.selectedPoints = new Selector();
         this._faceIdGenerator = 0;
         this._pointIdGenerator = 0;
+        this._nextIndex = 0;
         this.resetBuffers();
         const material = new THREE.MeshLambertMaterial({
             side: THREE.DoubleSide,
@@ -1397,6 +1401,7 @@ class Faces extends Primitive {
         });
         const geometry = new THREE.BufferGeometry();
         this.mesh = new THREE.Mesh(geometry, material);
+        geometry.setIndex([]);
     }
     /**
      * Adds a face.
@@ -1408,13 +1413,39 @@ class Faces extends Primitive {
             const point = this.points[pointID];
             point.faces.add(id);
         }
-        this.list[id] = {
+        const face = {
             id,
             vertices: new Set(),
             points: new Set(ids),
+            start: 0,
+            end: 0,
         };
+        const coordinates = [];
+        for (const pointID of face.points) {
+            const point = this.points[pointID];
+            coordinates.push(...point.coordinates);
+            const [id] = this.vertices.add([point.coordinates]);
+            point.vertices.add(id);
+            face.vertices.add(id);
+        }
+        const allIndices = Array.from(this._index.array);
+        face.start = allIndices.length;
+        const faceIndices = this.triangulate(coordinates);
+        const offset = this._nextIndex;
+        for (const faceIndex of faceIndices) {
+            const absoluteIndex = faceIndex + offset;
+            if (absoluteIndex >= this._nextIndex) {
+                this._nextIndex = absoluteIndex + 1;
+            }
+            allIndices.push(absoluteIndex);
+        }
+        face.end = allIndices.length;
+        this.mesh.geometry.setIndex(allIndices);
+        this.list[id] = face;
+        this.resetBuffers();
+        this.updateColor([id]);
+        this.updateNormal([id]);
     }
-    // TODO: setFace(), regenerateFace()
     /**
      * Removes faces.
      * @param ids List of faces to remove. If no face is specified,
@@ -1452,10 +1483,9 @@ class Faces extends Primitive {
                 newIndex.push(index);
             }
         }
+        this.mesh.geometry.setIndex(newIndex);
         this.resetBuffers();
         this.updateColor();
-        this.mesh.geometry.setIndex(newIndex);
-        this.mesh.geometry.computeVertexNormals();
     }
     removePoints(ids = this.selectedPoints.data) {
         const facesToRemove = new Set();
@@ -1579,10 +1609,37 @@ class Faces extends Primitive {
     }
     resetBuffers() {
         const positionBuffer = this.vertices.mesh.geometry.attributes.position;
-        this.mesh.geometry.setAttribute("position", positionBuffer);
-        const colorBuffer = new Float32Array(positionBuffer.count * 3);
-        const colorAttribute = new THREE.BufferAttribute(colorBuffer, 3);
-        this.mesh.geometry.setAttribute("color", colorAttribute);
+        if (this._positionBuffer !== positionBuffer) {
+            this.mesh.geometry.setAttribute("position", positionBuffer);
+            const colorBuffer = new Float32Array(positionBuffer.array.length * 3);
+            const colorAttribute = new THREE.BufferAttribute(colorBuffer, 3);
+            this.mesh.geometry.setAttribute("color", colorAttribute);
+            const normalBuffer = new Float32Array(positionBuffer.array.length * 3);
+            const normalAttribute = new THREE.BufferAttribute(normalBuffer, 3);
+            this.mesh.geometry.setAttribute("normal", normalAttribute);
+        }
+        this._colorBuffer.count = positionBuffer.count;
+        this._normalBuffer.count = positionBuffer.count;
+    }
+    updateNormal(ids = this._ids) {
+        const normalAttribute = this._normalBuffer;
+        for (const id of ids) {
+            const face = this.list[id];
+            if (!face)
+                continue;
+            const points = [];
+            for (const pointID of face.points) {
+                const point = this.points[pointID];
+                points.push(point.coordinates);
+            }
+            const [x, y, z] = this.getNormalVector(points);
+            for (const vertexID of face.vertices) {
+                const index = this.vertices.idMap.getIndex(vertexID);
+                if (index === null)
+                    continue;
+                normalAttribute.setXYZ(index, x, y, z);
+            }
+        }
     }
     updateColor(ids = this._ids) {
         const colorAttribute = this._colorBuffer;
@@ -1624,6 +1681,18 @@ class Faces extends Primitive {
         ];
         const max = Math.max(...crossProd);
         return crossProd.indexOf(max);
+    }
+    getNormalVector(points) {
+        const [x1, y1, z1] = points[0];
+        const [x2, y2, z2] = points[1];
+        const [x3, y3, z3] = points[2];
+        const a = [x2 - x1, y2 - y1, z2 - z1];
+        const b = [x3 - x2, y3 - y2, z3 - z2];
+        const x = a[1] * b[2] - a[2] * b[1];
+        const y = a[2] * b[0] - a[0] * b[2];
+        const z = a[0] * b[1] - a[1] * b[0];
+        const magnitude = Math.sqrt(x * x + y * y + z * z);
+        return [x / magnitude, y / magnitude, z / magnitude];
     }
     getCoordinate(index, coordinates) {
         const x = coordinates[index * 3];

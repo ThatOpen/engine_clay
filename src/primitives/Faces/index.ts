@@ -42,6 +42,7 @@ export class Faces extends Primitive {
 
   private _faceIdGenerator = 0;
   private _pointIdGenerator = 0;
+  private _nextIndex = 0;
 
   /**
    * The color of all the points.
@@ -71,13 +72,14 @@ export class Faces extends Primitive {
 
   constructor() {
     super();
-    this.resetBuffers();
+    this.updateBuffers();
     const material = new THREE.MeshLambertMaterial({
       side: THREE.DoubleSide,
       vertexColors: true,
     });
     const geometry = new THREE.BufferGeometry();
     this.mesh = new THREE.Mesh(geometry, material);
+    geometry.setIndex([]);
   }
 
   /**
@@ -90,14 +92,44 @@ export class Faces extends Primitive {
       const point = this.points[pointID];
       point.faces.add(id);
     }
-    this.list[id] = {
-      id,
-      vertices: new Set(),
-      points: new Set(ids),
-    };
-  }
 
-  // TODO: setFace(), regenerateFace()
+    const face = {
+      id,
+      vertices: new Set<number>(),
+      points: new Set<number>(ids),
+      start: 0,
+      end: 0,
+    };
+
+    const coordinates: number[] = [];
+    for (const pointID of face.points) {
+      const point = this.points[pointID];
+      coordinates.push(...point.coordinates);
+      const [id] = this.vertices.add([point.coordinates]);
+      point.vertices.add(id);
+      face.vertices.add(id);
+    }
+
+    const allIndices = Array.from(this._index.array);
+    face.start = allIndices.length;
+    const faceIndices = this.triangulate(coordinates);
+    const offset = this._nextIndex;
+    for (const faceIndex of faceIndices) {
+      const absoluteIndex = faceIndex + offset;
+      if (absoluteIndex >= this._nextIndex) {
+        this._nextIndex = absoluteIndex + 1;
+      }
+      allIndices.push(absoluteIndex);
+    }
+
+    face.end = allIndices.length;
+    this.mesh.geometry.setIndex(allIndices);
+    this.list[id] = face;
+
+    this.updateBuffers();
+    this.updateColor([id]);
+    this.updateNormal([id]);
+  }
 
   /**
    * Removes faces.
@@ -141,10 +173,9 @@ export class Faces extends Primitive {
       }
     }
 
-    this.resetBuffers();
-    this.updateColor();
     this.mesh.geometry.setIndex(newIndex);
-    this.mesh.geometry.computeVertexNormals();
+    this.updateBuffers();
+    this.updateColor();
   }
 
   removePoints(ids = this.selectedPoints.data) {
@@ -236,48 +267,40 @@ export class Faces extends Primitive {
     }
   }
 
-  regenerate() {
-    const selectedVerts = Array.from(this.vertices.selected.data);
-    const selectedFaces = Array.from(this.selected.data);
-    this.vertices.clear();
-    this.resetBuffers();
-    const allIndices: number[] = [];
-    let nextIndex = 0;
-    for (const faceID in this.list) {
-      const face = this.list[faceID];
-      const flatCoordinates: number[] = [];
-      for (const pointID of face.points) {
-        const point = this.points[pointID];
-        flatCoordinates.push(...point.coordinates);
-        const [id] = this.vertices.add([point.coordinates]);
-        point.vertices.add(id);
-        face.vertices.add(id);
-      }
-      const faceIndices = this.triangulate(flatCoordinates);
-      const offset = nextIndex;
-      for (const faceIndex of faceIndices) {
-        const absoluteIndex = faceIndex + offset;
-        if (absoluteIndex >= nextIndex) nextIndex = absoluteIndex + 1;
-        allIndices.push(absoluteIndex);
-      }
+  private updateBuffers() {
+    const positionBuffer = this.vertices.mesh.geometry.attributes.position;
+    if (this._positionBuffer !== positionBuffer) {
+      this.mesh.geometry.setAttribute("position", positionBuffer);
+
+      const colorBuffer = new Float32Array(positionBuffer.array.length * 3);
+      const colorAttribute = new THREE.BufferAttribute(colorBuffer, 3);
+      this.mesh.geometry.setAttribute("color", colorAttribute);
+
+      const normalBuffer = new Float32Array(positionBuffer.array.length * 3);
+      const normalAttribute = new THREE.BufferAttribute(normalBuffer, 3);
+      this.mesh.geometry.setAttribute("normal", normalAttribute);
     }
-    this.mesh.geometry.setIndex(allIndices);
-    this.resetBuffers();
-
-    this.vertices.select(true, selectedVerts);
-    this.select(true, selectedFaces);
-
-    this.updateColor();
-    this.mesh.geometry.computeVertexNormals();
+    this._colorBuffer.count = positionBuffer.count;
+    this._normalBuffer.count = positionBuffer.count;
   }
 
-  private resetBuffers() {
-    const positionBuffer = this.vertices.mesh.geometry.attributes.position;
-    this.mesh.geometry.setAttribute("position", positionBuffer);
-
-    const colorBuffer = new Float32Array(positionBuffer.count * 3);
-    const colorAttribute = new THREE.BufferAttribute(colorBuffer, 3);
-    this.mesh.geometry.setAttribute("color", colorAttribute);
+  private updateNormal(ids = this._ids as Iterable<number>) {
+    const normalAttribute = this._normalBuffer;
+    for (const id of ids) {
+      const face = this.list[id];
+      if (!face) continue;
+      const points: number[][] = [];
+      for (const pointID of face.points) {
+        const point = this.points[pointID];
+        points.push(point.coordinates);
+      }
+      const [x, y, z] = this.getNormalVector(points);
+      for (const vertexID of face.vertices) {
+        const index = this.vertices.idMap.getIndex(vertexID);
+        if (index === null) continue;
+        normalAttribute.setXYZ(index, x, y, z);
+      }
+    }
   }
 
   private updateColor(ids = this._ids as Iterable<number>) {
@@ -324,6 +347,23 @@ export class Faces extends Primitive {
 
     const max = Math.max(...crossProd);
     return crossProd.indexOf(max);
+  }
+
+  private getNormalVector(points: number[][]) {
+    const [x1, y1, z1] = points[0];
+    const [x2, y2, z2] = points[1];
+    const [x3, y3, z3] = points[2];
+
+    const a = [x2 - x1, y2 - y1, z2 - z1];
+    const b = [x3 - x2, y3 - y2, z3 - z2];
+
+    const x = a[1] * b[2] - a[2] * b[1];
+    const y = a[2] * b[0] - a[0] * b[2];
+    const z = a[0] * b[1] - a[1] * b[0];
+
+    const magnitude = Math.sqrt(x * x + y * y + z * z);
+
+    return [x / magnitude, y / magnitude, z / magnitude];
   }
 
   private getCoordinate(index: number, coordinates: number[]) {
