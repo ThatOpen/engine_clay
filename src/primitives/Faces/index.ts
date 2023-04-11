@@ -80,6 +80,10 @@ export class Faces extends Primitive {
     const geometry = new THREE.BufferGeometry();
     this.mesh = new THREE.Mesh(geometry, material);
     geometry.setIndex([]);
+
+    const normals = new THREE.BufferAttribute(new Float32Array(0), 3);
+    normals.name = "normal";
+    this.vertices.addAttribute(normals);
   }
 
   /**
@@ -128,7 +132,7 @@ export class Faces extends Primitive {
 
     this.updateBuffers();
     this.updateColor([id]);
-    this.updateNormal([id]);
+    this.computeNormal([id]);
   }
 
   /**
@@ -269,32 +273,33 @@ export class Faces extends Primitive {
 
   private updateBuffers() {
     const positionBuffer = this.vertices.mesh.geometry.attributes.position;
+    const normalBuffer = this.vertices.mesh.geometry.attributes.normal;
     if (this._positionBuffer !== positionBuffer) {
       this.mesh.geometry.setAttribute("position", positionBuffer);
+      this.mesh.geometry.setAttribute("normal", normalBuffer);
 
       const colorBuffer = new Float32Array(positionBuffer.array.length * 3);
       const colorAttribute = new THREE.BufferAttribute(colorBuffer, 3);
       this.mesh.geometry.setAttribute("color", colorAttribute);
-
-      const normalBuffer = new Float32Array(positionBuffer.array.length * 3);
-      const normalAttribute = new THREE.BufferAttribute(normalBuffer, 3);
-      this.mesh.geometry.setAttribute("normal", normalAttribute);
     }
     this._colorBuffer.count = positionBuffer.count;
-    this._normalBuffer.count = positionBuffer.count;
   }
 
-  private updateNormal(ids = this._ids as Iterable<number>) {
+  private computeNormal(ids = this._ids as Iterable<number>) {
     const normalAttribute = this._normalBuffer;
     for (const id of ids) {
       const face = this.list[id];
       if (!face) continue;
-      const points: number[][] = [];
-      for (const pointID of face.points) {
-        const point = this.points[pointID];
-        points.push(point.coordinates);
+      const coordinates: number[][] = [];
+      let counter = 0;
+      for (const vertexID of face.vertices) {
+        if (counter++ > 2) break;
+        const vertex = this.vertices.get(vertexID);
+        if (vertex !== null) {
+          coordinates.push(vertex);
+        }
       }
-      const [x, y, z] = this.getNormalVector(points);
+      const [x, y, z] = this.getNormalVector(coordinates);
       for (const vertexID of face.vertices) {
         const index = this.vertices.idMap.getIndex(vertexID);
         if (index === null) continue;
