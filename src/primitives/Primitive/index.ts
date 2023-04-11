@@ -66,6 +66,12 @@ export abstract class Primitive {
     return this.mesh.geometry.attributes.normal as THREE.BufferAttribute;
   }
 
+  protected get _attributes() {
+    return Object.values(
+      this.mesh.geometry.attributes
+    ) as THREE.BufferAttribute[];
+  }
+
   protected get _ids() {
     const ids: number[] = [];
     for (const id in this.list) {

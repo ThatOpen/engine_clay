@@ -11,7 +11,6 @@ export class Vertices extends Primitive {
   /** The map between each vertex ID and its index. */
   idMap = new IdIndexMap();
 
-  private _customAttributes: THREE.BufferAttribute[] = [];
   private _capacity = 0;
 
   /**
@@ -46,7 +45,9 @@ export class Vertices extends Primitive {
 
     this.mesh = new THREE.Points(geometry, material);
     this.mesh.frustumCulled = false;
-    this.resetAttributes();
+
+    this.createAttribute("position");
+    this.createAttribute("color");
   }
 
   /**
@@ -69,7 +70,7 @@ export class Vertices extends Primitive {
    * @returns the list of ids of the created vertices.
    */
   add(coordinates: [number, number, number][]) {
-    this.resizeBufferIfNecessary(coordinates.length);
+    this.resizeBuffersIfNecessary(coordinates.length);
     const ids: number[] = [];
     const { r, g, b } = this._baseColor;
     for (let i = 0; i < coordinates.length; i++) {
@@ -162,13 +163,9 @@ export class Vertices extends Primitive {
    * Removes the selected points from the list
    */
   remove(ids = this.selected.data) {
-    const position = this._positionBuffer;
-    const color = this._colorBuffer;
     for (const id of ids) {
-      this.removeFromBuffer(id, position);
-      this.removeFromBuffer(id, color);
-      for (const custom of this._customAttributes) {
-        this.removeFromBuffer(id, custom);
+      for (const attribute of this._attributes) {
+        this.removeFromBuffer(id, attribute);
       }
       this.idMap.remove(id);
     }
@@ -177,40 +174,29 @@ export class Vertices extends Primitive {
   }
 
   addAttribute(attribute: THREE.BufferAttribute) {
-    this._customAttributes.push(attribute);
+    this.mesh.geometry.setAttribute(attribute.name, attribute);
   }
 
   private updateBuffersCount() {
     const size = this.idMap.size;
-
-    const position = this._positionBuffer;
-    position.count = size;
-    position.needsUpdate = true;
-
-    const color = this._colorBuffer;
-    color.count = size;
-    color.needsUpdate = true;
-
-    for (const custom of this._customAttributes) {
-      custom.count = size;
-      custom.needsUpdate = true;
+    for (const attribute of this._attributes) {
+      attribute.count = size;
+      attribute.needsUpdate = true;
     }
   }
 
   private resetAttributes() {
-    const positionBuffer = new THREE.BufferAttribute(new Float32Array(0), 3);
-    const colorBuffer = new THREE.BufferAttribute(new Float32Array(0), 3);
-    this.mesh.geometry.setAttribute("position", positionBuffer);
-    this.mesh.geometry.setAttribute("color", colorBuffer);
-    const newAttributes: THREE.BufferAttribute[] = [];
-    for (const custom of this._customAttributes) {
-      const newAttr = new THREE.BufferAttribute(new Float32Array(0), 3);
-      newAttributes.push(newAttr);
-      newAttr.name = custom.name;
-      this.mesh.geometry.setAttribute(newAttr.name, newAttr);
+    for (const attribute of this._attributes) {
+      this.createAttribute(attribute.name);
     }
-    this._customAttributes = newAttributes;
     this._capacity = 0;
+  }
+
+  private createAttribute(name: string) {
+    this.mesh.geometry.deleteAttribute(name);
+    const attribute = new THREE.BufferAttribute(new Float32Array(0), 3);
+    attribute.name = name;
+    this.mesh.geometry.setAttribute(name, attribute);
   }
 
   private removeFromBuffer(id: number, buffer: THREE.BufferAttribute) {
@@ -226,55 +212,32 @@ export class Vertices extends Primitive {
     }
   }
 
-  private resizeBufferIfNecessary(increase: number) {
+  private resizeBuffersIfNecessary(increase: number) {
     const position = this.mesh.geometry.getAttribute("position");
     const size = position.count * 3 + increase * 3;
     const difference = size - this._capacity;
     if (difference >= 0) {
       const increase = Math.max(difference, this.bufferIncrease);
-      this.resizeBuffers(increase);
-    }
-  }
-
-  private resizeBuffers(increase = this.bufferIncrease) {
-    this._capacity += increase;
-    const oldPositionArray = this.mesh.geometry.getAttribute("position").array;
-    const oldColorArray = this.mesh.geometry.getAttribute("color").array;
-    this.resizeAttribute("position", this._positionBuffer);
-    this.resizeAttribute("color", this._colorBuffer);
-    for (let i = 0; i < this._positionBuffer.count; i++) {
-      const x = oldPositionArray[i * 3];
-      const y = oldPositionArray[i * 3 + 1];
-      const z = oldPositionArray[i * 3 + 2];
-      this._positionBuffer.setXYZ(i, x, y, z);
-      const r = oldColorArray[i * 3];
-      const g = oldColorArray[i * 3 + 1];
-      const b = oldColorArray[i * 3 + 2];
-      this._colorBuffer.setXYZ(i, r, g, b);
-    }
-    const newAttributes: THREE.BufferAttribute[] = [];
-    for (const custom of this._customAttributes) {
-      const newAttribute = this.resizeAttribute(custom.name, custom);
-      newAttributes.push(newAttribute);
-      for (let i = 0; i < this._capacity; i++) {
-        const x = custom.getX(i);
-        const y = custom.getY(i);
-        const z = custom.getZ(i);
-        this._positionBuffer.setXYZ(i, x, y, z);
+      this._capacity += increase;
+      for (const attribute of this._attributes) {
+        this.resizeBuffer(attribute);
       }
     }
-    this._customAttributes = newAttributes;
   }
 
-  private resizeAttribute(name: string, buffer: THREE.BufferAttribute) {
-    const count = buffer.count;
-    this.mesh.geometry.deleteAttribute(name);
+  private resizeBuffer(attribute: THREE.BufferAttribute) {
+    this.mesh.geometry.deleteAttribute(attribute.name);
     const array = new Float32Array(this._capacity);
-    const newBuffer = new THREE.BufferAttribute(array, 3);
-    newBuffer.name = name;
-    newBuffer.count = count;
-    this.mesh.geometry.setAttribute(name, newBuffer);
-    return newBuffer;
+    const newAttribute = new THREE.BufferAttribute(array, 3);
+    newAttribute.name = attribute.name;
+    newAttribute.count = attribute.count;
+    this.mesh.geometry.setAttribute(attribute.name, newAttribute);
+    for (let i = 0; i < this._capacity; i++) {
+      const x = attribute.getX(i);
+      const y = attribute.getY(i);
+      const z = attribute.getZ(i);
+      newAttribute.setXYZ(i, x, y, z);
+    }
   }
 
   private updateColor(ids = this.idMap.ids as Iterable<number>) {

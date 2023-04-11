@@ -65,8 +65,11 @@ export class IdIndexMap {
    */
   remove(id: number) {
     const index = this.getIndex(id);
+    if (index === null || index === undefined) return;
     const lastID = this._ids.pop();
-    if (index === null || index === undefined || lastID === undefined) return;
+    if (lastID === undefined) {
+      throw new Error(`Error while removing item: ${id}`);
+    }
     this._indices[id] = null;
     if (id === lastID) return;
     this._ids[index] = lastID;
