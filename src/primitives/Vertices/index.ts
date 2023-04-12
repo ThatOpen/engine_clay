@@ -1,17 +1,15 @@
 import * as THREE from "three";
-import { Primitive, IdIndexMap } from "../Primitive";
+import { Primitive } from "../Primitive";
+import { BufferManager, IdIndexMap } from "../../utils";
 
 export class Vertices extends Primitive {
-  /** Buffer increment when geometry size is exceeded, multiple of 3. */
-  bufferIncrease = 300;
-
   /** {@link Primitive.mesh } */
   mesh: THREE.Points;
 
   /** The map between each vertex ID and its index. */
   idMap = new IdIndexMap();
 
-  private _capacity = 0;
+  private _buffers: BufferManager;
 
   /**
    * The color of all the points.
@@ -46,8 +44,9 @@ export class Vertices extends Primitive {
     this.mesh = new THREE.Points(geometry, material);
     this.mesh.frustumCulled = false;
 
-    this.createAttribute("position");
-    this.createAttribute("color");
+    this._buffers = new BufferManager(geometry);
+    this._buffers.createAttribute("position");
+    this._buffers.createAttribute("color");
   }
 
   /**
@@ -70,7 +69,7 @@ export class Vertices extends Primitive {
    * @returns the list of ids of the created vertices.
    */
   add(coordinates: [number, number, number][]) {
-    this.resizeBuffersIfNecessary(coordinates.length);
+    this._buffers.resizeIfNeeded(coordinates.length);
     const ids: number[] = [];
     const { r, g, b } = this._baseColor;
     for (let i = 0; i < coordinates.length; i++) {
@@ -81,7 +80,7 @@ export class Vertices extends Primitive {
       this._positionBuffer.setXYZ(index, x, y, z);
       this._colorBuffer.setXYZ(index, r, g, b);
     }
-    this.updateBuffersCount();
+    this._buffers.updateCount(this.idMap.size);
     return ids;
   }
 
@@ -94,40 +93,6 @@ export class Vertices extends Primitive {
   select(active: boolean, ids = this.idMap.ids as Iterable<number>) {
     const idsToUpdate = this.selected.select(active, ids, this.idMap.ids);
     this.updateColor(idsToUpdate);
-  }
-
-  /**
-   * Apply a displacement vector to the selected points
-   * @param displacement Displacement vector.
-   * @param ids IDs of the vertices to move.
-   */
-  move(displacement: THREE.Vector3, ids = this.selected.data) {
-    const transform = new THREE.Matrix4();
-    transform.setPosition(displacement);
-    this.transform(transform, ids);
-  }
-
-  /**
-   * Rotate the selected points
-   * @param rotation euler rotation.
-   * @param ids IDs of the vertices to rotate.
-   */
-  rotate(rotation: THREE.Vector3, ids = this.selected.data) {
-    const transform = new THREE.Matrix4();
-    const { x, y, z } = rotation;
-    transform.makeRotationFromEuler(new THREE.Euler(x, y, z));
-    this.transform(transform, ids);
-  }
-
-  /**
-   * Scale the selected points
-   * @param scale Scale vector.
-   * @param ids IDs of the vertices to scale.
-   */
-  scale(scale: THREE.Vector3, ids = this.selected.data) {
-    const transform = new THREE.Matrix4();
-    transform.scale(scale);
-    this.transform(transform, ids);
   }
 
   /**
@@ -154,7 +119,7 @@ export class Vertices extends Primitive {
    * Quickly removes all the points and releases all the memory used.
    */
   clear() {
-    this.resetAttributes();
+    this._buffers.resetAttributes();
     this.selected.data.clear();
     this.idMap.reset();
   }
@@ -170,33 +135,11 @@ export class Vertices extends Primitive {
       this.idMap.remove(id);
     }
     this.select(false, ids);
-    this.updateBuffersCount();
+    this._buffers.updateCount(this.idMap.size);
   }
 
   addAttribute(attribute: THREE.BufferAttribute) {
-    this.mesh.geometry.setAttribute(attribute.name, attribute);
-  }
-
-  private updateBuffersCount() {
-    const size = this.idMap.size;
-    for (const attribute of this._attributes) {
-      attribute.count = size;
-      attribute.needsUpdate = true;
-    }
-  }
-
-  private resetAttributes() {
-    for (const attribute of this._attributes) {
-      this.createAttribute(attribute.name);
-    }
-    this._capacity = 0;
-  }
-
-  private createAttribute(name: string) {
-    this.mesh.geometry.deleteAttribute(name);
-    const attribute = new THREE.BufferAttribute(new Float32Array(0), 3);
-    attribute.name = name;
-    this.mesh.geometry.setAttribute(name, attribute);
+    this._buffers.addAttribute(attribute);
   }
 
   private removeFromBuffer(id: number, buffer: THREE.BufferAttribute) {
@@ -209,34 +152,6 @@ export class Vertices extends Primitive {
         buffer.getY(lastIndex),
         buffer.getZ(lastIndex)
       );
-    }
-  }
-
-  private resizeBuffersIfNecessary(increase: number) {
-    const position = this.mesh.geometry.getAttribute("position");
-    const size = position.count * 3 + increase * 3;
-    const difference = size - this._capacity;
-    if (difference >= 0) {
-      const increase = Math.max(difference, this.bufferIncrease);
-      this._capacity += increase;
-      for (const attribute of this._attributes) {
-        this.resizeBuffer(attribute);
-      }
-    }
-  }
-
-  private resizeBuffer(attribute: THREE.BufferAttribute) {
-    this.mesh.geometry.deleteAttribute(attribute.name);
-    const array = new Float32Array(this._capacity);
-    const newAttribute = new THREE.BufferAttribute(array, 3);
-    newAttribute.name = attribute.name;
-    newAttribute.count = attribute.count;
-    this.mesh.geometry.setAttribute(attribute.name, newAttribute);
-    for (let i = 0; i < this._capacity; i++) {
-      const x = attribute.getX(i);
-      const y = attribute.getY(i);
-      const z = attribute.getZ(i);
-      newAttribute.setXYZ(i, x, y, z);
     }
   }
 

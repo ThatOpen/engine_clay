@@ -1,7 +1,8 @@
 import * as THREE from "three";
 import earcut from "earcut";
 import { Vertices } from "../Vertices";
-import { Primitive, Selector } from "../Primitive";
+import { Primitive } from "../Primitive";
+import { Selector } from "../../utils";
 
 export class Faces extends Primitive {
   /** {@link Primitive.mesh } */

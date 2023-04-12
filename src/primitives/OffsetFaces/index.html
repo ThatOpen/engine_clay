@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta
+            name="viewport"
+            content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"
+    />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge"/>
+    <link rel="stylesheet" href="../../../resources/styles.css"/>
+    <link rel="icon" type="image/x-icon" href="../../../resources/favicon.ico"/>
+    <title>Components | Hello world</title>
+</head>
+<body>
+<canvas class="full-screen" id="container"></canvas>
+
+<script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.135.0/build/three.module.js",
+          "three/examples/jsm/libs/lil-gui.module.min": "https://unpkg.com/three@0.135.0/examples/jsm/libs/lil-gui.module.min.js",
+          "three/examples/jsm/controls/OrbitControls": "https://unpkg.com/three@0.135.0/examples/jsm/controls/OrbitControls.js",
+          "three/examples/jsm/controls/TransformControls": "https://unpkg.com/three@0.135.0/examples/jsm/controls/TransformControls.js",
+          "stats.js/src/Stats.js": "https://unpkg.com/stats-js@1.0.1/src/Stats.js",
+          "client-zip": "https://unpkg.com/client-zip@2.3.0/index.js"
+        }
+      }
+
+</script>
+<script type="module">
+    // import * as THREE from "three";
+    import {SimpleThreeScene} from "../../../resources/simple-three-scene.js";
+    // import {TransformControls} from "three/examples/jsm/controls/TransformControls";
+    import * as OBC from "../../../resources/openbim-clay.js";
+    // import * as dat from "three/examples/jsm/libs/lil-gui.module.min";
+
+
+    const canvas = document.getElementById("container");
+    const world = new SimpleThreeScene(canvas);
+
+    const offsetFaces = new OBC.OffsetFaces();
+    world.scene.add(offsetFaces.mesh);
+    world.scene.add(offsetFaces.lines.mesh);
+    world.scene.add(offsetFaces.lines.vertices.mesh);
+
+    offsetFaces.lines.addPoints([
+        [0.5, 0, 0.5],
+        [1.5, 0, 0.5],
+        [1.5, 0, 1.5],
+        [0.5, 0, 1.5],
+    ]);
+
+    offsetFaces.lines.add([0, 1, 2, 3, 0]);
+
+    offsetFaces.lines.regenerate();
+
+
+
+</script>
+</body>
+</html>

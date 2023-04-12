@@ -1,47 +1,71 @@
 import * as THREE from 'https://unpkg.com/three@0.135.0/build/three.module.js';
 
-class Selector {
-    constructor() {
-        this.data = new Set();
+class BufferManager {
+    /** The current size of the buffers. */
+    get size() {
+        const firstAttribute = this.attributes[0];
+        return firstAttribute.count * 3;
     }
-    /**
-     * Select or unselects the given faces.
-     * @param active Whether to select or unselect.
-     * @param ids List of faces IDs to select or unselect. If not
-     * defined, all faces will be selected or deselected.
-     * @param allItems all the existing items.
-     */
-    select(active, ids, allItems) {
-        const all = new Set(allItems);
-        const idsToUpdate = [];
-        for (const id of ids) {
-            const exists = all.has(id);
-            if (!exists)
-                continue;
-            const isAlreadySelected = this.data.has(id);
-            if (active) {
-                if (isAlreadySelected)
-                    continue;
-                this.data.add(id);
-                idsToUpdate.push(id);
-            }
-            else {
-                if (!isAlreadySelected)
-                    continue;
-                this.data.delete(id);
-                idsToUpdate.push(id);
+    get attributes() {
+        return Object.values(this.geometry.attributes);
+    }
+    constructor(geometry) {
+        this.geometry = geometry;
+        /** Buffer increment when geometry size is exceeded, multiple of 3. */
+        this.bufferIncrease = 300;
+        /**
+         * The maximum capacity of the buffers. If exceeded by the {@link size},
+         * the buffers will be rescaled.
+         */
+        this.capacity = 0;
+    }
+    addAttribute(attribute) {
+        this.geometry.setAttribute(attribute.name, attribute);
+    }
+    resetAttributes() {
+        for (const attribute of this.attributes) {
+            this.createAttribute(attribute.name);
+        }
+        this.capacity = 0;
+    }
+    createAttribute(name) {
+        if (this.geometry.hasAttribute(name)) {
+            this.geometry.deleteAttribute(name);
+        }
+        const attribute = new THREE.BufferAttribute(new Float32Array(0), 3);
+        attribute.name = name;
+        this.geometry.setAttribute(name, attribute);
+    }
+    updateCount(size) {
+        for (const attribute of this.attributes) {
+            attribute.count = size;
+            attribute.needsUpdate = true;
+        }
+    }
+    resizeIfNeeded(increase) {
+        const newSize = this.size + increase * 3;
+        const difference = newSize - this.capacity;
+        if (difference >= 0) {
+            const increase = Math.max(difference, this.bufferIncrease);
+            this.capacity += increase;
+            for (const attribute of this.attributes) {
+                this.resizeBuffers(attribute);
             }
         }
-        return idsToUpdate;
     }
-    getUnselected(ids) {
-        const notSelectedIDs = [];
-        for (const id of ids) {
-            if (!this.data.has(id)) {
-                notSelectedIDs.push(id);
-            }
+    resizeBuffers(attribute) {
+        this.geometry.deleteAttribute(attribute.name);
+        const array = new Float32Array(this.capacity);
+        const newAttribute = new THREE.BufferAttribute(array, 3);
+        newAttribute.name = attribute.name;
+        newAttribute.count = attribute.count;
+        this.geometry.setAttribute(attribute.name, newAttribute);
+        for (let i = 0; i < this.capacity; i++) {
+            const x = attribute.getX(i);
+            const y = attribute.getY(i);
+            const z = attribute.getZ(i);
+            newAttribute.setXYZ(i, x, y, z);
         }
-        return notSelectedIDs;
     }
 }
 
@@ -157,6 +181,51 @@ class IdIndexMap {
     }
 }
 
+class Selector {
+    constructor() {
+        this.data = new Set();
+    }
+    /**
+     * Select or unselects the given faces.
+     * @param active Whether to select or unselect.
+     * @param ids List of faces IDs to select or unselect. If not
+     * defined, all faces will be selected or deselected.
+     * @param allItems all the existing items.
+     */
+    select(active, ids, allItems) {
+        const all = new Set(allItems);
+        const idsToUpdate = [];
+        for (const id of ids) {
+            const exists = all.has(id);
+            if (!exists)
+                continue;
+            const isAlreadySelected = this.data.has(id);
+            if (active) {
+                if (isAlreadySelected)
+                    continue;
+                this.data.add(id);
+                idsToUpdate.push(id);
+            }
+            else {
+                if (!isAlreadySelected)
+                    continue;
+                this.data.delete(id);
+                idsToUpdate.push(id);
+            }
+        }
+        return idsToUpdate;
+    }
+    getUnselected(ids) {
+        const notSelectedIDs = [];
+        for (const id of ids) {
+            if (!this.data.has(id)) {
+                notSelectedIDs.push(id);
+            }
+        }
+        return notSelectedIDs;
+    }
+}
+
 class Primitive {
     constructor() {
         /**
@@ -235,11 +304,8 @@ class Vertices extends Primitive {
      */
     constructor(size = 0.1) {
         super();
-        /** Buffer increment when geometry size is exceeded, multiple of 3. */
-        this.bufferIncrease = 300;
         /** The map between each vertex ID and its index. */
         this.idMap = new IdIndexMap();
-        this._capacity = 0;
         const geometry = new THREE.BufferGeometry();
         const material = new THREE.PointsMaterial({
             size,
@@ -247,8 +313,9 @@ class Vertices extends Primitive {
         });
         this.mesh = new THREE.Points(geometry, material);
         this.mesh.frustumCulled = false;
-        this.createAttribute("position");
-        this.createAttribute("color");
+        this._buffers = new BufferManager(geometry);
+        this._buffers.createAttribute("position");
+        this._buffers.createAttribute("color");
     }
     /**
      * Gets the coordinates of the vertex with the given ID.
@@ -270,7 +337,7 @@ class Vertices extends Primitive {
      * @returns the list of ids of the created vertices.
      */
     add(coordinates) {
-        this.resizeBuffersIfNecessary(coordinates.length);
+        this._buffers.resizeIfNeeded(coordinates.length);
         const ids = [];
         const { r, g, b } = this._baseColor;
         for (let i = 0; i < coordinates.length; i++) {
@@ -281,7 +348,7 @@ class Vertices extends Primitive {
             this._positionBuffer.setXYZ(index, x, y, z);
             this._colorBuffer.setXYZ(index, r, g, b);
         }
-        this.updateBuffersCount();
+        this._buffers.updateCount(this.idMap.size);
         return ids;
     }
     /**
@@ -293,37 +360,6 @@ class Vertices extends Primitive {
     select(active, ids = this.idMap.ids) {
         const idsToUpdate = this.selected.select(active, ids, this.idMap.ids);
         this.updateColor(idsToUpdate);
-    }
-    /**
-     * Apply a displacement vector to the selected points
-     * @param displacement Displacement vector.
-     * @param ids IDs of the vertices to move.
-     */
-    move(displacement, ids = this.selected.data) {
-        const transform = new THREE.Matrix4();
-        transform.setPosition(displacement);
-        this.transform(transform, ids);
-    }
-    /**
-     * Rotate the selected points
-     * @param rotation euler rotation.
-     * @param ids IDs of the vertices to rotate.
-     */
-    rotate(rotation, ids = this.selected.data) {
-        const transform = new THREE.Matrix4();
-        const { x, y, z } = rotation;
-        transform.makeRotationFromEuler(new THREE.Euler(x, y, z));
-        this.transform(transform, ids);
-    }
-    /**
-     * Scale the selected points
-     * @param scale Scale vector.
-     * @param ids IDs of the vertices to scale.
-     */
-    scale(scale, ids = this.selected.data) {
-        const transform = new THREE.Matrix4();
-        transform.scale(scale);
-        this.transform(transform, ids);
     }
     /**
      * Applies a transformation to the selected vertices.
@@ -349,7 +385,7 @@ class Vertices extends Primitive {
      * Quickly removes all the points and releases all the memory used.
      */
     clear() {
-        this.resetAttributes();
+        this._buffers.resetAttributes();
         this.selected.data.clear();
         this.idMap.reset();
     }
@@ -364,61 +400,16 @@ class Vertices extends Primitive {
             this.idMap.remove(id);
         }
         this.select(false, ids);
-        this.updateBuffersCount();
+        this._buffers.updateCount(this.idMap.size);
     }
     addAttribute(attribute) {
-        this.mesh.geometry.setAttribute(attribute.name, attribute);
-    }
-    updateBuffersCount() {
-        const size = this.idMap.size;
-        for (const attribute of this._attributes) {
-            attribute.count = size;
-            attribute.needsUpdate = true;
-        }
-    }
-    resetAttributes() {
-        for (const attribute of this._attributes) {
-            this.createAttribute(attribute.name);
-        }
-        this._capacity = 0;
-    }
-    createAttribute(name) {
-        this.mesh.geometry.deleteAttribute(name);
-        const attribute = new THREE.BufferAttribute(new Float32Array(0), 3);
-        attribute.name = name;
-        this.mesh.geometry.setAttribute(name, attribute);
+        this._buffers.addAttribute(attribute);
     }
     removeFromBuffer(id, buffer) {
         const lastIndex = this.idMap.getLastIndex();
         const index = this.idMap.getIndex(id);
         if (index !== null) {
             buffer.setXYZ(index, buffer.getX(lastIndex), buffer.getY(lastIndex), buffer.getZ(lastIndex));
-        }
-    }
-    resizeBuffersIfNecessary(increase) {
-        const position = this.mesh.geometry.getAttribute("position");
-        const size = position.count * 3 + increase * 3;
-        const difference = size - this._capacity;
-        if (difference >= 0) {
-            const increase = Math.max(difference, this.bufferIncrease);
-            this._capacity += increase;
-            for (const attribute of this._attributes) {
-                this.resizeBuffer(attribute);
-            }
-        }
-    }
-    resizeBuffer(attribute) {
-        this.mesh.geometry.deleteAttribute(attribute.name);
-        const array = new Float32Array(this._capacity);
-        const newAttribute = new THREE.BufferAttribute(array, 3);
-        newAttribute.name = attribute.name;
-        newAttribute.count = attribute.count;
-        this.mesh.geometry.setAttribute(attribute.name, newAttribute);
-        for (let i = 0; i < this._capacity; i++) {
-            const x = attribute.getX(i);
-            const y = attribute.getY(i);
-            const z = attribute.getZ(i);
-            newAttribute.setXYZ(i, x, y, z);
         }
     }
     updateColor(ids = this.idMap.ids) {
@@ -1679,4 +1670,13 @@ class Faces extends Primitive {
     }
 }
 
-export { Faces, Lines, Vertices };
+class OffsetFaces extends Primitive {
+    constructor() {
+        super();
+        this.faces = new Faces();
+        this.lines = new Lines();
+        this.mesh = this.faces.mesh;
+    }
+}
+
+export { BufferManager, Faces, IdIndexMap, Lines, OffsetFaces, Selector, Vertices };

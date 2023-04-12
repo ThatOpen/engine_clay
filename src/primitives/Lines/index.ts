@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { Vertices } from "../Vertices";
-import { IdIndexMap, Primitive } from "../Primitive";
+import { Primitive } from "../Primitive";
+import { IdIndexMap } from "../../utils";
 
 export class Lines extends Primitive {
   /** {@link Primitive.mesh } */
