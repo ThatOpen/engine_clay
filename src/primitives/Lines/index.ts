@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { Vertices } from "../Vertices";
 import { Primitive } from "../Primitive";
-import { IdIndexMap } from "../../utils";
+import { BufferManager, IdIndexMap } from "../../utils";
 
 export class Lines extends Primitive {
   /** {@link Primitive.mesh } */
@@ -28,9 +28,8 @@ export class Lines extends Primitive {
    */
   idMap = new IdIndexMap();
 
-  /**
-   * The list of points that define the lines.
-   */
+  private _buffers: BufferManager;
+
   private _points: { [id: number]: { start: Set<number>; end: Set<number> } } =
     {};
 
@@ -56,10 +55,12 @@ export class Lines extends Primitive {
 
   constructor() {
     super();
-    this.resetBuffers();
     const material = new THREE.LineBasicMaterial({ vertexColors: true });
     const geometry = new THREE.BufferGeometry();
     this.mesh = new THREE.LineSegments(geometry, material);
+    this._buffers = new BufferManager(geometry);
+    this._buffers.createAttribute("position");
+    this._buffers.createAttribute("color");
   }
 
   /**
@@ -67,19 +68,35 @@ export class Lines extends Primitive {
    * @param ids - the IDs of the {@link _points} that define the segments.
    */
   add(ids: number[]) {
+    const newVerticesCount = (ids.length - 1) * 2;
+    this._buffers.resizeIfNeeded(newVerticesCount);
+    const { r, g, b } = this._baseColor;
     for (let i = 0; i < ids.length - 1; i++) {
+      const startID = ids[i];
+      const endID = ids[i + 1];
+
+      const start = this.vertices.get(startID);
+      const end = this.vertices.get(endID);
+
+      if (start === null || end === null) continue;
+
       const index = this.idMap.add();
       const id = this.idMap.getId(index);
 
-      const start = ids[i];
-      const end = ids[i + 1];
-      const startPoint = this._points[start];
-      const endPoint = this._points[end];
+      const startPoint = this._points[startID];
+      const endPoint = this._points[endID];
       startPoint.start.add(id);
       endPoint.end.add(id);
 
-      this.list[id] = { id, start, end };
+      this._positionBuffer.setXYZ(index * 2, start[0], start[1], start[2]);
+      this._positionBuffer.setXYZ(index * 2 + 1, end[0], end[1], end[2]);
+      this._colorBuffer.setXYZ(index * 2, r, g, b);
+      this._colorBuffer.setXYZ(index * 2 + 1, r, g, b);
+
+      this.list[id] = { id, start: startID, end: endID };
     }
+    const allVerticesCount = this.idMap.size * 2;
+    this._buffers.updateCount(allVerticesCount);
   }
 
   /**
@@ -187,23 +204,6 @@ export class Lines extends Primitive {
     this.vertices.transform(matrix, points);
   }
 
-  regenerate() {
-    this.resetBuffers();
-    const position = this._positionBuffer;
-    for (const lineID in this.list) {
-      const line = this.list[lineID];
-      const index = this.idMap.getIndex(line.id);
-      const start = this.vertices.get(line.start);
-      const end = this.vertices.get(line.end);
-      if (index === null || start === null || end === null) continue;
-      position.setXYZ(index * 2, start[0], start[1], start[2]);
-      position.setXYZ(index * 2 + 1, end[0], end[1], end[2]);
-      position.count += 2;
-    }
-    position.needsUpdate = true;
-    this.updateColor();
-  }
-
   private removeFromBuffer(id: number, buffer: THREE.BufferAttribute) {
     const index = this.idMap.getIndex(id);
     if (index === null) return;
@@ -232,18 +232,6 @@ export class Lines extends Primitive {
       this._positionBuffer.setXYZ(index, vector.x, vector.y, vector.z);
     }
     this._positionBuffer.needsUpdate = true;
-  }
-
-  private resetBuffers() {
-    const vertexCount = this.idMap.size * 2;
-    const positionBuffer = new Float32Array(vertexCount * 3);
-    const positionAttribute = new THREE.BufferAttribute(positionBuffer, 3);
-    positionAttribute.count = 0;
-    this.mesh.geometry.setAttribute("position", positionAttribute);
-
-    const colorBuffer = new Float32Array(vertexCount * 3);
-    const colorAttribute = new THREE.BufferAttribute(colorBuffer, 3);
-    this.mesh.geometry.setAttribute("color", colorAttribute);
   }
 
   private updateColor(ids = this._ids as Iterable<number>) {
