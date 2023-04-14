@@ -2,7 +2,7 @@ import * as THREE from "three";
 import earcut from "earcut";
 import { Vertices } from "../Vertices";
 import { Primitive } from "../Primitive";
-import { Selector } from "../../utils";
+import { Selector, Vector } from "../../utils";
 
 export class Faces extends Primitive {
   /** {@link Primitive.mesh } */
@@ -300,7 +300,7 @@ export class Faces extends Primitive {
           coordinates.push(vertex);
         }
       }
-      const [x, y, z] = this.getNormalVector(coordinates);
+      const [x, y, z] = Vector.getNormal(coordinates);
       for (const vertexID of face.vertices) {
         const index = this.vertices.idMap.getIndex(vertexID);
         if (index === null) continue;
@@ -353,23 +353,6 @@ export class Faces extends Primitive {
 
     const max = Math.max(...crossProd);
     return crossProd.indexOf(max);
-  }
-
-  private getNormalVector(points: number[][]) {
-    const [x1, y1, z1] = points[0];
-    const [x2, y2, z2] = points[1];
-    const [x3, y3, z3] = points[2];
-
-    const a = [x2 - x1, y2 - y1, z2 - z1];
-    const b = [x3 - x2, y3 - y2, z3 - z2];
-
-    const x = a[1] * b[2] - a[2] * b[1];
-    const y = a[2] * b[0] - a[0] * b[2];
-    const z = a[0] * b[1] - a[1] * b[0];
-
-    const magnitude = Math.sqrt(x * x + y * y + z * z);
-
-    return [x / magnitude, y / magnitude, z / magnitude];
   }
 
   private getCoordinate(index: number, coordinates: number[]) {

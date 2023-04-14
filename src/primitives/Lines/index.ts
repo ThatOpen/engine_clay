@@ -28,10 +28,12 @@ export class Lines extends Primitive {
    */
   idMap = new IdIndexMap();
 
-  private _buffers: BufferManager;
+  /**
+   * The list of points that define each line.
+   */
+  points: { [id: number]: { start: Set<number>; end: Set<number> } } = {};
 
-  private _points: { [id: number]: { start: Set<number>; end: Set<number> } } =
-    {};
+  private _buffers: BufferManager;
 
   /**
    * The color of all the points.
@@ -64,10 +66,11 @@ export class Lines extends Primitive {
   }
 
   /**
-   * Adds a segment between two {@link _points}.
-   * @param ids - the IDs of the {@link _points} that define the segments.
+   * Adds a segment between two {@link points}.
+   * @param ids - the IDs of the {@link points} that define the segments.
    */
   add(ids: number[]) {
+    const createdIDs: number[] = [];
     const newVerticesCount = (ids.length - 1) * 2;
     this._buffers.resizeIfNeeded(newVerticesCount);
     const { r, g, b } = this._baseColor;
@@ -82,9 +85,10 @@ export class Lines extends Primitive {
 
       const index = this.idMap.add();
       const id = this.idMap.getId(index);
+      createdIDs.push(id);
 
-      const startPoint = this._points[startID];
-      const endPoint = this._points[endID];
+      const startPoint = this.points[startID];
+      const endPoint = this.points[endID];
       startPoint.start.add(id);
       endPoint.end.add(id);
 
@@ -97,6 +101,7 @@ export class Lines extends Primitive {
     }
     const allVerticesCount = this.idMap.size * 2;
     this._buffers.updateCount(allVerticesCount);
+    return createdIDs;
   }
 
   /**
@@ -106,7 +111,7 @@ export class Lines extends Primitive {
   addPoints(points: [number, number, number][]) {
     const ids = this.vertices.add(points);
     for (const id of ids) {
-      this._points[id] = { start: new Set(), end: new Set() };
+      this.points[id] = { start: new Set(), end: new Set() };
     }
   }
 
@@ -149,10 +154,10 @@ export class Lines extends Primitive {
       this.removeFromBuffer(id, position);
       this.removeFromBuffer(id, color);
       this.idMap.remove(id);
-      const startPoint = this._points[line.start];
+      const startPoint = this.points[line.start];
       points.push(line.start, line.end);
       startPoint.start.delete(id);
-      const endPoint = this._points[line.end];
+      const endPoint = this.points[line.end];
       endPoint.end.delete(id);
       delete this.list[id];
       this.selected.data.delete(id);
@@ -170,7 +175,7 @@ export class Lines extends Primitive {
   removePoints(ids = this.vertices.selected.data) {
     const lines = new Set<number>();
     for (const id of ids) {
-      const point = this._points[id];
+      const point = this.points[id];
       if (!point) continue;
       for (const id of point.start) {
         lines.add(id);
@@ -188,7 +193,7 @@ export class Lines extends Primitive {
     const points = new Set<number>();
     for (const id of this.vertices.selected.data) {
       points.add(id);
-      const point = this._points[id];
+      const point = this.points[id];
       for (const id of point.start) {
         const index = this.idMap.getIndex(id);
         if (index === null) continue;

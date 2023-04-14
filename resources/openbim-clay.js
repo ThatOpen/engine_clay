@@ -226,6 +226,35 @@ class Selector {
     }
 }
 
+class Vector {
+    static getNormal(points) {
+        const a = Vector.substract(points[0], points[1]);
+        const b = Vector.substract(points[1], points[2]);
+        const x = a[1] * b[2] - a[2] * b[1];
+        const y = a[2] * b[0] - a[0] * b[2];
+        const z = a[0] * b[1] - a[1] * b[0];
+        const magnitude = Math.sqrt(x * x + y * y + z * z);
+        return [x / magnitude, y / magnitude, z / magnitude];
+    }
+    static add(...vectors) {
+        const result = [0, 0, 0];
+        for (const vector of vectors) {
+            result[0] += vector[0];
+            result[1] += vector[1];
+            result[2] += vector[2];
+        }
+        return result;
+    }
+    static substract(v1, v2) {
+        const [x1, y1, z1] = v1;
+        const [x2, y2, z2] = v2;
+        return [x2 - x1, y2 - y1, z2 - z1];
+    }
+    static multiplyScalar(vector, scalar) {
+        return [vector[0] * scalar, vector[1] * scalar, vector[2] * scalar];
+    }
+}
+
 class Primitive {
     constructor() {
         /**
@@ -461,7 +490,10 @@ class Lines extends Primitive {
          * The map that keeps track of the segments ID and their position in the geometric buffer.
          */
         this.idMap = new IdIndexMap();
-        this._points = {};
+        /**
+         * The list of points that define each line.
+         */
+        this.points = {};
         const material = new THREE.LineBasicMaterial({ vertexColors: true });
         const geometry = new THREE.BufferGeometry();
         this.mesh = new THREE.LineSegments(geometry, material);
@@ -470,10 +502,11 @@ class Lines extends Primitive {
         this._buffers.createAttribute("color");
     }
     /**
-     * Adds a segment between two {@link _points}.
-     * @param ids - the IDs of the {@link _points} that define the segments.
+     * Adds a segment between two {@link points}.
+     * @param ids - the IDs of the {@link points} that define the segments.
      */
     add(ids) {
+        const createdIDs = [];
         const newVerticesCount = (ids.length - 1) * 2;
         this._buffers.resizeIfNeeded(newVerticesCount);
         const { r, g, b } = this._baseColor;
@@ -486,8 +519,9 @@ class Lines extends Primitive {
                 continue;
             const index = this.idMap.add();
             const id = this.idMap.getId(index);
-            const startPoint = this._points[startID];
-            const endPoint = this._points[endID];
+            createdIDs.push(id);
+            const startPoint = this.points[startID];
+            const endPoint = this.points[endID];
             startPoint.start.add(id);
             endPoint.end.add(id);
             this._positionBuffer.setXYZ(index * 2, start[0], start[1], start[2]);
@@ -498,6 +532,7 @@ class Lines extends Primitive {
         }
         const allVerticesCount = this.idMap.size * 2;
         this._buffers.updateCount(allVerticesCount);
+        return createdIDs;
     }
     /**
      * Adds the points that can be used by one or many lines.
@@ -506,7 +541,7 @@ class Lines extends Primitive {
     addPoints(points) {
         const ids = this.vertices.add(points);
         for (const id of ids) {
-            this._points[id] = { start: new Set(), end: new Set() };
+            this.points[id] = { start: new Set(), end: new Set() };
         }
     }
     /**
@@ -547,10 +582,10 @@ class Lines extends Primitive {
             this.removeFromBuffer(id, position);
             this.removeFromBuffer(id, color);
             this.idMap.remove(id);
-            const startPoint = this._points[line.start];
+            const startPoint = this.points[line.start];
             points.push(line.start, line.end);
             startPoint.start.delete(id);
-            const endPoint = this._points[line.end];
+            const endPoint = this.points[line.end];
             endPoint.end.delete(id);
             delete this.list[id];
             this.selected.data.delete(id);
@@ -567,7 +602,7 @@ class Lines extends Primitive {
     removePoints(ids = this.vertices.selected.data) {
         const lines = new Set();
         for (const id of ids) {
-            const point = this._points[id];
+            const point = this.points[id];
             if (!point)
                 continue;
             for (const id of point.start) {
@@ -585,7 +620,7 @@ class Lines extends Primitive {
         const points = new Set();
         for (const id of this.vertices.selected.data) {
             points.add(id);
-            const point = this._points[id];
+            const point = this.points[id];
             for (const id of point.start) {
                 const index = this.idMap.getIndex(id);
                 if (index === null)
@@ -1585,7 +1620,7 @@ class Faces extends Primitive {
                     coordinates.push(vertex);
                 }
             }
-            const [x, y, z] = this.getNormalVector(coordinates);
+            const [x, y, z] = Vector.getNormal(coordinates);
             for (const vertexID of face.vertices) {
                 const index = this.vertices.idMap.getIndex(vertexID);
                 if (index === null)
@@ -1635,18 +1670,6 @@ class Faces extends Primitive {
         const max = Math.max(...crossProd);
         return crossProd.indexOf(max);
     }
-    getNormalVector(points) {
-        const [x1, y1, z1] = points[0];
-        const [x2, y2, z2] = points[1];
-        const [x3, y3, z3] = points[2];
-        const a = [x2 - x1, y2 - y1, z2 - z1];
-        const b = [x3 - x2, y3 - y2, z3 - z2];
-        const x = a[1] * b[2] - a[2] * b[1];
-        const y = a[2] * b[0] - a[0] * b[2];
-        const z = a[0] * b[1] - a[1] * b[0];
-        const magnitude = Math.sqrt(x * x + y * y + z * z);
-        return [x / magnitude, y / magnitude, z / magnitude];
-    }
     getCoordinate(index, coordinates) {
         const x = coordinates[index * 3];
         const y = coordinates[index * 3 + 1];
@@ -1660,8 +1683,47 @@ class OffsetFaces extends Primitive {
         super();
         this.faces = new Faces();
         this.lines = new Lines();
+        /**
+         * The list of axis.
+         */
+        this.axes = {};
         this.mesh = this.faces.mesh;
+    }
+    addPoints(points) {
+        this.lines.addPoints(points);
+    }
+    addAxes(ids, width, offset = 0) {
+        if (offset > width / 2) {
+            throw new Error("The axis must be contained within the face generated!");
+        }
+        const lineIDs = this.lines.add(ids);
+        // for (const id of lineIDs) {
+        //   const line = this.lines.list[id];
+        //   const start = this.lines.vertices.get(line.start);
+        //   const end = this.lines.vertices.get(line.end);
+        //   if (start === null || end === null) continue;
+        // }
+        for (const id of lineIDs) {
+            const line = this.lines.list[id];
+            const start = this.lines.vertices.get(line.start);
+            const end = this.lines.vertices.get(line.end);
+            if (start === null || end === null)
+                continue;
+            const pointOverStart = [start[0], start[1] + 1, start[2]];
+            const firstNormal = Vector.getNormal([pointOverStart, start, end]);
+            const offsetVector = Vector.multiplyScalar(firstNormal, offset);
+            const depthVector = Vector.multiplyScalar(firstNormal, width / 2);
+            const minusDepthVector = Vector.multiplyScalar(depthVector, -1);
+            const p1 = Vector.add(start, depthVector, offsetVector);
+            const p2 = Vector.add(start, minusDepthVector, offsetVector);
+            const p3 = Vector.add(end, minusDepthVector, offsetVector);
+            const p4 = Vector.add(end, depthVector, offsetVector);
+            const counter = Object.keys(this.faces.points).length;
+            this.faces.addPoints([p1, p2, p3, p4]);
+            this.faces.add([counter, counter + 1, counter + 2, counter + 3]);
+            this.axes[id] = { width, offset };
+        }
     }
 }
 
-export { BufferManager, Faces, IdIndexMap, Lines, OffsetFaces, Selector, Vertices };
+export { BufferManager, Faces, IdIndexMap, Lines, OffsetFaces, Selector, Vector, Vertices };
