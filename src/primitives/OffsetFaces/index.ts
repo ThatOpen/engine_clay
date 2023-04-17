@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { Vector3 } from "three";
+// import { Vector3 } from "three";
 import { Primitive } from "../Primitive";
 import { Faces } from "../Faces";
 import { Lines } from "../Lines";
@@ -46,16 +46,16 @@ export class OffsetFaces extends Primitive {
 
       vectors = this.order2DVectorsCounterClockwise(vectors);
 
-      for (let i = 0; i < vectors.length; i++) {
-        const currentVector = vectors[i];
+      // for (let i = 0; i < vectors.length; i++) {
+      //   const currentVector = vectors[i];
 
-        const isLast = i === vectors.length - 1;
-        const nextVector = isLast ? vectors[i + 1] : vectors[0];
+      //   const isLast = i === vectors.length - 1;
+      //   const nextVector = isLast ? vectors[i + 1] : vectors[0];
 
-        const upVector = [0, 1, 0];
+      //   const upVector = [0, 1, 0];
 
-        const currentRightDirection = Vector.multiply(currentVector, upVector);
-      }
+      //   const currentRightDirection = Vector.multiply(currentVector, upVector);
+      // }
     }
 
     for (const id of lineIDs) {

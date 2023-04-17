@@ -104,6 +104,13 @@ export class Lines extends Primitive {
     return createdIDs;
   }
 
+  get(id: number) {
+    const index = this.idMap.getIndex(id);
+    if (index === null) return null;
+    const line = this.list[index];
+    return [this.vertices.get(line.start), this.vertices.get(line.end)];
+  }
+
   /**
    * Adds the points that can be used by one or many lines.
    * @param points the list of (x, y, z) coordinates of the points.

@@ -134,6 +134,8 @@ export class Faces extends Primitive {
     this.updateBuffers();
     this.updateColor([id]);
     this.computeNormal([id]);
+
+    return id;
   }
 
   /**
@@ -222,6 +224,7 @@ export class Faces extends Primitive {
    * Adds the points that can be used by one or many faces
    */
   addPoints(points: [number, number, number][]) {
+    const newPoints = [];
     for (const [x, y, z] of points) {
       const id = this._pointIdGenerator++;
       this.points[id] = {
@@ -230,7 +233,9 @@ export class Faces extends Primitive {
         vertices: new Set<number>(),
         faces: new Set<number>(),
       };
+      newPoints.push(id);
     }
+    return newPoints;
   }
 
   /**

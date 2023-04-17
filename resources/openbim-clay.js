@@ -230,9 +230,18 @@ class Vector {
     static getNormal(points) {
         const a = Vector.substract(points[0], points[1]);
         const b = Vector.substract(points[1], points[2]);
-        const x = a[1] * b[2] - a[2] * b[1];
-        const y = a[2] * b[0] - a[0] * b[2];
-        const z = a[0] * b[1] - a[1] * b[0];
+        const [x, y, z] = this.multiply(a, b);
+        const magnitude = Math.sqrt(x * x + y * y + z * z);
+        return [x / magnitude, y / magnitude, z / magnitude];
+    }
+    static multiply(v1, v2) {
+        const x = v1[1] * v2[2] - v1[2] * v2[1];
+        const y = v1[2] * v2[0] - v1[0] * v2[2];
+        const z = v1[0] * v2[1] - v1[1] * v2[0];
+        return [x, y, z];
+    }
+    static normalize(vector) {
+        const [x, y, z] = vector;
         const magnitude = Math.sqrt(x * x + y * y + z * z);
         return [x / magnitude, y / magnitude, z / magnitude];
     }
@@ -533,6 +542,13 @@ class Lines extends Primitive {
         const allVerticesCount = this.idMap.size * 2;
         this._buffers.updateCount(allVerticesCount);
         return createdIDs;
+    }
+    get(id) {
+        const index = this.idMap.getIndex(id);
+        if (index === null)
+            return null;
+        const line = this.list[index];
+        return [this.vertices.get(line.start), this.vertices.get(line.end)];
     }
     /**
      * Adds the points that can be used by one or many lines.
@@ -1463,6 +1479,7 @@ class Faces extends Primitive {
         this.updateBuffers();
         this.updateColor([id]);
         this.computeNormal([id]);
+        return id;
     }
     /**
      * Removes faces.
@@ -1543,6 +1560,7 @@ class Faces extends Primitive {
      * Adds the points that can be used by one or many faces
      */
     addPoints(points) {
+        const newPoints = [];
         for (const [x, y, z] of points) {
             const id = this._pointIdGenerator++;
             this.points[id] = {
@@ -1551,7 +1569,9 @@ class Faces extends Primitive {
                 vertices: new Set(),
                 faces: new Set(),
             };
+            newPoints.push(id);
         }
+        return newPoints;
     }
     /**
      * Selects or unselects the given points.
@@ -1678,6 +1698,7 @@ class Faces extends Primitive {
     }
 }
 
+// import { Vector3 } from "three";
 class OffsetFaces extends Primitive {
     constructor() {
         super();
@@ -1697,12 +1718,20 @@ class OffsetFaces extends Primitive {
             throw new Error("The axis must be contained within the face generated!");
         }
         const lineIDs = this.lines.add(ids);
-        // for (const id of lineIDs) {
-        //   const line = this.lines.list[id];
-        //   const start = this.lines.vertices.get(line.start);
-        //   const end = this.lines.vertices.get(line.end);
-        //   if (start === null || end === null) continue;
-        // }
+        for (const id of ids) {
+            const point = this.lines.points[id];
+            let vectors = [];
+            this.getAllNormalizedVectors(vectors, point.start, false);
+            this.getAllNormalizedVectors(vectors, point.end, true);
+            vectors = this.order2DVectorsCounterClockwise(vectors);
+            // for (let i = 0; i < vectors.length; i++) {
+            //   const currentVector = vectors[i];
+            //   const isLast = i === vectors.length - 1;
+            //   const nextVector = isLast ? vectors[i + 1] : vectors[0];
+            //   const upVector = [0, 1, 0];
+            //   const currentRightDirection = Vector.multiply(currentVector, upVector);
+            // }
+        }
         for (const id of lineIDs) {
             const line = this.lines.list[id];
             const start = this.lines.vertices.get(line.start);
@@ -1724,6 +1753,142 @@ class OffsetFaces extends Primitive {
             this.axes[id] = { width, offset };
         }
     }
+    order2DVectorsCounterClockwise(vectors) {
+        const vectorsWithAngles = [];
+        for (const vector of vectors) {
+            const angle = Math.atan2(vector[2], vector[0]);
+            vectorsWithAngles.push({ angle, vector });
+        }
+        return vectorsWithAngles
+            .sort((item) => item.angle)
+            .map((item) => item.vector);
+    }
+    getAllNormalizedVectors(vectors, ids, flip) {
+        for (const lineID of ids) {
+            const line = this.lines.list[lineID];
+            const start = this.lines.vertices.get(line.start);
+            const end = this.lines.vertices.get(line.end);
+            if (start === null || end === null) {
+                throw new Error(`Error with line ${lineID}`);
+            }
+            let vector = Vector.substract(start, end);
+            if (flip) {
+                vector = Vector.multiplyScalar(vector, -1);
+            }
+            vector = Vector.normalize(vector);
+            vectors.push(vector);
+        }
+    }
 }
 
-export { BufferManager, Faces, IdIndexMap, Lines, OffsetFaces, Selector, Vector, Vertices };
+class Extrusions extends Primitive {
+    constructor() {
+        super();
+        /** {@link Primitive.mesh } */
+        this.mesh = new THREE.Mesh();
+        /**
+         * The list of outer points that define the faces. Each point corresponds to a set of {@link Vertices}. This way,
+         * we can provide an API of faces that share vertices, but under the hood the vertices are duplicated per face
+         * (and thus being able to contain the normals as a vertex attribute).
+         */
+        this.list = {};
+        /**
+         * The geometric representation of the vertices that define this instance of faces.
+         */
+        this.faces = new Faces();
+        /**
+         * The geometric representation of the vertices that define this instance of lines.
+         */
+        this.lines = new Lines();
+        this.selectedExtrusions = new Selector();
+        this._nextIndex = 0;
+        const material = new THREE.MeshLambertMaterial({
+            side: THREE.DoubleSide,
+            vertexColors: true,
+        });
+        const geometry = new THREE.BufferGeometry();
+        this.mesh = new THREE.Mesh(geometry, material);
+        geometry.setIndex([]);
+    }
+    clear() {
+        this.faces = new Faces();
+        this.lines = new Lines();
+        this.list = {};
+    }
+    add(faceId, linesIds) {
+        const id = this._nextIndex;
+        const extrude = {
+            id,
+            base: faceId,
+            paths: linesIds,
+            faces: new Set(),
+            needsUpdate: true,
+            parentExtrusion: -1,
+            childrenExtrusionFaces: new Set(),
+        };
+        this._nextIndex++;
+        this.list[id] = extrude;
+        this.updateExtrusions();
+    }
+    /**
+     * Update the extrusions by creating multiple consecutive extrusions based on the given list of extrusion objects.
+     * Each extrusion object contains a base surface and a set of curve-paths.
+     */
+    updateExtrusions() {
+        for (const id in this.list) {
+            if (this.list[id].needsUpdate) {
+                this.list[id].needsUpdate = false;
+                const pathIds = this.list[id].paths; // get the array of path IDs
+                const baseId = this.list[id].base;
+                // this.faces.remove(this.list[id].faces);
+                const newFaces = new Set();
+                let lastVector = new THREE.Vector3();
+                for (let i = 0; i < pathIds.length; i++) {
+                    const newPoints = []; // create an array to hold the new points of the extruded surface
+                    const pathId = pathIds[i];
+                    const linePoints = this.lines.get(pathId);
+                    if (linePoints === null ||
+                        linePoints[0] === null ||
+                        linePoints[1] === null) {
+                        return null;
+                    }
+                    const vector = new THREE.Vector3(linePoints[1][0] - linePoints[0][0], linePoints[1][1] - linePoints[0][1], linePoints[1][2] - linePoints[0][2]);
+                    const newBasePoints = [];
+                    for (const pointID of this.faces.list[baseId].points) {
+                        const point = this.faces.points[pointID].coordinates;
+                        let newBPoint = new THREE.Vector3(point[0], point[1], point[2]);
+                        if (i === 0) {
+                            const iter = this.faces.list[baseId].points.values();
+                            for (let i = 0; i < this.faces.list[baseId].points.size; i++) {
+                                newBasePoints.push(iter.next().value);
+                            }
+                        }
+                        else {
+                            newBPoint = new THREE.Vector3(point[0] + lastVector.x, point[1] + lastVector.y, point[2] + lastVector.z);
+                            newBasePoints.push(this.faces.addPoints([
+                                [newBPoint.x, newBPoint.y, newBPoint.z],
+                            ])[0]);
+                        }
+                        if (point === null) {
+                            return null;
+                        }
+                        const newPoint = new THREE.Vector3(newBPoint.x + vector.x, newBPoint.y + vector.y, newBPoint.z + vector.z);
+                        newPoints.push(this.faces.addPoints([[newPoint.x, newPoint.y, newPoint.z]])[0]);
+                    }
+                    lastVector = new THREE.Vector3(lastVector.x + vector.x, lastVector.y + vector.y, lastVector.z + vector.z);
+                    for (let i = 0; i < this.faces.list[baseId].points.size; i++) {
+                        const p1 = newBasePoints[i];
+                        const p2 = newBasePoints[(i + 1) % this.faces.list[baseId].points.size];
+                        const p3 = newPoints[(i + 1) % this.faces.list[baseId].points.size];
+                        const p4 = newPoints[i];
+                        newFaces.add(this.faces.add([p1, p2, p3, p4]));
+                    }
+                    newFaces.add(this.faces.add(newPoints));
+                }
+                this.list[id].faces = newFaces;
+            }
+        }
+    }
+}
+
+export { BufferManager, Extrusions, Faces, IdIndexMap, Lines, OffsetFaces, Selector, Vector, Vertices };
