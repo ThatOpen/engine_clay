@@ -5,6 +5,11 @@ import { Faces } from "../Faces";
 import { Lines } from "../Lines";
 import { Vector } from "../../utils";
 
+interface LineVector {
+  lineID: number;
+  vector: number[];
+}
+
 export class OffsetFaces extends Primitive {
   /** {@link Primitive.mesh } */
   mesh: THREE.Mesh;
@@ -35,69 +40,142 @@ export class OffsetFaces extends Primitive {
     if (offset > width / 2) {
       throw new Error("The axis must be contained within the face generated!");
     }
-    const lineIDs = this.lines.add(ids);
+
+    this.lines.add(ids);
+
+    // A line that goes from A to B will define an offsetface like this:
+    //     p1                             p2
+    //     +------------------------------+
+    //    |  A +-------------------+ B   |
+    //   +------------------------------+
+    //   p4                            p3
+
+    // The next array means: [pointIndex, x, z]
+
+    const offsetFaces: {
+      [lineID: number]: { [pointIndex: number]: [number, number] };
+    } = {};
+
+    // Strategy: traverse all points, sort lines by angle and find the intersection
+    // of each line with the next one
 
     for (const id of ids) {
       const point = this.lines.points[id];
-      let vectors: number[][] = [];
+      const coords = this.lines.vertices.get(id);
+      if (coords === null) continue;
+
+      let vectors: LineVector[] = [];
 
       this.getAllNormalizedVectors(vectors, point.start, false);
       this.getAllNormalizedVectors(vectors, point.end, true);
 
       vectors = this.order2DVectorsCounterClockwise(vectors);
 
-      // for (let i = 0; i < vectors.length; i++) {
-      //   const currentVector = vectors[i];
+      const upVector = [0, 1, 0];
 
-      //   const isLast = i === vectors.length - 1;
-      //   const nextVector = isLast ? vectors[i + 1] : vectors[0];
+      for (let i = 0; i < vectors.length; i++) {
+        const currentLine = vectors[i];
+        const currentVector = currentLine.vector;
+        const isCurrentStart = point.start.has(currentLine.lineID);
 
-      //   const upVector = [0, 1, 0];
+        if (!offsetFaces[currentLine.lineID]) {
+          offsetFaces[currentLine.lineID] = {};
+        }
 
-      //   const currentRightDirection = Vector.multiply(currentVector, upVector);
-      // }
+        const onlyOneLineInPoint = vectors.length === 1;
+        if (onlyOneLineInPoint) {
+          const normal = Vector.multiply(upVector, currentVector);
+          const v1 = Vector.multiplyScalar(normal, width);
+          const v2 = Vector.multiplyScalar(normal, -width);
+
+          const p1 = Vector.add(coords, v1);
+          const p2 = Vector.add(coords, v2);
+
+          const index1 = isCurrentStart ? 1 : 3;
+          const index2 = isCurrentStart ? 4 : 2;
+
+          offsetFaces[currentLine.lineID][index1] = [p1[0], p1[2]];
+          offsetFaces[currentLine.lineID][index2] = [p2[0], p2[2]];
+
+          break;
+        }
+
+        const j = i === vectors.length - 2 ? i + 1 : 0;
+        const nextLine = vectors[j];
+        const nextVector = nextLine.vector;
+
+        // Express the outlines as a point and a direction
+        // Beware the left-handed system for the direction
+
+        const n1 = Vector.multiply(upVector, currentVector);
+        const v1 = Vector.multiplyScalar(n1, width);
+        const p1 = Vector.add(coords, v1);
+
+        const n2 = Vector.multiply(nextVector, upVector);
+        const v2 = Vector.multiplyScalar(n2, width);
+        const p2 = Vector.add(coords, v2);
+
+        // Convert point-direction to implicit 2D line ax + by = d
+        // Beware that "y" is "z" in our 2D system
+        // p . n = d
+
+        const a1 = n1[0];
+        const b1 = n1[2];
+        const d1 = p1[0] * n1[0] + p1[2] * n1[2];
+
+        const a2 = n2[0];
+        const b2 = n2[2];
+        const d2 = p2[0] * n2[0] + p2[2] * n2[2];
+
+        // Find the intersection of the two lines
+
+        const x = (b2 * d1 - b1 * d2) / (a1 * b2 - a2 * b1);
+        const y = (a1 * d2 - a2 * d1) / (a1 * b2 - a2 * b1);
+
+        // Save the intersection points in both lines
+
+        if (!offsetFaces[nextLine.lineID]) {
+          offsetFaces[nextLine.lineID] = {};
+        }
+
+        const isNextStart = point.start.has(nextLine.lineID);
+
+        const currentIndex = isCurrentStart ? 1 : 3;
+        const nextIndex = isNextStart ? 4 : 2;
+
+        offsetFaces[currentLine.lineID][currentIndex] = [x, y];
+        offsetFaces[nextLine.lineID][nextIndex] = [x, y];
+      }
     }
 
-    for (const id of lineIDs) {
-      const line = this.lines.list[id];
+    console.log(offsetFaces);
 
-      const start = this.lines.vertices.get(line.start);
-      const end = this.lines.vertices.get(line.end);
-      if (start === null || end === null) continue;
-
-      const pointOverStart = [start[0], start[1] + 1, start[2]];
-      const firstNormal = Vector.getNormal([pointOverStart, start, end]);
-
-      const offsetVector = Vector.multiplyScalar(firstNormal, offset);
-      const depthVector = Vector.multiplyScalar(firstNormal, width / 2);
-      const minusDepthVector = Vector.multiplyScalar(depthVector, -1);
-
-      const p1 = Vector.add(start, depthVector, offsetVector);
-      const p2 = Vector.add(start, minusDepthVector, offsetVector);
-      const p3 = Vector.add(end, minusDepthVector, offsetVector);
-      const p4 = Vector.add(end, depthVector, offsetVector);
-
-      const counter = Object.keys(this.faces.points).length;
-      this.faces.addPoints([p1, p2, p3, p4]);
-      this.faces.add([counter, counter + 1, counter + 2, counter + 3]);
-
-      this.axes[id] = { width, offset };
+    for (const lineID in offsetFaces) {
+      const offsetFace = offsetFaces[lineID];
+      const points: [number, number, number][] = [];
+      for (let i = 1; i < 5; i++) {
+        const [x, z] = offsetFace[i];
+        points.push([x, 0, z]);
+      }
+      const ids = this.faces.addPoints(points);
+      this.faces.add(ids);
     }
   }
 
-  private order2DVectorsCounterClockwise(vectors: number[][]) {
-    const vectorsWithAngles: { angle: number; vector: number[] }[] = [];
-    for (const vector of vectors) {
-      const angle = Math.atan2(vector[2], vector[0]);
-      vectorsWithAngles.push({ angle, vector });
+  private order2DVectorsCounterClockwise(vectors: LineVector[]) {
+    const vectorsWithAngles: { angle: number; line: LineVector }[] = [];
+    for (const line of vectors) {
+      const { vector } = line;
+      const angle = Math.abs(Math.atan2(vector[2], vector[0]));
+      vectorsWithAngles.push({ angle, line });
     }
     return vectorsWithAngles
       .sort((item) => item.angle)
-      .map((item) => item.vector);
+      .map((item) => item.line);
   }
 
   private getAllNormalizedVectors(
-    vectors: number[][],
+    vectors: LineVector[],
     ids: Set<number>,
     flip: boolean
   ) {
@@ -113,7 +191,7 @@ export class OffsetFaces extends Primitive {
         vector = Vector.multiplyScalar(vector, -1);
       }
       vector = Vector.normalize(vector);
-      vectors.push(vector);
+      vectors.push({ lineID, vector });
     }
   }
 }
