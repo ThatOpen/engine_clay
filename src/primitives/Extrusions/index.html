@@ -94,6 +94,9 @@
             [0, 0, -1],
             [0, -1, -1],
             [1, -1, -1],
+            [0, 1, 0],
+            [1, 1, 0],
+            [-1, 1, 1],
         ]);
         extrusions.lines.add([0, 1]);
         extrusions.lines.add([0, 2]);
@@ -101,6 +104,9 @@
         extrusions.lines.add([0, 4]);
         extrusions.lines.add([0, 5]);
         extrusions.lines.add([0, 6]);
+        extrusions.lines.add([0, 7]);
+        extrusions.lines.add([0, 8]);
+        extrusions.lines.add([0, 9]);
 
         // TODO
         // Add extrusion as single pairs of surface and line
@@ -109,6 +115,7 @@
         // Add buttons to control extrusions
         extrusions.add(3,[0, 1, 2]);
         extrusions.add(2,[3, 4, 5]);
+        extrusions.add(1,[6, 7, 8]);
     }
 
     function setSelected() {
