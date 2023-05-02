@@ -1620,18 +1620,8 @@ class Faces extends Primitive {
             this.mesh.geometry.setAttribute("normal", normalBuffer);
             const colorBuffer = new Float32Array(positionBuffer.array.length * 3);
             const colorAttribute = new THREE.BufferAttribute(colorBuffer, 3);
-            let r = 0.5;
-            let g = 0.5;
-            let b = 0.5;
-            if (this.baseColor) {
-                r = this.baseColor.r;
-                g = this.baseColor.g;
-                b = this.baseColor.b;
-            }
-            for (let i = 0; i < positionBuffer.array.length; i++) {
-                colorAttribute.setXYZ(i, r, g, b);
-            }
             this.mesh.geometry.setAttribute("color", colorAttribute);
+            this.updateColor();
         }
         this._colorBuffer.count = positionBuffer.count;
     }
