@@ -88,6 +88,14 @@ export class Faces extends Primitive {
   }
 
   /**
+   * Quickly removes all the faces and releases all the memory used.
+   */
+  clear() {
+    this.vertices.clear();
+    this.updateBuffers();
+  }
+
+  /**
    * Adds a face.
    * @param ids - the IDs of the {@link points} that define that face. It's assumed that they are coplanar.
    */
@@ -281,6 +289,9 @@ export class Faces extends Primitive {
     const positionBuffer = this.vertices.mesh.geometry.attributes.position;
     const normalBuffer = this.vertices.mesh.geometry.attributes.normal;
     if (this._positionBuffer !== positionBuffer) {
+      this.mesh.geometry.deleteAttribute("position");
+      this.mesh.geometry.deleteAttribute("normal");
+      this.mesh.geometry.deleteAttribute("color");
       this.mesh.geometry.setAttribute("position", positionBuffer);
       this.mesh.geometry.setAttribute("normal", normalBuffer);
       const colorBuffer = new Float32Array(positionBuffer.array.length * 3);

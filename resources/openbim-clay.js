@@ -1438,6 +1438,13 @@ class Faces extends Primitive {
         this.vertices.addAttribute(normals);
     }
     /**
+     * Quickly removes all the faces and releases all the memory used.
+     */
+    clear() {
+        this.vertices.clear();
+        this.updateBuffers();
+    }
+    /**
      * Adds a face.
      * @param ids - the IDs of the {@link points} that define that face. It's assumed that they are coplanar.
      */
@@ -1616,6 +1623,9 @@ class Faces extends Primitive {
         const positionBuffer = this.vertices.mesh.geometry.attributes.position;
         const normalBuffer = this.vertices.mesh.geometry.attributes.normal;
         if (this._positionBuffer !== positionBuffer) {
+            this.mesh.geometry.deleteAttribute("position");
+            this.mesh.geometry.deleteAttribute("normal");
+            this.mesh.geometry.deleteAttribute("color");
             this.mesh.geometry.setAttribute("position", positionBuffer);
             this.mesh.geometry.setAttribute("normal", normalBuffer);
             const colorBuffer = new Float32Array(positionBuffer.array.length * 3);
@@ -1718,7 +1728,16 @@ class OffsetFaces extends Primitive {
         if (offset > width / 2) {
             throw new Error("The axis must be contained within the face generated!");
         }
-        this.lines.add(ids);
+        const linesIDs = this.lines.add(ids);
+        for (const id of linesIDs) {
+            this.axes[id] = {
+                width,
+                offset,
+            };
+        }
+    }
+    regenerate() {
+        this.faces.clear();
         // A line that goes from A to B will define an offsetface like this:
         //     p1                             p2
         //     +------------------------------+
@@ -1729,7 +1748,8 @@ class OffsetFaces extends Primitive {
         const offsetFaces = {};
         // Strategy: traverse all points, sort lines by angle and find the intersection
         // of each line with the next one
-        for (const id of ids) {
+        for (const pointID in this.lines.points) {
+            const id = parseInt(pointID, 10);
             const point = this.lines.points[id];
             const coords = this.lines.vertices.get(id);
             if (coords === null)
@@ -1743,6 +1763,7 @@ class OffsetFaces extends Primitive {
                 const currentLine = vectors[i];
                 const currentVector = currentLine.vector;
                 const isCurrentStart = point.start.has(currentLine.lineID);
+                const { width } = this.axes[currentLine.lineID];
                 if (!offsetFaces[currentLine.lineID]) {
                     offsetFaces[currentLine.lineID] = {};
                 }

@@ -41,7 +41,18 @@ export class OffsetFaces extends Primitive {
       throw new Error("The axis must be contained within the face generated!");
     }
 
-    this.lines.add(ids);
+    const linesIDs = this.lines.add(ids);
+
+    for (const id of linesIDs) {
+      this.axes[id] = {
+        width,
+        offset,
+      };
+    }
+  }
+
+  regenerate() {
+    this.faces.clear();
 
     // A line that goes from A to B will define an offsetface like this:
     //     p1                             p2
@@ -59,7 +70,8 @@ export class OffsetFaces extends Primitive {
     // Strategy: traverse all points, sort lines by angle and find the intersection
     // of each line with the next one
 
-    for (const id of ids) {
+    for (const pointID in this.lines.points) {
+      const id = parseInt(pointID, 10);
       const point = this.lines.points[id];
       const coords = this.lines.vertices.get(id);
       if (coords === null) continue;
@@ -77,6 +89,8 @@ export class OffsetFaces extends Primitive {
         const currentLine = vectors[i];
         const currentVector = currentLine.vector;
         const isCurrentStart = point.start.has(currentLine.lineID);
+
+        const { width } = this.axes[currentLine.lineID];
 
         if (!offsetFaces[currentLine.lineID]) {
           offsetFaces[currentLine.lineID] = {};

@@ -47,12 +47,14 @@
         [0, 0, 0],
         [1, 0, 0],
         [1, 0, 1],
-        [0, 0, 1],
+        // [0, 0, 1],
     ]);
 
-    // offsetFaces.addAxes([0, 1, 2, 3], 0.2);
-    offsetFaces.addAxes([0, 1, 2, 3, 0], 0.2);
+    offsetFaces.addAxes([0, 1], 0.1);
+    offsetFaces.addAxes([1, 2], 0.4);
     // offsetFaces.addAxes([0, 2], 0.2);
+
+    offsetFaces.regenerate();
 
 
 
