@@ -1643,12 +1643,12 @@ class Faces extends Primitive {
                 continue;
             const coordinates = [];
             let counter = 0;
-            for (const vertexID of face.vertices) {
+            for (const pointID of face.points) {
                 if (counter++ > 2)
                     break;
-                const vertex = this.vertices.get(vertexID);
-                if (vertex !== null) {
-                    coordinates.push(vertex);
+                const point = this.points[pointID];
+                if (point !== null) {
+                    coordinates.push(point.coordinates);
                 }
             }
             const [x, y, z] = Vector.getNormal(coordinates);
@@ -1744,11 +1744,11 @@ class OffsetFaces extends Primitive {
         //    |  A +-------------------+ B   |
         //   +------------------------------+
         //   p4                            p3
-        // The next array means: [pointIndex, x, z]
         const offsetFaces = {};
         // Strategy: traverse all points, sort lines by angle and find the intersection
         // of each line with the next one
         for (const pointID in this.lines.points) {
+            const knotVertices = [];
             const id = parseInt(pointID, 10);
             const point = this.lines.points[id];
             const coords = this.lines.vertices.get(id);
@@ -1757,7 +1757,7 @@ class OffsetFaces extends Primitive {
             let vectors = [];
             this.getAllNormalizedVectors(vectors, point.start, false);
             this.getAllNormalizedVectors(vectors, point.end, true);
-            vectors = this.order2DVectorsCounterClockwise(vectors);
+            vectors = this.order2DVectorsClockwise(vectors);
             const upVector = [0, 1, 0];
             for (let i = 0; i < vectors.length; i++) {
                 const currentLine = vectors[i];
@@ -1776,8 +1776,10 @@ class OffsetFaces extends Primitive {
                     const p2 = Vector.add(coords, v2);
                     const index1 = isCurrentStart ? 1 : 3;
                     const index2 = isCurrentStart ? 4 : 2;
-                    offsetFaces[currentLine.lineID][index1] = [p1[0], p1[2]];
-                    offsetFaces[currentLine.lineID][index2] = [p2[0], p2[2]];
+                    const [firstPointID] = this.faces.addPoints([p1]);
+                    const [secondPointID] = this.faces.addPoints([p2]);
+                    offsetFaces[currentLine.lineID][index1] = firstPointID;
+                    offsetFaces[currentLine.lineID][index2] = secondPointID;
                     break;
                 }
                 const isLastVector = i === vectors.length - 1;
@@ -1812,23 +1814,29 @@ class OffsetFaces extends Primitive {
                 const isNextStart = point.start.has(nextLine.lineID);
                 const currentIndex = isCurrentStart ? 1 : 3;
                 const nextIndex = isNextStart ? 4 : 2;
-                offsetFaces[currentLine.lineID][currentIndex] = [x, y];
-                offsetFaces[nextLine.lineID][nextIndex] = [x, y];
+                // Create the point
+                const [pointID] = this.faces.addPoints([[x, 0, y]]);
+                // Save point as part of this knot
+                knotVertices.push(pointID);
+                offsetFaces[currentLine.lineID][currentIndex] = pointID;
+                offsetFaces[nextLine.lineID][nextIndex] = pointID;
+            }
+            if (knotVertices.length > 2) {
+                const reversed = knotVertices.reverse();
+                this.faces.add(reversed);
             }
         }
         console.log(offsetFaces);
         for (const lineID in offsetFaces) {
             const offsetFace = offsetFaces[lineID];
-            const points = [];
+            const ids = [];
             for (let i = 1; i < 5; i++) {
-                const [x, z] = offsetFace[i];
-                points.push([x, 0, z]);
+                ids.push(offsetFace[i]);
             }
-            const ids = this.faces.addPoints(points);
             this.faces.add(ids);
         }
     }
-    order2DVectorsCounterClockwise(vectors) {
+    order2DVectorsClockwise(vectors) {
         const vectorsWithAngles = [];
         for (const line of vectors) {
             const { vector } = line;
@@ -1976,4 +1984,15 @@ class Extrusions extends Primitive {
     }
 }
 
-export { BufferManager, Extrusions, Faces, IdIndexMap, Lines, OffsetFaces, Selector, Vector, Vertices };
+// import { Vector3 } from "three";
+class Walls extends Primitive {
+    constructor() {
+        super();
+        this.offsetFaces = new OffsetFaces();
+        this.extrusions = new Extrusions();
+        this.extrusions.faces = this.offsetFaces.faces;
+        this.mesh = this.extrusions.mesh;
+    }
+}
+
+export { BufferManager, Extrusions, Faces, IdIndexMap, Lines, OffsetFaces, Selector, Vector, Vertices, Walls };

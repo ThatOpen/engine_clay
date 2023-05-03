@@ -309,11 +309,11 @@ export class Faces extends Primitive {
       if (!face) continue;
       const coordinates: number[][] = [];
       let counter = 0;
-      for (const vertexID of face.vertices) {
+      for (const pointID of face.points) {
         if (counter++ > 2) break;
-        const vertex = this.vertices.get(vertexID);
-        if (vertex !== null) {
-          coordinates.push(vertex);
+        const point = this.points[pointID];
+        if (point !== null) {
+          coordinates.push(point.coordinates);
         }
       }
       const [x, y, z] = Vector.getNormal(coordinates);
