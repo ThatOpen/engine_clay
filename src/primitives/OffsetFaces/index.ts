@@ -162,19 +162,24 @@ export class OffsetFaces extends Primitive {
         offsetFaces[currentLine.lineID][currentIndex] = [x, y];
         offsetFaces[nextLine.lineID][nextIndex] = [x, y];
       }
-    }
 
-    console.log(offsetFaces);
+      console.log(offsetFaces);
 
-    for (const lineID in offsetFaces) {
-      const offsetFace = offsetFaces[lineID];
-      const points: [number, number, number][] = [];
-      for (let i = 1; i < 5; i++) {
-        const [x, z] = offsetFace[i];
-        points.push([x, 0, z]);
+      for (const lineID in offsetFaces) {
+        const offsetFace = offsetFaces[lineID];
+        const points: [number, number, number][] = [];
+        for (let i = 1; i < 5; i++) {
+          const [x, z] = offsetFace[i];
+          points.push([x, 0, z]);
+        }
+        const ids = this.faces.addPoints(points);
+        this.faces.add(ids);
       }
-      const ids = this.faces.addPoints(points);
-      this.faces.add(ids);
+
+      // const isComplexKnot = vectors.length > 2;
+      // if (isComplexKnot) {
+      //   this.faces.add();
+      // }
     }
   }
 
@@ -184,11 +189,12 @@ export class OffsetFaces extends Primitive {
       const { vector } = line;
       let angle = Math.atan2(vector[0], vector[2]);
       if (angle < 0) angle += 2 * Math.PI;
+      console.log((angle * 180) / Math.PI);
       vectorsWithAngles.push({ angle, line });
     }
-    return vectorsWithAngles
-      .sort((item) => item.angle)
-      .map((item) => item.line);
+
+    vectorsWithAngles.sort((v1, v2) => (v1.angle > v2.angle ? 1 : -1));
+    return vectorsWithAngles.map((item) => item.line);
   }
 
   private getAllNormalizedVectors(
