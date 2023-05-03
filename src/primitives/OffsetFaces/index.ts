@@ -114,9 +114,11 @@ export class OffsetFaces extends Primitive {
           break;
         }
 
-        const j = i === vectors.length - 2 ? i + 1 : 0;
+        const isLastVector = i === vectors.length - 1;
+        const j = isLastVector ? 0 : i + 1;
         const nextLine = vectors[j];
         const nextVector = nextLine.vector;
+        const nextWidth = this.axes[nextLine.lineID].width;
 
         // Express the outlines as a point and a direction
         // Beware the left-handed system for the direction
@@ -126,7 +128,7 @@ export class OffsetFaces extends Primitive {
         const p1 = Vector.add(coords, v1);
 
         const n2 = Vector.multiply(nextVector, upVector);
-        const v2 = Vector.multiplyScalar(n2, width);
+        const v2 = Vector.multiplyScalar(n2, nextWidth);
         const p2 = Vector.add(coords, v2);
 
         // Convert point-direction to implicit 2D line ax + by = d
@@ -180,7 +182,8 @@ export class OffsetFaces extends Primitive {
     const vectorsWithAngles: { angle: number; line: LineVector }[] = [];
     for (const line of vectors) {
       const { vector } = line;
-      const angle = Math.abs(Math.atan2(vector[2], vector[0]));
+      let angle = Math.atan2(vector[0], vector[2]);
+      if (angle < 0) angle += 2 * Math.PI;
       vectorsWithAngles.push({ angle, line });
     }
     return vectorsWithAngles
