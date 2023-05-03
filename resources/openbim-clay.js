@@ -559,6 +559,7 @@ class Lines extends Primitive {
         for (const id of ids) {
             this.points[id] = { start: new Set(), end: new Set() };
         }
+        return ids;
     }
     /**
      * Select or unselects the given lines.
@@ -1915,6 +1916,7 @@ class Extrusions extends Primitive {
         this._nextIndex++;
         this.list[id] = extrude;
         this.updateExtrusions();
+        return id;
     }
     /**
      * Update the extrusions by creating multiple consecutive extrusions based on the given list of extrusion objects.
@@ -1990,9 +1992,60 @@ class Walls extends Primitive {
         super();
         this.offsetFaces = new OffsetFaces();
         this.extrusions = new Extrusions();
+        // TODO: Probably better to keep offsetfaces and extrusion faces separated
         this.extrusions.faces = this.offsetFaces.faces;
         this.mesh = this.extrusions.mesh;
     }
 }
 
-export { BufferManager, Extrusions, Faces, IdIndexMap, Lines, OffsetFaces, Selector, Vector, Vertices, Walls };
+// import { Vector3 } from "three";
+class Slabs extends Primitive {
+    constructor() {
+        super();
+        this.extrusions = new Extrusions();
+        this.lines = new Lines();
+        this._nextIndex = 0;
+        this.list = {};
+        this.mesh = this.extrusions.mesh;
+    }
+    add(lineIDs, height) {
+        const id = this._nextIndex++;
+        const pointsIDs = [];
+        let first = true;
+        for (const id of lineIDs) {
+            const line = this.lines.list[id];
+            if (first) {
+                pointsIDs.push(line.start);
+                first = false;
+            }
+            pointsIDs.push(line.end);
+        }
+        const allCoordinates = [];
+        for (const id of pointsIDs) {
+            const coordinates = this.lines.vertices.get(id);
+            if (!coordinates)
+                continue;
+            allCoordinates.push(coordinates);
+        }
+        // Create axis
+        // TODO: Make direction normal to face
+        const directionPointsIDs = this.extrusions.lines.addPoints([
+            [0, 0, 0],
+            [0, height, 0],
+        ]);
+        const [directionID] = this.extrusions.lines.add(directionPointsIDs);
+        // Create base face
+        const ids = this.extrusions.faces.addPoints(allCoordinates);
+        const faceID = this.extrusions.faces.add(ids);
+        // Create extrusion
+        const extrusionID = this.extrusions.add(faceID, [directionID]);
+        this.list[id] = {
+            id,
+            direction: directionID,
+            lines: new Set(lineIDs),
+            extrusion: extrusionID,
+        };
+    }
+}
+
+export { BufferManager, Extrusions, Faces, IdIndexMap, Lines, OffsetFaces, Selector, Slabs, Vector, Vertices, Walls };

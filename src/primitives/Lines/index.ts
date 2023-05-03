@@ -120,6 +120,7 @@ export class Lines extends Primitive {
     for (const id of ids) {
       this.points[id] = { start: new Set(), end: new Set() };
     }
+    return ids;
   }
 
   /**

@@ -13,6 +13,7 @@ export class Walls extends Primitive {
 
   constructor() {
     super();
+    // TODO: Probably better to keep offsetfaces and extrusion faces separated
     this.extrusions.faces = this.offsetFaces.faces;
     this.mesh = this.extrusions.mesh;
   }
