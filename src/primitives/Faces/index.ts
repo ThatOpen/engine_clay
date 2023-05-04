@@ -4,6 +4,22 @@ import { Vertices } from "../Vertices";
 import { Primitive } from "../Primitive";
 import { Selector, Vector } from "../../utils";
 
+interface Face {
+  id: number;
+  holes: Set<number>[];
+  vertices: Set<number>;
+  points: Set<number>;
+  start: number;
+  end: number;
+}
+
+interface FacePoint {
+  id: number;
+  coordinates: [number, number, number];
+  vertices: Set<number>;
+  faces: Set<number>;
+}
+
 export class Faces extends Primitive {
   /** {@link Primitive.mesh } */
   mesh: THREE.Mesh = new THREE.Mesh();
@@ -13,26 +29,12 @@ export class Faces extends Primitive {
    * we can provide an API of faces that share vertices, but under the hood the vertices are duplicated per face
    * (and thus being able to contain the normals as a vertex attribute).
    */
-  points: {
-    [id: number]: {
-      coordinates: [number, number, number];
-      vertices: Set<number>;
-      id: number;
-      faces: Set<number>;
-    };
-  } = {};
+  points: { [id: number]: FacePoint } = {};
 
   /**
    * The list of faces. Each face is defined by a list of outer points.
-   * TODO: Implement inner points.
    */
-  list: {
-    [id: number]: {
-      id: number;
-      vertices: Set<number>;
-      points: Set<number>;
-    };
-  } = {};
+  list: { [id: number]: Face } = {};
 
   /**
    * The geometric representation of the vertices that define this instance of faces.
@@ -98,34 +100,46 @@ export class Faces extends Primitive {
   /**
    * Adds a face.
    * @param ids - the IDs of the {@link points} that define that face. It's assumed that they are coplanar.
+   * @param holesIDs - the IDs of the {@link points} that define the holes.
    */
-  add(ids: number[]) {
+  add(ids: number[], holesIDs: number[][] = []) {
     const id = this._faceIdGenerator++;
+
     for (const pointID of ids) {
       const point = this.points[pointID];
       point.faces.add(id);
     }
 
-    const face = {
-      id,
-      vertices: new Set<number>(),
-      points: new Set<number>(ids),
-      start: 0,
-      end: 0,
-    };
+    const holes: Set<number>[] = [];
+    for (const holeIDs of holesIDs) {
+      holes.push(new Set(holeIDs));
+      for (const pointID of holeIDs) {
+        const point = this.points[pointID];
+        point.faces.add(id);
+      }
+    }
+
+    const face = this.newFace(id, holes, ids);
 
     const coordinates: number[] = [];
     for (const pointID of face.points) {
-      const point = this.points[pointID];
-      coordinates.push(...point.coordinates);
-      const [id] = this.vertices.add([point.coordinates]);
-      point.vertices.add(id);
-      face.vertices.add(id);
+      this.saveCoordinates(pointID, coordinates, face);
+    }
+
+    let holesCounter = coordinates.length / 3;
+    const holeIndices: number[] = [];
+
+    for (const holeIDs of face.holes) {
+      holeIndices.push(holesCounter);
+      holesCounter += holeIDs.size;
+      for (const pointID of holeIDs) {
+        this.saveCoordinates(pointID, coordinates, face);
+      }
     }
 
     const allIndices = Array.from(this._index.array);
     face.start = allIndices.length;
-    const faceIndices = this.triangulate(coordinates);
+    const faceIndices = this.triangulate(coordinates, holeIndices);
     const offset = this._nextIndex;
     for (const faceIndex of faceIndices) {
       const absoluteIndex = faceIndex + offset;
@@ -223,6 +237,9 @@ export class Faces extends Primitive {
       const face = this.list[id];
       if (face) {
         points.push(...face.points);
+        for (const hole of face.holes) {
+          points.push(...hole);
+        }
       }
     }
     this.selectPoints(active, points);
@@ -285,6 +302,25 @@ export class Faces extends Primitive {
     }
   }
 
+  private newFace(id: number, holes: Set<number>[], ids: number[]) {
+    return {
+      id,
+      holes,
+      vertices: new Set<number>(),
+      points: new Set<number>(ids),
+      start: 0,
+      end: 0,
+    };
+  }
+
+  private saveCoordinates(pointID: number, coordinates: number[], face: Face) {
+    const point = this.points[pointID];
+    coordinates.push(...point.coordinates);
+    const [id] = this.vertices.add([point.coordinates]);
+    point.vertices.add(id);
+    face.vertices.add(id);
+  }
+
   private updateBuffers() {
     const positionBuffer = this.vertices.mesh.geometry.attributes.position;
     const normalBuffer = this.vertices.mesh.geometry.attributes.normal;
@@ -340,7 +376,7 @@ export class Faces extends Primitive {
     colorAttribute.needsUpdate = true;
   }
 
-  private triangulate(coordinates: number[]) {
+  private triangulate(coordinates: number[], holesIndices: number[]) {
     // Earcut only supports 2d triangulations, so let's project the face
     // into the cartesian plane that is more parallel to the face
     const dim = this.getProjectionDimension(coordinates);
@@ -350,7 +386,7 @@ export class Faces extends Primitive {
         projectedCoords.push(coordinates[i]);
       }
     }
-    return earcut(projectedCoords, [], 2);
+    return earcut(projectedCoords, holesIndices, 2);
   }
 
   private getProjectionDimension(coordinates: number[]) {

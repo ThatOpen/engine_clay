@@ -1415,7 +1415,6 @@ class Faces extends Primitive {
         this.points = {};
         /**
          * The list of faces. Each face is defined by a list of outer points.
-         * TODO: Implement inner points.
          */
         this.list = {};
         /**
@@ -1448,31 +1447,39 @@ class Faces extends Primitive {
     /**
      * Adds a face.
      * @param ids - the IDs of the {@link points} that define that face. It's assumed that they are coplanar.
+     * @param holesIDs - the IDs of the {@link points} that define the holes.
      */
-    add(ids) {
+    add(ids, holesIDs = []) {
         const id = this._faceIdGenerator++;
         for (const pointID of ids) {
             const point = this.points[pointID];
             point.faces.add(id);
         }
-        const face = {
-            id,
-            vertices: new Set(),
-            points: new Set(ids),
-            start: 0,
-            end: 0,
-        };
+        const holes = [];
+        for (const holeIDs of holesIDs) {
+            holes.push(new Set(holeIDs));
+            for (const pointID of holeIDs) {
+                const point = this.points[pointID];
+                point.faces.add(id);
+            }
+        }
+        const face = this.newFace(id, holes, ids);
         const coordinates = [];
         for (const pointID of face.points) {
-            const point = this.points[pointID];
-            coordinates.push(...point.coordinates);
-            const [id] = this.vertices.add([point.coordinates]);
-            point.vertices.add(id);
-            face.vertices.add(id);
+            this.saveCoordinates(pointID, coordinates, face);
+        }
+        let holesCounter = coordinates.length / 3;
+        const holeIndices = [];
+        for (const holeIDs of face.holes) {
+            holeIndices.push(holesCounter);
+            holesCounter += holeIDs.size;
+            for (const pointID of holeIDs) {
+                this.saveCoordinates(pointID, coordinates, face);
+            }
         }
         const allIndices = Array.from(this._index.array);
         face.start = allIndices.length;
-        const faceIndices = this.triangulate(coordinates);
+        const faceIndices = this.triangulate(coordinates, holeIndices);
         const offset = this._nextIndex;
         for (const faceIndex of faceIndices) {
             const absoluteIndex = faceIndex + offset;
@@ -1560,6 +1567,9 @@ class Faces extends Primitive {
             const face = this.list[id];
             if (face) {
                 points.push(...face.points);
+                for (const hole of face.holes) {
+                    points.push(...hole);
+                }
             }
         }
         this.selectPoints(active, points);
@@ -1620,6 +1630,23 @@ class Faces extends Primitive {
             point.coordinates = coords;
         }
     }
+    newFace(id, holes, ids) {
+        return {
+            id,
+            holes,
+            vertices: new Set(),
+            points: new Set(ids),
+            start: 0,
+            end: 0,
+        };
+    }
+    saveCoordinates(pointID, coordinates, face) {
+        const point = this.points[pointID];
+        coordinates.push(...point.coordinates);
+        const [id] = this.vertices.add([point.coordinates]);
+        point.vertices.add(id);
+        face.vertices.add(id);
+    }
     updateBuffers() {
         const positionBuffer = this.vertices.mesh.geometry.attributes.position;
         const normalBuffer = this.vertices.mesh.geometry.attributes.normal;
@@ -1676,7 +1703,7 @@ class Faces extends Primitive {
         }
         colorAttribute.needsUpdate = true;
     }
-    triangulate(coordinates) {
+    triangulate(coordinates, holesIndices) {
         // Earcut only supports 2d triangulations, so let's project the face
         // into the cartesian plane that is more parallel to the face
         const dim = this.getProjectionDimension(coordinates);
@@ -1686,7 +1713,7 @@ class Faces extends Primitive {
                 projectedCoords.push(coordinates[i]);
             }
         }
-        return earcut$1.exports(projectedCoords, [], 2);
+        return earcut$1.exports(projectedCoords, holesIndices, 2);
     }
     getProjectionDimension(coordinates) {
         const [x1, y1, z1] = this.getCoordinate(0, coordinates);

@@ -1,15 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8"/>
-    <meta
-            name="viewport"
-            content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"
-    />
-    <meta http-equiv="X-UA-Compatible" content="ie=edge"/>
-    <link rel="stylesheet" href="../../../resources/styles.css"/>
-    <link rel="icon" type="image/x-icon" href="../../../resources/favicon.ico"/>
-    <title>Components | Hello world</title>
+  <meta charset="UTF-8"/>
+  <meta
+          name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"
+  />
+  <meta http-equiv="X-UA-Compatible" content="ie=edge"/>
+  <link rel="stylesheet" href="../../../resources/styles.css"/>
+  <link rel="icon" type="image/x-icon" href="../../../resources/favicon.ico"/>
+  <title>Components | Hello world</title>
 </head>
 <body>
 <canvas class="full-screen" id="container"></canvas>
@@ -26,136 +26,165 @@
         }
       }
 
+
 </script>
 <script type="module">
-    import * as THREE from "three";
-    import {SimpleThreeScene} from "../../../resources/simple-three-scene.js";
-    import {TransformControls} from "three/examples/jsm/controls/TransformControls";
-    import * as OBC from "../../../resources/openbim-clay.js";
-    import * as dat from "three/examples/jsm/libs/lil-gui.module.min";
+	import * as THREE from 'three';
+	import { SimpleThreeScene } from '../../../resources/simple-three-scene.js';
+	import { TransformControls } from 'three/examples/jsm/controls/TransformControls';
+	import * as OBC from '../../../resources/openbim-clay.js';
+	import * as dat from 'three/examples/jsm/libs/lil-gui.module.min';
 
 
-    const canvas = document.getElementById("container");
-    const world = new SimpleThreeScene(canvas);
+	const canvas = document.getElementById('container');
+	const world = new SimpleThreeScene(canvas);
 
-    const faces = new OBC.Faces();
-    world.scene.add(faces.mesh);
+	const faces = new OBC.Faces();
+	world.scene.add(faces.mesh);
 
-    faces.addPoints([
-        [0, 0, 0],
-        [1, 0, 0],
-        [1, 0, 1],
-        [0, 0, 1],
-        [0, 1, 0],
-        [1, 1, 0],
-        [1, 1, 1],
-        [0, 1, 1],
-    ]);
+	// Adding all the points we will use
 
-    faces.add([0, 1, 2, 3]);
-    faces.add([4, 5, 6, 7]);
-    faces.add([0, 4, 5, 1]);
-    faces.add([2, 6, 7, 3]);
-    faces.add([3, 7, 4, 0]);
-    faces.add([1, 5, 6, 2]);
+	faces.addPoints([
+		// Cube coordinates
 
-    const settings = {
-        pointsVisible: false,
-        pointSelectionStart: 0,
-        pointSelectionEnd: 0,
-        faceSelectionStart: 0,
-        faceSelectionEnd: 0,
-        baseColor: 0x888888,
-        selectColor: 0xff0000,
-        transformMode: "translate",
-        delete: deleteSelectedFaces,
-        deletePoints: deleteSelectedPoints,
-        regenerate: regenerate
-    }
+		[0, 0, 0],
+		[1, 0, 0],
+		[1, 0, 1],
+		[0, 0, 1],
 
-    function regenerate() {
-        faces.regenerate();
-    }
+		[0, 1, 0],
+		[1, 1, 0],
+		[1, 1, 1],
+		[0, 1, 1],
 
-    function setSelectedPoints() {
-        const selection = [];
-        for (let i = settings.pointSelectionStart; i < settings.pointSelectionEnd; i++) {
-            selection.push(i);
-        }
-        faces.selectPoints(false);
-        faces.selectPoints(true, selection);
-    }
+		// Face with holes coordinates
 
-    function setSelectedFaces() {
-        const selection = [];
-        for (let i = settings.faceSelectionStart; i < settings.faceSelectionEnd; i++) {
-            selection.push(i);
-        }
-        faces.select(false);
-        faces.select(true, selection);
-    }
+		[2, 0, 2],
+		[3, 0, 2],
+		[3, 0, 3],
+		[2, 0, 3],
 
-    function deleteSelectedFaces() {
-        faces.remove();
-    }
+		[2.2, 0, 2.2],
+		[2.4, 0, 2.2],
+		[2.4, 0, 2.4],
+		[2.2, 0, 2.4],
 
-    function deleteSelectedPoints() {
-        faces.removePoints();
-    }
+		[2.6, 0, 2.6],
+		[2.8, 0, 2.6],
+		[2.8, 0, 2.8],
+		[2.6, 0, 2.8],
+	]);
 
-    // Set up the controls to move them around
+	// Create a cube
 
-    const control = new TransformControls(world.camera, world.renderer.domElement);
-    const helper = new THREE.Object3D();
-    let transform = new THREE.Matrix4();
-    world.scene.add(helper);
-    control.attach(helper);
-    world.scene.add(control);
+	faces.add([0, 1, 2, 3]);
+	faces.add([4, 5, 6, 7]);
+	faces.add([0, 4, 5, 1]);
+	faces.add([2, 6, 7, 3]);
+	faces.add([3, 7, 4, 0]);
+	faces.add([1, 5, 6, 2]);
 
-    control.addEventListener("dragging-changed", (event) => world.controls.enabled = !event.value);
-    control.addEventListener('change', () => {
-        helper.updateMatrix();
-        const temp = helper.matrix.clone();
-        temp.multiply(transform.invert());
-        faces.transform(temp);
-        transform = helper.matrix.clone();
-    });
+	// Create a face with 2 holes
 
-    const gui = new dat.GUI();
+	faces.add(
+		[8, 9, 10, 11],
+		[
+			[12, 13, 14, 15],
+			[16, 17, 18, 19],
+		]);
 
-    gui.add(settings, "pointsVisible").name("Points visible").onChange(() => {
-        if(settings.pointsVisible) {
-            world.scene.add(faces.vertices.mesh);
-        } else {
-            faces.vertices.mesh.removeFromParent();
-        }
-    });
 
-    gui.add(settings, "pointSelectionStart").name("Point selection start").min(0).max(10).step(1).onChange(setSelectedPoints);
-    gui.add(settings, "pointSelectionEnd").name("Point selection end").min(0).max(10).step(1).onChange(setSelectedPoints);
-    gui.add(settings, "faceSelectionStart").name("Face selection start").min(0).max(6).step(1).onChange(setSelectedFaces);
-    gui.add(settings, "faceSelectionEnd").name("Face selection end").min(0).max(6).step(1).onChange(setSelectedFaces);
+	const settings = {
+		pointsVisible: false,
+		pointSelectionStart: 0,
+		pointSelectionEnd: 0,
+		faceSelectionStart: 0,
+		faceSelectionEnd: 0,
+		baseColor: 0x888888,
+		selectColor: 0xff0000,
+		transformMode: 'translate',
+		delete: deleteSelectedFaces,
+		deletePoints: deleteSelectedPoints,
+	};
 
-    const baseColor = new THREE.Color();
-    gui.addColor(settings, "baseColor").name("Base color").onChange(() => {
-        baseColor.set(settings.baseColor);
-        faces.baseColor = baseColor;
-    });
+	function setSelectedPoints() {
+		const selection = [];
+		for (let i = settings.pointSelectionStart; i < settings.pointSelectionEnd; i++) {
+			selection.push(i);
+		}
+		faces.selectPoints(false);
+		faces.selectPoints(true, selection);
+	}
 
-    const selectColor = new THREE.Color();
-    gui.addColor(settings, "selectColor").name("Select color").onChange(() => {
-        selectColor.set(settings.selectColor);
-        faces.selectColor = selectColor;
-    });
+	function setSelectedFaces() {
+		const selection = [];
+		for (let i = settings.faceSelectionStart; i < settings.faceSelectionEnd; i++) {
+			selection.push(i);
+		}
+		faces.select(false);
+		faces.select(true, selection);
+	}
 
-    gui.add(settings, "transformMode", {translate: "translate", rotate: "rotate", scale: "scale"})
-        .name("Transform mode").min(0).max(1000).onChange((result) => {
-        control.setMode(result);
-    });
+	function deleteSelectedFaces() {
+		faces.remove();
+	}
 
-    gui.add(settings, "delete").name("Delete selected faces").onChange(deleteSelectedFaces);
-    gui.add(settings, "deletePoints").name("Delete selected points").onChange(deleteSelectedPoints);
-    gui.add(settings, "regenerate").name("Regenerate geometry").onChange(regenerate);
+	function deleteSelectedPoints() {
+		faces.removePoints();
+	}
+
+	// Set up the controls to move them around
+
+	const control = new TransformControls(world.camera, world.renderer.domElement);
+	const helper = new THREE.Object3D();
+	let transform = new THREE.Matrix4();
+	world.scene.add(helper);
+	control.attach(helper);
+	world.scene.add(control);
+
+	control.addEventListener('dragging-changed', (event) => world.controls.enabled = !event.value);
+	control.addEventListener('change', () => {
+		helper.updateMatrix();
+		const temp = helper.matrix.clone();
+		temp.multiply(transform.invert());
+		faces.transform(temp);
+		transform = helper.matrix.clone();
+	});
+
+	const gui = new dat.GUI();
+
+	gui.add(settings, 'pointsVisible').name('Points visible').onChange(() => {
+		if (settings.pointsVisible) {
+			world.scene.add(faces.vertices.mesh);
+		} else {
+			faces.vertices.mesh.removeFromParent();
+		}
+	});
+
+	gui.add(settings, 'pointSelectionStart').name('Point selection start').min(0).max(20).step(1).onChange(setSelectedPoints);
+	gui.add(settings, 'pointSelectionEnd').name('Point selection end').min(0).max(20).step(1).onChange(setSelectedPoints);
+	gui.add(settings, 'faceSelectionStart').name('Face selection start').min(0).max(7).step(1).onChange(setSelectedFaces);
+	gui.add(settings, 'faceSelectionEnd').name('Face selection end').min(0).max(7).step(1).onChange(setSelectedFaces);
+
+	const baseColor = new THREE.Color();
+	gui.addColor(settings, 'baseColor').name('Base color').onChange(() => {
+		baseColor.set(settings.baseColor);
+		faces.baseColor = baseColor;
+	});
+
+	const selectColor = new THREE.Color();
+	gui.addColor(settings, 'selectColor').name('Select color').onChange(() => {
+		selectColor.set(settings.selectColor);
+		faces.selectColor = selectColor;
+	});
+
+	gui.add(settings, 'transformMode', { translate: 'translate', rotate: 'rotate', scale: 'scale' })
+		.name('Transform mode').min(0).max(1000).onChange((result) => {
+		control.setMode(result);
+	});
+
+	gui.add(settings, 'delete').name('Delete selected faces').onChange(deleteSelectedFaces);
+	gui.add(settings, 'deletePoints').name('Delete selected points').onChange(deleteSelectedPoints);
 
 
 </script>
