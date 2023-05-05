@@ -1817,35 +1817,14 @@ class OffsetFaces extends Primitive {
             throw new Error("The axis must be contained within the face generated!");
         }
         const linesIDs = this.lines.add(ids);
-        // First, create all offsetFaces
-        // Then, update the necessary knots
         const knotsToUpdate = new Set();
         for (const id of linesIDs) {
-            const line = this.lines.list[id];
-            const start = this.lines.vertices.get(line.start);
-            const end = this.lines.vertices.get(line.end);
-            if (!start || !end)
+            const result = this.getFacePoints(id, width, knotsToUpdate);
+            if (result === null)
                 continue;
-            knotsToUpdate.add(line.start);
-            knotsToUpdate.add(line.end);
-            const rawDirection = Vector.substract(end, start);
-            const direction = Vector.normalize(rawDirection);
-            const normal = Vector.multiply(Vector.up, direction);
-            const scaledNormal = Vector.multiplyScalar(normal, width / 2);
-            const invScaledNormal = Vector.multiplyScalar(scaledNormal, -1);
-            const p1 = Vector.add(start, scaledNormal);
-            const p2 = Vector.add(start, invScaledNormal);
-            const p3 = Vector.add(end, invScaledNormal);
-            const p4 = Vector.add(end, scaledNormal);
-            const points = this.faces.addPoints([p1, p2, p3, p4]);
+            const points = this.faces.addPoints(result);
             const face = this.faces.add(points);
-            this.list[id] = {
-                id,
-                width,
-                offset,
-                face,
-                points,
-            };
+            this.list[id] = { id, width, offset, face, points };
         }
         this.updateKnots(knotsToUpdate);
     }
@@ -1856,6 +1835,7 @@ class OffsetFaces extends Primitive {
      * defined, all lines will be selected or deselected.
      */
     select(active, ids = this._ids) {
+        this.selected.select(active, ids, this._ids);
         const faces = [];
         for (const id of ids) {
             const item = this.list[id];
@@ -1886,6 +1866,41 @@ class OffsetFaces extends Primitive {
         }
         this.lines.selectPoints(active, points);
         this.faces.select(active, faces);
+    }
+    setWidth(width, ids = this.selected.data) {
+        const knotsToUpdate = new Set();
+        for (const id of ids) {
+            const offsetFace = this.list[id];
+            offsetFace.width = width;
+            const result = this.getFacePoints(id, width, knotsToUpdate);
+            if (result === null)
+                continue;
+            for (let i = 0; i < 4; i++) {
+                const pointID = offsetFace.points[i];
+                const coordinates = result[i];
+                this.faces.setPoint(pointID, coordinates);
+            }
+        }
+        this.updateKnots(knotsToUpdate);
+    }
+    getFacePoints(id, width, knots) {
+        const line = this.lines.list[id];
+        const start = this.lines.vertices.get(line.start);
+        const end = this.lines.vertices.get(line.end);
+        if (!start || !end)
+            return null;
+        knots.add(line.start);
+        knots.add(line.end);
+        const rawDirection = Vector.substract(end, start);
+        const direction = Vector.normalize(rawDirection);
+        const normal = Vector.multiply(Vector.up, direction);
+        const scaledNormal = Vector.multiplyScalar(normal, width / 2);
+        const invScaledNormal = Vector.multiplyScalar(scaledNormal, -1);
+        const p1 = Vector.add(start, scaledNormal);
+        const p2 = Vector.add(start, invScaledNormal);
+        const p3 = Vector.add(end, invScaledNormal);
+        const p4 = Vector.add(end, scaledNormal);
+        return [p1, p2, p3, p4];
     }
     updateKnots(ids) {
         for (const id of ids) {
