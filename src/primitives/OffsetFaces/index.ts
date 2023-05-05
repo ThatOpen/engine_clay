@@ -200,21 +200,32 @@ export class OffsetFaces extends Primitive {
         const v2 = Vector.multiplyScalar(n2, nextWidth / 2);
         const p2 = Vector.add(coords, v2);
 
-        // Convert point-direction to implicit 2D line ax + by = d
-        // Although in our case we use z instead of y
-        // p . n = d
+        let x: number;
+        let z: number;
 
-        const a1 = n1[0];
-        const b1 = n1[2];
-        const d1 = p1[0] * n1[0] + p1[2] * n1[2];
+        const r1 = Vector.round(p1);
+        const r2 = Vector.round(p2);
+        const areLinesParallel = r1[0] === r2[0] && r1[2] === r2[2];
 
-        const a2 = n2[0];
-        const b2 = n2[2];
-        const d2 = p2[0] * n2[0] + p2[2] * n2[2];
+        if (areLinesParallel) {
+          x = p1[0];
+          z = p1[2];
+        } else {
+          // Convert point-direction to implicit 2D line ax + by = d
+          // Although in our case we use z instead of y
+          // p . n = d
 
-        // Find the intersection of the two lines
-        const x = (b2 * d1 - b1 * d2) / (a1 * b2 - a2 * b1);
-        const z = (a1 * d2 - a2 * d1) / (a1 * b2 - a2 * b1);
+          const a1 = n1[0];
+          const b1 = n1[2];
+          const d1 = p1[0] * n1[0] + p1[2] * n1[2];
+
+          const a2 = n2[0];
+          const b2 = n2[2];
+          const d2 = p2[0] * n2[0] + p2[2] * n2[2];
+
+          x = (b2 * d1 - b1 * d2) / (a1 * b2 - a2 * b1);
+          z = (a1 * d2 - a2 * d1) / (a1 * b2 - a2 * b1);
+        }
 
         // Update the vertices of both OffsetFaces
         const currentOffsetFace = this.list[currentLine.lineID];

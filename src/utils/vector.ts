@@ -3,6 +3,14 @@ export class Vector {
     return [0, 1, 0];
   }
 
+  static round(vector: number[], precission = 1000) {
+    return [
+      Math.round(vector[0] * precission) / precission,
+      Math.round(vector[1] * precission) / precission,
+      Math.round(vector[2] * precission) / precission,
+    ];
+  }
+
   static getNormal(points: number[][]) {
     const a = Vector.substract(points[0], points[1]);
     const b = Vector.substract(points[1], points[2]);
