@@ -65,6 +65,21 @@ export class Vertices extends Primitive {
 
   /**
    * Add new points
+   * @param ids the vertices to edit.
+   * @param coordinates the new coordinates for the vertex.
+   */
+  set(ids: Iterable<number>, coordinates: [number, number, number]) {
+    const [x, y, z] = coordinates;
+    for (const id of ids) {
+      const index = this.idMap.getIndex(id);
+      if (index === null) return;
+      this._positionBuffer.setXYZ(index, x, y, z);
+    }
+    this._positionBuffer.needsUpdate = true;
+  }
+
+  /**
+   * Add new points
    * @param coordinates Points to add.
    * @returns the list of ids of the created vertices.
    */

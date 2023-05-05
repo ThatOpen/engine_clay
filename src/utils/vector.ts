@@ -1,4 +1,8 @@
 export class Vector {
+  static get up() {
+    return [0, 1, 0];
+  }
+
   static getNormal(points: number[][]) {
     const a = Vector.substract(points[0], points[1]);
     const b = Vector.substract(points[1], points[2]);

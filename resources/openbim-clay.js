@@ -227,6 +227,9 @@ class Selector {
 }
 
 class Vector {
+    static get up() {
+        return [0, 1, 0];
+    }
     static getNormal(points) {
         const a = Vector.substract(points[0], points[1]);
         const b = Vector.substract(points[1], points[2]);
@@ -368,6 +371,21 @@ class Vertices extends Primitive {
             this._positionBuffer.getY(index),
             this._positionBuffer.getZ(index),
         ];
+    }
+    /**
+     * Add new points
+     * @param ids the vertices to edit.
+     * @param coordinates the new coordinates for the vertex.
+     */
+    set(ids, coordinates) {
+        const [x, y, z] = coordinates;
+        for (const id of ids) {
+            const index = this.idMap.getIndex(id);
+            if (index === null)
+                return;
+            this._positionBuffer.setXYZ(index, x, y, z);
+        }
+        this._positionBuffer.needsUpdate = true;
     }
     /**
      * Add new points
@@ -1612,6 +1630,16 @@ class Faces extends Primitive {
         }
         this.vertices.select(active, vertices);
     }
+    /**
+     * Sets a point of the face to a specific position.
+     * @param id The point whose position to set.
+     * @param coordinates The new coordinates of the point.
+     */
+    setPoint(id, coordinates) {
+        const point = this.points[id];
+        point.coordinates = coordinates;
+        this.vertices.set(point.vertices, coordinates);
+    }
     transform(matrix) {
         const vertices = new Set();
         for (const id of this.selectedPoints.data) {
@@ -1743,88 +1771,104 @@ class OffsetFaces extends Primitive {
         super();
         this.faces = new Faces();
         this.lines = new Lines();
+        // An axis that goes from A to B will define an OffsetFace like this:
+        //       p2  +-------------------------------------------+ p3
+        //          |                                           |
+        //       A +-------------------------------------------+ B
+        //        |                                           |
+        //    p1 +-------------------------------------------+ p4
         /**
-         * The list of axis.
+         * The list of axis. Points are p1, p2, p3, p4
          */
-        this.axes = {};
+        this.list = {};
+        this.knots = {};
         this.mesh = this.faces.mesh;
     }
-    addPoints(points) {
-        this.lines.addPoints(points);
-    }
-    addAxes(ids, width, offset = 0) {
+    /**
+     * Adds a new set of axes to this instance of OffsetFaces.
+     * @param ids the ids of the points that define the axes ({@link Lines}).
+     * @param width the width of the faces.
+     * @param offset the offset of the faces to their respective axis.
+     *
+     */
+    add(ids, width, offset = 0) {
         if (offset > width / 2) {
             throw new Error("The axis must be contained within the face generated!");
         }
         const linesIDs = this.lines.add(ids);
+        // First, create all offsetFaces
+        // Then, update the necessary knots
+        const knotsToUpdate = new Set();
         for (const id of linesIDs) {
-            this.axes[id] = {
+            const line = this.lines.list[id];
+            const start = this.lines.vertices.get(line.start);
+            const end = this.lines.vertices.get(line.end);
+            if (!start || !end)
+                continue;
+            knotsToUpdate.add(line.start);
+            knotsToUpdate.add(line.end);
+            const rawDirection = Vector.substract(end, start);
+            const direction = Vector.normalize(rawDirection);
+            const normal = Vector.multiply(Vector.up, direction);
+            const scaledNormal = Vector.multiplyScalar(normal, width / 2);
+            const invScaledNormal = Vector.multiplyScalar(scaledNormal, -1);
+            const p1 = Vector.add(start, scaledNormal);
+            const p2 = Vector.add(start, invScaledNormal);
+            const p3 = Vector.add(end, invScaledNormal);
+            const p4 = Vector.add(end, scaledNormal);
+            const points = this.faces.addPoints([p1, p2, p3, p4]);
+            const face = this.faces.add(points);
+            this.list[id] = {
+                id,
                 width,
                 offset,
+                face,
+                points,
             };
         }
+        this.updateKnots(knotsToUpdate);
     }
-    regenerate() {
-        this.faces.clear();
-        // A line that goes from A to B will define an offsetface like this:
-        //     p1                             p2
-        //     +------------------------------+
-        //    |  A +-------------------+ B   |
-        //   +------------------------------+
-        //   p4                            p3
-        const offsetFaces = {};
-        // Strategy: traverse all points, sort lines by angle and find the intersection
-        // of each line with the next one
-        for (const pointID in this.lines.points) {
-            const knotVertices = [];
-            const id = parseInt(pointID, 10);
+    updateKnots(ids) {
+        for (const id of ids) {
             const point = this.lines.points[id];
             const coords = this.lines.vertices.get(id);
             if (coords === null)
                 continue;
-            let vectors = [];
-            this.getAllNormalizedVectors(vectors, point.start, false);
-            this.getAllNormalizedVectors(vectors, point.end, true);
-            vectors = this.order2DVectorsClockwise(vectors);
-            const upVector = [0, 1, 0];
+            const knotFace = this.knots[id];
+            if (knotFace !== undefined && knotFace !== null) {
+                const points = this.faces.list[knotFace].points;
+                this.faces.removePoints(points);
+            }
+            if (point.start.size + point.end.size === 1) {
+                continue;
+            }
+            // Strategy: traverse all points, sort lines by angle and find the intersection
+            // of each outer line with the next one
+            const vectors = this.getNormalVectorsSortedClockwise(id);
+            if (vectors.length === 1) {
+                continue;
+            }
+            const intersectionPoints = [];
             for (let i = 0; i < vectors.length; i++) {
                 const currentLine = vectors[i];
                 const currentVector = currentLine.vector;
-                const isCurrentStart = point.start.has(currentLine.lineID);
-                const { width } = this.axes[currentLine.lineID];
-                if (!offsetFaces[currentLine.lineID]) {
-                    offsetFaces[currentLine.lineID] = {};
-                }
-                const onlyOneLineInPoint = vectors.length === 1;
-                if (onlyOneLineInPoint) {
-                    const normal = Vector.multiply(upVector, currentVector);
-                    const v1 = Vector.multiplyScalar(normal, width);
-                    const v2 = Vector.multiplyScalar(normal, -width);
-                    const p1 = Vector.add(coords, v1);
-                    const p2 = Vector.add(coords, v2);
-                    const index1 = isCurrentStart ? 1 : 3;
-                    const index2 = isCurrentStart ? 4 : 2;
-                    const [firstPointID] = this.faces.addPoints([p1]);
-                    const [secondPointID] = this.faces.addPoints([p2]);
-                    offsetFaces[currentLine.lineID][index1] = firstPointID;
-                    offsetFaces[currentLine.lineID][index2] = secondPointID;
-                    break;
-                }
+                const { width } = this.list[currentLine.lineID];
+                // If it's the last vector, the next one is the first one
                 const isLastVector = i === vectors.length - 1;
                 const j = isLastVector ? 0 : i + 1;
                 const nextLine = vectors[j];
                 const nextVector = nextLine.vector;
-                const nextWidth = this.axes[nextLine.lineID].width;
+                const nextWidth = this.list[nextLine.lineID].width;
                 // Express the outlines as a point and a direction
-                // Beware the left-handed system for the direction
-                const n1 = Vector.multiply(upVector, currentVector);
-                const v1 = Vector.multiplyScalar(n1, width);
+                // Beware the right-handed system for the direction
+                const n1 = Vector.multiply(Vector.up, currentVector);
+                const v1 = Vector.multiplyScalar(n1, width / 2);
                 const p1 = Vector.add(coords, v1);
-                const n2 = Vector.multiply(nextVector, upVector);
-                const v2 = Vector.multiplyScalar(n2, nextWidth);
+                const n2 = Vector.multiply(nextVector, Vector.up);
+                const v2 = Vector.multiplyScalar(n2, nextWidth / 2);
                 const p2 = Vector.add(coords, v2);
                 // Convert point-direction to implicit 2D line ax + by = d
-                // Beware that "y" is "z" in our 2D system
+                // Although in our case we use z instead of y
                 // p . n = d
                 const a1 = n1[0];
                 const b1 = n1[2];
@@ -1834,35 +1878,33 @@ class OffsetFaces extends Primitive {
                 const d2 = p2[0] * n2[0] + p2[2] * n2[2];
                 // Find the intersection of the two lines
                 const x = (b2 * d1 - b1 * d2) / (a1 * b2 - a2 * b1);
-                const y = (a1 * d2 - a2 * d1) / (a1 * b2 - a2 * b1);
-                // Save the intersection points in both lines
-                if (!offsetFaces[nextLine.lineID]) {
-                    offsetFaces[nextLine.lineID] = {};
-                }
-                const isNextStart = point.start.has(nextLine.lineID);
+                const z = (a1 * d2 - a2 * d1) / (a1 * b2 - a2 * b1);
+                // Update the vertices of both OffsetFaces
+                const currentOffsetFace = this.list[currentLine.lineID];
+                const isCurrentStart = point.start.has(currentLine.lineID);
                 const currentIndex = isCurrentStart ? 1 : 3;
-                const nextIndex = isNextStart ? 4 : 2;
-                // Create the point
-                const [pointID] = this.faces.addPoints([[x, 0, y]]);
-                // Save point as part of this knot
-                knotVertices.push(pointID);
-                offsetFaces[currentLine.lineID][currentIndex] = pointID;
-                offsetFaces[nextLine.lineID][nextIndex] = pointID;
+                const currentPoint = currentOffsetFace.points[currentIndex];
+                this.faces.setPoint(currentPoint, [x, 0, z]);
+                const nextOffsetFace = this.list[nextLine.lineID];
+                const isNextStart = point.start.has(nextLine.lineID);
+                const nextIndex = isNextStart ? 0 : 2;
+                const nextPoint = nextOffsetFace.points[nextIndex];
+                this.faces.setPoint(nextPoint, [x, 0, z]);
+                intersectionPoints.push([x, 0, z]);
             }
-            if (knotVertices.length > 2) {
-                const reversed = knotVertices.reverse();
-                this.faces.add(reversed);
+            if (intersectionPoints.length > 2) {
+                intersectionPoints.reverse();
+                const pointsIDs = this.faces.addPoints(intersectionPoints);
+                this.knots[id] = this.faces.add(pointsIDs);
             }
         }
-        console.log(offsetFaces);
-        for (const lineID in offsetFaces) {
-            const offsetFace = offsetFaces[lineID];
-            const ids = [];
-            for (let i = 1; i < 5; i++) {
-                ids.push(offsetFace[i]);
-            }
-            this.faces.add(ids);
-        }
+    }
+    getNormalVectorsSortedClockwise(id) {
+        const vectors = [];
+        const point = this.lines.points[id];
+        this.getAllNormalizedVectors(vectors, point.start, false);
+        this.getAllNormalizedVectors(vectors, point.end, true);
+        return this.order2DVectorsClockwise(vectors);
     }
     order2DVectorsClockwise(vectors) {
         const vectorsWithAngles = [];

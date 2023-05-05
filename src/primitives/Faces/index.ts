@@ -165,7 +165,7 @@ export class Faces extends Primitive {
    * @param ids List of faces to remove. If no face is specified,
    * removes all the selected faces.
    */
-  remove(ids = this.selected.data) {
+  remove(ids = this.selected.data as Iterable<number>) {
     const verticesToRemove = new Set<number>();
     for (const id of ids) {
       const face = this.list[id];
@@ -282,6 +282,17 @@ export class Faces extends Primitive {
       }
     }
     this.vertices.select(active, vertices);
+  }
+
+  /**
+   * Sets a point of the face to a specific position.
+   * @param id The point whose position to set.
+   * @param coordinates The new coordinates of the point.
+   */
+  setPoint(id: number, coordinates: [number, number, number]) {
+    const point = this.points[id];
+    point.coordinates = coordinates;
+    this.vertices.set(point.vertices, coordinates);
   }
 
   transform(matrix: THREE.Matrix4) {

@@ -28,15 +28,22 @@
 
 </script>
 <script type="module">
-    // import * as THREE from "three";
+    import * as THREE from "three";
     import {SimpleThreeScene} from "../../../resources/simple-three-scene.js";
-    // import {TransformControls} from "three/examples/jsm/controls/TransformControls";
+    import {TransformControls} from "three/examples/jsm/controls/TransformControls";
     import * as OBC from "../../../resources/openbim-clay.js";
-    // import * as dat from "three/examples/jsm/libs/lil-gui.module.min";
-
+    import * as dat from "three/examples/jsm/libs/lil-gui.module.min";
 
     const canvas = document.getElementById("container");
     const world = new SimpleThreeScene(canvas);
+
+    const settings = {
+        axesVisible: true,
+        pointSelectionStart: 0,
+        pointSelectionEnd: 0,
+        faceSelectionStart: 0,
+        faceSelectionEnd: 0,
+    }
 
     const offsetFaces = new OBC.OffsetFaces();
     world.scene.add(offsetFaces.mesh);
@@ -48,16 +55,63 @@
         [1, 0, 0],
         [1, 0, 1],
         [0, 0, 1],
-        [0.5, 0, 1],
     ]);
 
-    offsetFaces.addAxes([0, 1], 0.1);
-    offsetFaces.addAxes([1, 2], 0.1);
-    offsetFaces.addAxes([1, 3], 0.1);
-    offsetFaces.addAxes([1, 4], 0.1);
+    offsetFaces.add([0, 1], 0.2);
+    offsetFaces.add([2, 1], 0.3);
+    offsetFaces.add([3, 1], 0.3);
+    // offsetFaces.addAxes([1, 2], 0.1);
+    // offsetFaces.addAxes([1, 3], 0.1);
+    // offsetFaces.addAxes([1, 4], 0.1);
 
-    offsetFaces.regenerate();
+    function setSelectedPoints() {
+        const selection = [];
+        for (let i = settings.pointSelectionStart; i < settings.pointSelectionEnd; i++) {
+            selection.push(i);
+        }
+        offsetFaces.lines.selectPoints(false);
+        offsetFaces.lines.selectPoints(true, selection);
+    }
 
+    function setSelectedFaces() {
+
+    }
+
+    // Set up controls
+
+    const control = new TransformControls(world.camera, world.renderer.domElement);
+    const helper = new THREE.Object3D();
+    let transform = new THREE.Matrix4();
+    world.scene.add(helper);
+    control.attach(helper);
+    world.scene.add(control);
+
+    control.addEventListener("dragging-changed", (event) => world.controls.enabled = !event.value);
+    control.addEventListener('change', () => {
+        // helper.updateMatrix();
+        // const temp = helper.matrix.clone();
+        // temp.multiply(transform.invert());
+        // lines.transform(temp);
+        // transform = helper.matrix.clone();
+    });
+
+    // Set up GUI
+
+    const gui = new dat.GUI();
+    gui.add(settings, "axesVisible").name("Axes visible").onChange(() => {
+        if(settings.axesVisible) {
+            world.scene.add(offsetFaces.lines.mesh);
+            world.scene.add(offsetFaces.lines.vertices.mesh);
+        } else {
+            offsetFaces.lines.mesh.removeFromParent();
+            offsetFaces.lines.vertices.mesh.removeFromParent();
+        }
+    });
+
+    gui.add(settings, "pointSelectionStart").name("Point selection start").min(0).max(10).step(1).onChange(setSelectedPoints);
+    gui.add(settings, "pointSelectionEnd").name("Point selection end").min(0).max(10).step(1).onChange(setSelectedPoints);
+    gui.add(settings, "faceSelectionStart").name("Face selection start").min(0).max(6).step(1).onChange(setSelectedFaces);
+    gui.add(settings, "faceSelectionEnd").name("Face selection end").min(0).max(6).step(1).onChange(setSelectedFaces);
 
 
 </script>

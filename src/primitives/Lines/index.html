@@ -79,7 +79,7 @@
         lines.selectPoints(true, selection);
     }
 
-    function setSelectedLines() {
+    function setSelectedFaces() {
         const selection = [];
         for (let i = settings.lineSelectionStart; i < settings.lineSelectionEnd; i++) {
             selection.push(i);
@@ -123,8 +123,8 @@
 
     gui.add(settings, "pointSelectionStart").name("Point selection start").min(0).max(10).step(1).onChange(setSelectedPoints);
     gui.add(settings, "pointSelectionEnd").name("Point selection end").min(0).max(10).step(1).onChange(setSelectedPoints);
-    gui.add(settings, "lineSelectionStart").name("Line selection start").min(0).max(6).step(1).onChange(setSelectedLines);
-    gui.add(settings, "lineSelectionEnd").name("Line selection end").min(0).max(6).step(1).onChange(setSelectedLines);
+    gui.add(settings, "lineSelectionStart").name("Line selection start").min(0).max(6).step(1).onChange(setSelectedFaces);
+    gui.add(settings, "lineSelectionEnd").name("Line selection end").min(0).max(6).step(1).onChange(setSelectedFaces);
 
     const baseColor = new THREE.Color();
     gui.addColor(settings, "baseColor").name("Base color").onChange(() => {
