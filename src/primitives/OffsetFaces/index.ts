@@ -47,7 +47,8 @@ export class OffsetFaces extends Primitive {
   private get _knotsIds() {
     const ids: number[] = [];
     for (const id in this.knots) {
-      ids.push(this.list[id].id);
+      const idNumber = parseInt(id, 10);
+      ids.push(idNumber);
     }
     return ids;
   }
@@ -122,7 +123,9 @@ export class OffsetFaces extends Primitive {
     const faces: number[] = [];
     for (const id of ids) {
       const item = this.list[id];
-      faces.push(item.face);
+      if (item) {
+        faces.push(item.face);
+      }
     }
     this.faces.select(active, faces);
     this.lines.select(active, ids);
@@ -157,9 +160,9 @@ export class OffsetFaces extends Primitive {
 
       const knotFace = this.knots[id];
       if (knotFace !== undefined && knotFace !== null) {
-        this.faces.remove([knotFace]);
-        // const points = this.faces.list[knotFace].points;
-        // this.faces.removePoints(points);
+        const points = this.faces.list[knotFace].points;
+        this.faces.removePoints(points);
+        this.knots[id] = null;
       }
 
       if (point.start.size + point.end.size === 1) {
