@@ -582,7 +582,7 @@ class Lines extends Primitive {
     /**
      * Select or unselects the given lines.
      * @param active Whether to select or unselect.
-     * @param ids List of faces IDs to select or unselect. If not
+     * @param ids List of lines IDs to select or unselect. If not
      * defined, all lines will be selected or deselected.
      */
     select(active, ids = this._ids) {
@@ -1767,6 +1767,13 @@ class Faces extends Primitive {
 
 // import { Vector3 } from "three";
 class OffsetFaces extends Primitive {
+    get _knotsIds() {
+        const ids = [];
+        for (const id in this.knots) {
+            ids.push(this.list[id].id);
+        }
+        return ids;
+    }
     constructor() {
         super();
         this.faces = new Faces();
@@ -1781,6 +1788,11 @@ class OffsetFaces extends Primitive {
          * The list of axis. Points are p1, p2, p3, p4
          */
         this.list = {};
+        /**
+         * A knot is the encounter of multiple OffsetFaces at a point. It's made of
+         * a point and, optionally, an extra face to fill the gap (if there are more
+         * than 3 OffsetFaces).
+         */
         this.knots = {};
         this.mesh = this.faces.mesh;
     }
@@ -1827,6 +1839,40 @@ class OffsetFaces extends Primitive {
             };
         }
         this.updateKnots(knotsToUpdate);
+    }
+    /**
+     * Select or unselects the given OffsetFaces.
+     * @param active Whether to select or unselect.
+     * @param ids List of OffsetFaces IDs to select or unselect. If not
+     * defined, all lines will be selected or deselected.
+     */
+    select(active, ids = this._ids) {
+        const faces = [];
+        for (const id of ids) {
+            const item = this.list[id];
+            faces.push(item.face);
+        }
+        this.faces.select(active, faces);
+        this.lines.select(active, ids);
+    }
+    /**
+     * Select or unselects the given knots.
+     * @param active Whether to select or unselect.
+     * @param ids List of knot IDs to select or unselect. If not
+     * defined, all knots will be selected or deselected.
+     */
+    selectKnots(active, ids = this._knotsIds) {
+        const points = [];
+        const faces = [];
+        for (const id of ids) {
+            points.push(id);
+            const face = this.knots[id];
+            if (face !== null) {
+                faces.push(face);
+            }
+        }
+        this.lines.selectPoints(active, points);
+        this.faces.select(active, faces);
     }
     updateKnots(ids) {
         for (const id of ids) {

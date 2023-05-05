@@ -37,7 +37,20 @@ export class OffsetFaces extends Primitive {
     };
   } = {};
 
+  /**
+   * A knot is the encounter of multiple OffsetFaces at a point. It's made of
+   * a point and, optionally, an extra face to fill the gap (if there are more
+   * than 3 OffsetFaces).
+   */
   knots: { [id: number]: number | null } = {};
+
+  private get _knotsIds() {
+    const ids: number[] = [];
+    for (const id in this.knots) {
+      ids.push(this.list[id].id);
+    }
+    return ids;
+  }
 
   constructor() {
     super();
@@ -97,6 +110,43 @@ export class OffsetFaces extends Primitive {
     }
 
     this.updateKnots(knotsToUpdate);
+  }
+
+  /**
+   * Select or unselects the given OffsetFaces.
+   * @param active Whether to select or unselect.
+   * @param ids List of OffsetFaces IDs to select or unselect. If not
+   * defined, all lines will be selected or deselected.
+   */
+  select(active: boolean, ids = this._ids as Iterable<number>) {
+    const faces: number[] = [];
+    for (const id of ids) {
+      const item = this.list[id];
+      faces.push(item.face);
+    }
+    this.faces.select(active, faces);
+    this.lines.select(active, ids);
+  }
+
+  /**
+   * Select or unselects the given knots.
+   * @param active Whether to select or unselect.
+   * @param ids List of knot IDs to select or unselect. If not
+   * defined, all knots will be selected or deselected.
+   */
+  selectKnots(active: boolean, ids = this._knotsIds as Iterable<number>) {
+    const points: number[] = [];
+    const faces: number[] = [];
+    for (const id of ids) {
+      const face = this.knots[id];
+      if (face === undefined) continue;
+      points.push(id);
+      if (face !== null) {
+        faces.push(face);
+      }
+    }
+    this.lines.selectPoints(active, points);
+    this.faces.select(active, faces);
   }
 
   private updateKnots(ids: Iterable<number>) {

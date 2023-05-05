@@ -126,10 +126,10 @@ export class Lines extends Primitive {
   /**
    * Select or unselects the given lines.
    * @param active Whether to select or unselect.
-   * @param ids List of faces IDs to select or unselect. If not
+   * @param ids List of lines IDs to select or unselect. If not
    * defined, all lines will be selected or deselected.
    */
-  select(active: boolean, ids = this._ids) {
+  select(active: boolean, ids = this._ids as Iterable<number>) {
     const allLines = this.idMap.ids;
     const lineIDs = ids || allLines;
     const idsToUpdate = this.selected.select(active, lineIDs, allLines);

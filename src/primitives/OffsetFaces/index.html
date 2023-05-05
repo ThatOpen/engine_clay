@@ -43,6 +43,8 @@
         pointSelectionEnd: 0,
         faceSelectionStart: 0,
         faceSelectionEnd: 0,
+        knotSelectionStart: 0,
+        knotSelectionEnd: 0,
     }
 
     const offsetFaces = new OBC.OffsetFaces();
@@ -74,7 +76,21 @@
     }
 
     function setSelectedFaces() {
+        const selection = [];
+        for (let i = settings.faceSelectionStart; i < settings.faceSelectionEnd; i++) {
+            selection.push(i);
+        }
+        offsetFaces.select(false);
+        offsetFaces.select(true, selection);
+    }
 
+    function setSelectedKnots() {
+        const selection = [];
+        for (let i = settings.knotSelectionStart; i < settings.knotSelectionEnd; i++) {
+            selection.push(i);
+        }
+        offsetFaces.selectKnots(false);
+        offsetFaces.selectKnots(true, selection);
     }
 
     // Set up controls
@@ -112,6 +128,8 @@
     gui.add(settings, "pointSelectionEnd").name("Point selection end").min(0).max(10).step(1).onChange(setSelectedPoints);
     gui.add(settings, "faceSelectionStart").name("Face selection start").min(0).max(6).step(1).onChange(setSelectedFaces);
     gui.add(settings, "faceSelectionEnd").name("Face selection end").min(0).max(6).step(1).onChange(setSelectedFaces);
+    gui.add(settings, "knotSelectionStart").name("Knot selection start").min(0).max(6).step(1).onChange(setSelectedKnots);
+    gui.add(settings, "knotSelectionEnd").name("Knot selection end").min(0).max(6).step(1).onChange(setSelectedKnots);
 
 
 </script>
