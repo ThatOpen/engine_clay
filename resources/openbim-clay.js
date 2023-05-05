@@ -1450,7 +1450,6 @@ class Faces extends Primitive {
         this.selectedPoints = new Selector();
         this._faceIdGenerator = 0;
         this._pointIdGenerator = 0;
-        this._nextIndex = 0;
         const material = new THREE.MeshLambertMaterial({
             side: THREE.DoubleSide,
             vertexColors: true,
@@ -1506,12 +1505,13 @@ class Faces extends Primitive {
         const allIndices = Array.from(this._index.array);
         face.start = allIndices.length;
         const faceIndices = this.triangulate(coordinates, holeIndices);
-        const offset = this._nextIndex;
+        let offset = 0;
+        for (const index of allIndices) {
+            if (index >= offset)
+                offset = index + 1;
+        }
         for (const faceIndex of faceIndices) {
             const absoluteIndex = faceIndex + offset;
-            if (absoluteIndex >= this._nextIndex) {
-                this._nextIndex = absoluteIndex + 1;
-            }
             allIndices.push(absoluteIndex);
         }
         face.end = allIndices.length;
@@ -1980,7 +1980,6 @@ class OffsetFaces extends Primitive {
             let angle = Math.atan2(vector[0], vector[2]);
             if (angle < 0)
                 angle += 2 * Math.PI;
-            console.log((angle * 180) / Math.PI);
             vectorsWithAngles.push({ angle, line });
         }
         vectorsWithAngles.sort((v1, v2) => (v1.angle > v2.angle ? 1 : -1));

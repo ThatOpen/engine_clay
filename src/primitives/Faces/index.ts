@@ -45,7 +45,6 @@ export class Faces extends Primitive {
 
   private _faceIdGenerator = 0;
   private _pointIdGenerator = 0;
-  private _nextIndex = 0;
 
   /**
    * The color of all the points.
@@ -142,12 +141,14 @@ export class Faces extends Primitive {
     const allIndices = Array.from(this._index.array);
     face.start = allIndices.length;
     const faceIndices = this.triangulate(coordinates, holeIndices);
-    const offset = this._nextIndex;
+
+    let offset = 0;
+    for (const index of allIndices) {
+      if (index >= offset) offset = index + 1;
+    }
+
     for (const faceIndex of faceIndices) {
       const absoluteIndex = faceIndex + offset;
-      if (absoluteIndex >= this._nextIndex) {
-        this._nextIndex = absoluteIndex + 1;
-      }
       allIndices.push(absoluteIndex);
     }
 

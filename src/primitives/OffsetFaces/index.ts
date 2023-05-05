@@ -265,7 +265,6 @@ export class OffsetFaces extends Primitive {
       const { vector } = line;
       let angle = Math.atan2(vector[0], vector[2]);
       if (angle < 0) angle += 2 * Math.PI;
-      console.log((angle * 180) / Math.PI);
       vectorsWithAngles.push({ angle, line });
     }
 
