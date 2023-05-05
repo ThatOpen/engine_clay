@@ -157,8 +157,9 @@ export class OffsetFaces extends Primitive {
 
       const knotFace = this.knots[id];
       if (knotFace !== undefined && knotFace !== null) {
-        const points = this.faces.list[knotFace].points;
-        this.faces.removePoints(points);
+        this.faces.remove([knotFace]);
+        // const points = this.faces.list[knotFace].points;
+        // this.faces.removePoints(points);
       }
 
       if (point.start.size + point.end.size === 1) {

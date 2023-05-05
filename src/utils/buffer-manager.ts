@@ -54,21 +54,22 @@ export class BufferManager {
     const difference = newSize - this.capacity;
     if (difference >= 0) {
       const increase = Math.max(difference, this.bufferIncrease);
+      const oldCapacity = this.capacity;
       this.capacity += increase;
       for (const attribute of this.attributes) {
-        this.resizeBuffers(attribute);
+        this.resizeBuffers(attribute, oldCapacity);
       }
     }
   }
 
-  private resizeBuffers(attribute: THREE.BufferAttribute) {
+  private resizeBuffers(attribute: THREE.BufferAttribute, oldCapacity: number) {
     this.geometry.deleteAttribute(attribute.name);
     const array = new Float32Array(this.capacity);
     const newAttribute = new THREE.BufferAttribute(array, 3);
     newAttribute.name = attribute.name;
     newAttribute.count = attribute.count;
     this.geometry.setAttribute(attribute.name, newAttribute);
-    for (let i = 0; i < this.capacity; i++) {
+    for (let i = 0; i < oldCapacity; i++) {
       const x = attribute.getX(i);
       const y = attribute.getY(i);
       const z = attribute.getZ(i);

@@ -51,10 +51,8 @@
         [0, 0, 10],
     ]);
 
-    offsetFaces.addAxes([0, 1, 2, 3, 0], 0.1);
-    offsetFaces.addAxes([3, 1], 0.1);
-
-    offsetFaces.regenerate();
+    offsetFaces.add([0, 1, 2, 3, 0], 0.1);
+    offsetFaces.add([3, 1], 0.1);
 
     walls.extrusions.lines.addPoints([[0, 0, 0], [0, 3, 0]]);
     walls.extrusions.lines.add([0, 1]);

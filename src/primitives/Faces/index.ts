@@ -75,11 +75,11 @@ export class Faces extends Primitive {
 
   constructor() {
     super();
-    this.updateBuffers();
     const material = new THREE.MeshLambertMaterial({
       side: THREE.DoubleSide,
       vertexColors: true,
     });
+
     const geometry = new THREE.BufferGeometry();
     this.mesh = new THREE.Mesh(geometry, material);
     geometry.setIndex([]);
@@ -87,6 +87,8 @@ export class Faces extends Primitive {
     const normals = new THREE.BufferAttribute(new Float32Array(0), 3);
     normals.name = "normal";
     this.vertices.addAttribute(normals);
+
+    this.updateBuffers();
   }
 
   /**

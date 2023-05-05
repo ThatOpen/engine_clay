@@ -47,20 +47,21 @@ class BufferManager {
         const difference = newSize - this.capacity;
         if (difference >= 0) {
             const increase = Math.max(difference, this.bufferIncrease);
+            const oldCapacity = this.capacity;
             this.capacity += increase;
             for (const attribute of this.attributes) {
-                this.resizeBuffers(attribute);
+                this.resizeBuffers(attribute, oldCapacity);
             }
         }
     }
-    resizeBuffers(attribute) {
+    resizeBuffers(attribute, oldCapacity) {
         this.geometry.deleteAttribute(attribute.name);
         const array = new Float32Array(this.capacity);
         const newAttribute = new THREE.BufferAttribute(array, 3);
         newAttribute.name = attribute.name;
         newAttribute.count = attribute.count;
         this.geometry.setAttribute(attribute.name, newAttribute);
-        for (let i = 0; i < this.capacity; i++) {
+        for (let i = 0; i < oldCapacity; i++) {
             const x = attribute.getX(i);
             const y = attribute.getY(i);
             const z = attribute.getZ(i);
@@ -1443,7 +1444,6 @@ class Faces extends Primitive {
         this._faceIdGenerator = 0;
         this._pointIdGenerator = 0;
         this._nextIndex = 0;
-        this.updateBuffers();
         const material = new THREE.MeshLambertMaterial({
             side: THREE.DoubleSide,
             vertexColors: true,
@@ -1454,6 +1454,7 @@ class Faces extends Primitive {
         const normals = new THREE.BufferAttribute(new Float32Array(0), 3);
         normals.name = "normal";
         this.vertices.addAttribute(normals);
+        this.updateBuffers();
     }
     /**
      * Quickly removes all the faces and releases all the memory used.
@@ -1865,8 +1866,10 @@ class OffsetFaces extends Primitive {
         const points = [];
         const faces = [];
         for (const id of ids) {
-            points.push(id);
             const face = this.knots[id];
+            if (face === undefined)
+                continue;
+            points.push(id);
             if (face !== null) {
                 faces.push(face);
             }
@@ -1882,8 +1885,9 @@ class OffsetFaces extends Primitive {
                 continue;
             const knotFace = this.knots[id];
             if (knotFace !== undefined && knotFace !== null) {
-                const points = this.faces.list[knotFace].points;
-                this.faces.removePoints(points);
+                this.faces.remove([knotFace]);
+                // const points = this.faces.list[knotFace].points;
+                // this.faces.removePoints(points);
             }
             if (point.start.size + point.end.size === 1) {
                 continue;
