@@ -430,10 +430,10 @@ class Vertices extends Primitive {
     }
     /**
      * Applies a transformation to the selected vertices.
-     * @param transformation Transformation matrix to apply.
+     * @param matrix Transformation matrix to apply.
      * @param ids IDs of the vertices to transform.
      */
-    transform(transformation, ids = this.selected.data) {
+    transform(matrix, ids = this.selected.data) {
         const vector = new THREE.Vector3();
         for (const id of ids) {
             const index = this.idMap.getIndex(id);
@@ -443,7 +443,7 @@ class Vertices extends Primitive {
             const y = this._positionBuffer.getY(index);
             const z = this._positionBuffer.getZ(index);
             vector.set(x, y, z);
-            vector.applyMatrix4(transformation);
+            vector.applyMatrix4(matrix);
             this._positionBuffer.setXYZ(index, vector.x, vector.y, vector.z);
         }
         this._positionBuffer.needsUpdate = true;
@@ -1652,6 +1652,10 @@ class Faces extends Primitive {
         point.coordinates = coordinates;
         this.vertices.set(point.vertices, coordinates);
     }
+    /**
+     * Applies a transformation to the selected vertices.
+     * @param matrix Transformation matrix to apply.
+     */
     transform(matrix) {
         const vertices = new Set();
         for (const id of this.selectedPoints.data) {
@@ -1844,6 +1848,24 @@ class OffsetFaces extends Primitive {
         }
         this.lines.selectPoints(active, points);
         this.faces.select(active, faces);
+    }
+    /**
+     * Applies a transformation to the selected vertices.
+     * @param matrix Transformation matrix to apply.
+     */
+    transform(matrix) {
+        this.lines.transform(matrix);
+        const linesToUpdate = new Set();
+        for (const id of this.lines.vertices.selected.data) {
+            const point = this.lines.points[id];
+            for (const lineID of point.start) {
+                linesToUpdate.add(lineID);
+            }
+            for (const lineID of point.end) {
+                linesToUpdate.add(lineID);
+            }
+        }
+        this.updateOffsetFaces(linesToUpdate);
     }
     /**
      * Sets the offset of the specified OffsetFaces.

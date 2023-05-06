@@ -179,7 +179,7 @@
 	});
 
 	gui.add(settings, 'transformMode', { translate: 'translate', rotate: 'rotate', scale: 'scale' })
-		.name('Transform mode').min(0).max(1000).onChange((result) => {
+		.name('Transform mode').onChange((result) => {
 		control.setMode(result);
 	});
 

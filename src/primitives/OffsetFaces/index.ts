@@ -125,6 +125,25 @@ export class OffsetFaces extends Primitive {
   }
 
   /**
+   * Applies a transformation to the selected vertices.
+   * @param matrix Transformation matrix to apply.
+   */
+  transform(matrix: THREE.Matrix4) {
+    this.lines.transform(matrix);
+    const linesToUpdate = new Set<number>();
+    for (const id of this.lines.vertices.selected.data) {
+      const point = this.lines.points[id];
+      for (const lineID of point.start) {
+        linesToUpdate.add(lineID);
+      }
+      for (const lineID of point.end) {
+        linesToUpdate.add(lineID);
+      }
+    }
+    this.updateOffsetFaces(linesToUpdate);
+  }
+
+  /**
    * Sets the offset of the specified OffsetFaces.
    * @param offset The offset to set.
    * @param ids List of knot IDs whose offset to change. If not specified,

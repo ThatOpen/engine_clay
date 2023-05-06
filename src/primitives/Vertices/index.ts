@@ -112,10 +112,10 @@ export class Vertices extends Primitive {
 
   /**
    * Applies a transformation to the selected vertices.
-   * @param transformation Transformation matrix to apply.
+   * @param matrix Transformation matrix to apply.
    * @param ids IDs of the vertices to transform.
    */
-  transform(transformation: THREE.Matrix4, ids = this.selected.data) {
+  transform(matrix: THREE.Matrix4, ids = this.selected.data) {
     const vector = new THREE.Vector3();
     for (const id of ids) {
       const index = this.idMap.getIndex(id);
@@ -124,7 +124,7 @@ export class Vertices extends Primitive {
       const y = this._positionBuffer.getY(index);
       const z = this._positionBuffer.getZ(index);
       vector.set(x, y, z);
-      vector.applyMatrix4(transformation);
+      vector.applyMatrix4(matrix);
       this._positionBuffer.setXYZ(index, vector.x, vector.y, vector.z);
     }
     this._positionBuffer.needsUpdate = true;

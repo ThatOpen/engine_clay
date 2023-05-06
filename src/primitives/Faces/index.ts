@@ -299,6 +299,10 @@ export class Faces extends Primitive {
     this.vertices.set(point.vertices, coordinates);
   }
 
+  /**
+   * Applies a transformation to the selected vertices.
+   * @param matrix Transformation matrix to apply.
+   */
   transform(matrix: THREE.Matrix4) {
     const vertices = new Set<number>();
     for (const id of this.selectedPoints.data) {
