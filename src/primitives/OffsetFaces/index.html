@@ -49,6 +49,7 @@
 		width: 0.1,
 		offset: 0,
 		transformMode: 'translate',
+    remove: remove
 	};
 
 	const offsetFaces = new OBC.OffsetFaces();
@@ -107,6 +108,10 @@
 		offsetFaces.setOffset(settings.offset);
 	}
 
+	function remove() {
+		offsetFaces.remove();
+  }
+
 	// Set up controls
 
 	const control = new TransformControls(world.camera, world.renderer.domElement);
@@ -152,6 +157,7 @@
 		control.setMode(result);
 	});
 
+	gui.add(settings, 'remove').name('Remove');
 
 </script>
 </body>

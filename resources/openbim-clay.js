@@ -1649,6 +1649,8 @@ class Faces extends Primitive {
      */
     setPoint(id, coordinates) {
         const point = this.points[id];
+        if (point === undefined)
+            return;
         point.coordinates = coordinates;
         this.vertices.set(point.vertices, coordinates);
     }
@@ -1817,7 +1819,6 @@ class OffsetFaces extends Primitive {
      * defined, all lines will be selected or deselected.
      */
     select(active, ids = this._ids) {
-        this.selected.select(active, ids, this._ids);
         const faces = [];
         for (const id of ids) {
             const item = this.list[id];
@@ -1850,21 +1851,33 @@ class OffsetFaces extends Primitive {
         this.faces.select(active, faces);
     }
     /**
+     * Removes faces.
+     * @param ids List of OffsetFaces to remove. If no face is specified,
+     * removes all the selected OffsetFaces.
+     */
+    remove(ids = this.lines.selected.data) {
+        const relatedKnots = new Set();
+        const facePoints = [];
+        for (const id of ids) {
+            facePoints.push(...this.list[id].points);
+            const line = this.lines.list[id];
+            relatedKnots.add(line.start);
+            relatedKnots.add(line.end);
+            delete this.list[id];
+        }
+        this.faces.removePoints(facePoints);
+        const linesToUpdate = this.getRelatedLines(relatedKnots);
+        this.lines.remove(ids);
+        this.updateOffsetFaces(linesToUpdate);
+    }
+    /**
      * Applies a transformation to the selected vertices.
      * @param matrix Transformation matrix to apply.
      */
     transform(matrix) {
         this.lines.transform(matrix);
-        const linesToUpdate = new Set();
-        for (const id of this.lines.vertices.selected.data) {
-            const point = this.lines.points[id];
-            for (const lineID of point.start) {
-                linesToUpdate.add(lineID);
-            }
-            for (const lineID of point.end) {
-                linesToUpdate.add(lineID);
-            }
-        }
+        const selectedPoints = this.lines.vertices.selected.data;
+        const linesToUpdate = this.getRelatedLines(selectedPoints);
         this.updateOffsetFaces(linesToUpdate);
     }
     /**
@@ -1873,7 +1886,7 @@ class OffsetFaces extends Primitive {
      * @param ids List of knot IDs whose offset to change. If not specified,
      * it will change the offset of the selected OffsetFaces.
      */
-    setOffset(offset, ids = this.selected.data) {
+    setOffset(offset, ids = this.lines.selected.data) {
         for (const id of ids) {
             const offsetFace = this.list[id];
             offsetFace.offset = offset;
@@ -1886,12 +1899,25 @@ class OffsetFaces extends Primitive {
      * @param ids List of knot IDs whose width to change. If not specified,
      * it will change the width of the selected OffsetFaces.
      */
-    setWidth(width, ids = this.selected.data) {
+    setWidth(width, ids = this.lines.selected.data) {
         for (const id of ids) {
             const offsetFace = this.list[id];
             offsetFace.width = width;
         }
         this.updateOffsetFaces(ids);
+    }
+    getRelatedLines(pointIDs) {
+        const linesToUpdate = new Set();
+        for (const id of pointIDs) {
+            const point = this.lines.points[id];
+            for (const lineID of point.start) {
+                linesToUpdate.add(lineID);
+            }
+            for (const lineID of point.end) {
+                linesToUpdate.add(lineID);
+            }
+        }
+        return linesToUpdate;
     }
     getFacePoints(id, knots) {
         const offsetFace = this.list[id];
@@ -1921,6 +1947,8 @@ class OffsetFaces extends Primitive {
         const knotsToUpdate = new Set();
         for (const id of ids) {
             const offsetFace = this.list[id];
+            if (offsetFace === undefined)
+                continue;
             const result = this.getFacePoints(id, knotsToUpdate);
             if (result === null)
                 continue;

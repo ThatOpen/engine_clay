@@ -91,7 +91,6 @@ export class OffsetFaces extends Primitive {
    * defined, all lines will be selected or deselected.
    */
   select(active: boolean, ids = this._ids as Iterable<number>) {
-    this.selected.select(active, ids, this._ids);
     const faces: number[] = [];
     for (const id of ids) {
       const item = this.list[id];
@@ -125,21 +124,35 @@ export class OffsetFaces extends Primitive {
   }
 
   /**
+   * Removes faces.
+   * @param ids List of OffsetFaces to remove. If no face is specified,
+   * removes all the selected OffsetFaces.
+   */
+  remove(ids = this.lines.selected.data as Iterable<number>) {
+    const relatedKnots = new Set<number>();
+    const facePoints: number[] = [];
+    for (const id of ids) {
+      facePoints.push(...this.list[id].points);
+      const line = this.lines.list[id];
+      relatedKnots.add(line.start);
+      relatedKnots.add(line.end);
+      delete this.list[id];
+    }
+
+    this.faces.removePoints(facePoints);
+    const linesToUpdate = this.getRelatedLines(relatedKnots);
+    this.lines.remove(ids);
+    this.updateOffsetFaces(linesToUpdate);
+  }
+
+  /**
    * Applies a transformation to the selected vertices.
    * @param matrix Transformation matrix to apply.
    */
   transform(matrix: THREE.Matrix4) {
     this.lines.transform(matrix);
-    const linesToUpdate = new Set<number>();
-    for (const id of this.lines.vertices.selected.data) {
-      const point = this.lines.points[id];
-      for (const lineID of point.start) {
-        linesToUpdate.add(lineID);
-      }
-      for (const lineID of point.end) {
-        linesToUpdate.add(lineID);
-      }
-    }
+    const selectedPoints = this.lines.vertices.selected.data;
+    const linesToUpdate = this.getRelatedLines(selectedPoints);
     this.updateOffsetFaces(linesToUpdate);
   }
 
@@ -149,7 +162,10 @@ export class OffsetFaces extends Primitive {
    * @param ids List of knot IDs whose offset to change. If not specified,
    * it will change the offset of the selected OffsetFaces.
    */
-  setOffset(offset: number, ids = this.selected.data as Iterable<number>) {
+  setOffset(
+    offset: number,
+    ids = this.lines.selected.data as Iterable<number>
+  ) {
     for (const id of ids) {
       const offsetFace = this.list[id];
       offsetFace.offset = offset;
@@ -163,12 +179,26 @@ export class OffsetFaces extends Primitive {
    * @param ids List of knot IDs whose width to change. If not specified,
    * it will change the width of the selected OffsetFaces.
    */
-  setWidth(width: number, ids = this.selected.data as Iterable<number>) {
+  setWidth(width: number, ids = this.lines.selected.data as Iterable<number>) {
     for (const id of ids) {
       const offsetFace = this.list[id];
       offsetFace.width = width;
     }
     this.updateOffsetFaces(ids);
+  }
+
+  private getRelatedLines(pointIDs: Iterable<number>) {
+    const linesToUpdate = new Set<number>();
+    for (const id of pointIDs) {
+      const point = this.lines.points[id];
+      for (const lineID of point.start) {
+        linesToUpdate.add(lineID);
+      }
+      for (const lineID of point.end) {
+        linesToUpdate.add(lineID);
+      }
+    }
+    return linesToUpdate;
   }
 
   private getFacePoints(id: number, knots: Set<number>) {
@@ -204,6 +234,7 @@ export class OffsetFaces extends Primitive {
     const knotsToUpdate = new Set<number>();
     for (const id of ids) {
       const offsetFace = this.list[id];
+      if (offsetFace === undefined) continue;
       const result = this.getFacePoints(id, knotsToUpdate);
       if (result === null) continue;
 

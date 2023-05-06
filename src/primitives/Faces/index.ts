@@ -211,7 +211,7 @@ export class Faces extends Primitive {
     this.updateColor();
   }
 
-  removePoints(ids = this.selectedPoints.data) {
+  removePoints(ids = this.selectedPoints.data as Iterable<number>) {
     const facesToRemove = new Set<number>();
     for (const id of ids) {
       const point = this.points[id];
@@ -295,6 +295,7 @@ export class Faces extends Primitive {
    */
   setPoint(id: number, coordinates: [number, number, number]) {
     const point = this.points[id];
+    if (point === undefined) return;
     point.coordinates = coordinates;
     this.vertices.set(point.vertices, coordinates);
   }

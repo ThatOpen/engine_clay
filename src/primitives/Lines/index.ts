@@ -152,7 +152,7 @@ export class Lines extends Primitive {
    * @param ids List of lines to remove. If no line is specified,
    * removes all the selected lines.
    */
-  remove(ids = this.selected.data) {
+  remove(ids = this.selected.data as Iterable<number>) {
     const position = this._positionBuffer;
     const color = this._colorBuffer;
     const points: number[] = [];
