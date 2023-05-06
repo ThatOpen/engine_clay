@@ -51,6 +51,10 @@
 		transformMode: 'translate',
     remove: remove,
     removePoints: removePoints,
+		baseColor: 0x888888,
+		selectColor: 0xff0000,
+		lineBaseColor: 0x888888,
+		lineSelectColor: 0xff0000,
 	};
 
 	const offsetFaces = new OBC.OffsetFaces();
@@ -164,6 +168,30 @@
 
 	gui.add(settings, 'remove').name('Remove');
 	gui.add(settings, 'removePoints').name('Remove points');
+
+	const baseColor = new THREE.Color();
+	gui.addColor(settings, 'baseColor').name('Base color').onChange(() => {
+		baseColor.set(settings.baseColor);
+		offsetFaces.faces.baseColor = baseColor;
+	});
+
+	const selectColor = new THREE.Color();
+	gui.addColor(settings, 'selectColor').name('Select color').onChange(() => {
+		selectColor.set(settings.selectColor);
+		offsetFaces.faces.selectColor = selectColor;
+	});
+
+	const lineBaseColor = new THREE.Color();
+	gui.addColor(settings, 'lineBaseColor').name('Base color').onChange(() => {
+		lineBaseColor.set(settings.lineBaseColor);
+		offsetFaces.lines.baseColor = lineBaseColor;
+	});
+
+	const lineSelectColor = new THREE.Color();
+	gui.addColor(settings, 'lineSelectColor').name('Select color').onChange(() => {
+		lineSelectColor.set(settings.lineSelectColor);
+		offsetFaces.lines.selectColor = lineSelectColor;
+	});
 
 </script>
 </body>
