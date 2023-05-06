@@ -49,7 +49,8 @@
 		width: 0.1,
 		offset: 0,
 		transformMode: 'translate',
-    remove: remove
+    remove: remove,
+    removePoints: removePoints,
 	};
 
 	const offsetFaces = new OBC.OffsetFaces();
@@ -112,6 +113,10 @@
 		offsetFaces.remove();
   }
 
+	function removePoints() {
+		offsetFaces.removePoints();
+	}
+
 	// Set up controls
 
 	const control = new TransformControls(world.camera, world.renderer.domElement);
@@ -158,6 +163,7 @@
 	});
 
 	gui.add(settings, 'remove').name('Remove');
+	gui.add(settings, 'removePoints').name('Remove points');
 
 </script>
 </body>

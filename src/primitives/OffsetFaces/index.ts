@@ -124,7 +124,7 @@ export class OffsetFaces extends Primitive {
   }
 
   /**
-   * Removes faces.
+   * Removes OffsetFaces.
    * @param ids List of OffsetFaces to remove. If no face is specified,
    * removes all the selected OffsetFaces.
    */
@@ -143,6 +143,28 @@ export class OffsetFaces extends Primitive {
     const linesToUpdate = this.getRelatedLines(relatedKnots);
     this.lines.remove(ids);
     this.updateOffsetFaces(linesToUpdate);
+  }
+
+  /**
+   * Removes Knots and all the related OffsetFaces.
+   * @param ids List of knots to remove. If no knot is specified,
+   * removes all the selected knots.
+   */
+  removePoints(ids = this.lines.vertices.selected.data as Iterable<number>) {
+    const pointsToRemove = new Set<number>();
+    const knotFacesToRemove = new Set<number>();
+    for (const id of ids) {
+      pointsToRemove.add(id);
+      const face = this.knots[id];
+      if (face !== null && face !== undefined) {
+        knotFacesToRemove.add(face);
+      }
+      delete this.knots[id];
+    }
+    this.faces.remove(knotFacesToRemove);
+    const offsetFacesToRemove = this.getRelatedLines(ids);
+    this.remove(offsetFacesToRemove);
+    this.lines.removePoints(pointsToRemove);
   }
 
   /**

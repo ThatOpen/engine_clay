@@ -180,7 +180,7 @@ export class Lines extends Primitive {
    * @param ids List of points to remove. If no point is specified,
    * removes all the selected points.
    */
-  removePoints(ids = this.vertices.selected.data) {
+  removePoints(ids = this.vertices.selected.data as Iterable<number>) {
     const lines = new Set<number>();
     for (const id of ids) {
       const point = this.points[id];

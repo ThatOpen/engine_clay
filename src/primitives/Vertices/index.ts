@@ -142,7 +142,7 @@ export class Vertices extends Primitive {
   /**
    * Removes the selected points from the list
    */
-  remove(ids = this.selected.data) {
+  remove(ids = this.selected.data as Iterable<number>) {
     for (const id of ids) {
       for (const attribute of this._attributes) {
         this.removeFromBuffer(id, attribute);
