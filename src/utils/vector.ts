@@ -12,14 +12,18 @@ export class Vector {
   }
 
   static getNormal(points: number[][]) {
-    const a = Vector.substract(points[0], points[1]);
-    const b = Vector.substract(points[1], points[2]);
+    const a = Vector.subtract(points[0], points[1]);
+    const b = Vector.subtract(points[1], points[2]);
 
     const [x, y, z] = this.multiply(a, b);
 
     const magnitude = Math.sqrt(x * x + y * y + z * z);
 
     return [x / magnitude, y / magnitude, z / magnitude];
+  }
+
+  static dot(v1: number[], v2: number[]) {
+    return v1[0] * v2[0] + v1[1] * v2[1] + v1[2] * v2[2];
   }
 
   static multiply(v1: number[], v2: number[]) {
@@ -45,7 +49,7 @@ export class Vector {
     return result as [number, number, number];
   }
 
-  static substract(v1: number[], v2: number[]) {
+  static subtract(v1: number[], v2: number[]) {
     const [x1, y1, z1] = v1;
     const [x2, y2, z2] = v2;
     return [x2 - x1, y2 - y1, z2 - z1];

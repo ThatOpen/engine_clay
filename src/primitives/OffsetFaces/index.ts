@@ -4,6 +4,7 @@ import { Primitive } from "../Primitive";
 import { Faces } from "../Faces";
 import { Lines } from "../Lines";
 import { Vector } from "../../utils";
+// import { Polygon } from "../../utils/polygon";
 
 interface LineVector {
   lineID: number;
@@ -17,7 +18,8 @@ export class OffsetFaces extends Primitive {
   faces = new Faces();
   lines = new Lines();
 
-  // An axis that goes from A to B will define an OffsetFace like this:
+  // An axis that goes from A to B will define an OffsetFace like this. The
+  // positive offset direction goes up.
   //       p2  +-------------------------------------------+ p3
   //          |                                           |
   //       A +-------------------------------------------+ B
@@ -66,20 +68,17 @@ export class OffsetFaces extends Primitive {
    *
    */
   add(ids: number[], width: number, offset = 0) {
-    if (offset > width / 2) {
-      throw new Error("The axis must be contained within the face generated!");
-    }
-
     const linesIDs = this.lines.add(ids);
 
     const knotsToUpdate = new Set<number>();
 
     for (const id of linesIDs) {
-      const result = this.getFacePoints(id, width, knotsToUpdate);
+      this.list[id] = { id, width, offset, face: 0, points: [] };
+      const result = this.getFacePoints(id, knotsToUpdate);
       if (result === null) continue;
       const points = this.faces.addPoints(result);
-      const face = this.faces.add(points);
-      this.list[id] = { id, width, offset, face, points };
+      this.list[id].points = points;
+      this.list[id].face = this.faces.add(points);
     }
 
     this.updateKnots(knotsToUpdate);
@@ -125,12 +124,68 @@ export class OffsetFaces extends Primitive {
     this.faces.select(active, faces);
   }
 
+  /**
+   * Sets the offset of the specified OffsetFaces.
+   * @param offset The offset to set.
+   * @param ids List of knot IDs whose offset to change. If not specified,
+   * it will change the offset of the selected OffsetFaces.
+   */
+  setOffset(offset: number, ids = this.selected.data as Iterable<number>) {
+    for (const id of ids) {
+      const offsetFace = this.list[id];
+      offsetFace.offset = offset;
+    }
+    this.updateOffsetFaces(ids);
+  }
+
+  /**
+   * Sets the width of the specified OffsetFaces.
+   * @param width The width to set.
+   * @param ids List of knot IDs whose width to change. If not specified,
+   * it will change the width of the selected OffsetFaces.
+   */
   setWidth(width: number, ids = this.selected.data as Iterable<number>) {
-    const knotsToUpdate = new Set<number>();
     for (const id of ids) {
       const offsetFace = this.list[id];
       offsetFace.width = width;
-      const result = this.getFacePoints(id, width, knotsToUpdate);
+    }
+    this.updateOffsetFaces(ids);
+  }
+
+  private getFacePoints(id: number, knots: Set<number>) {
+    const offsetFace = this.list[id];
+    if (!offsetFace) return null;
+    const line = this.lines.list[id];
+    const start = this.lines.vertices.get(line.start);
+    const end = this.lines.vertices.get(line.end);
+    if (!start || !end) return null;
+
+    knots.add(line.start);
+    knots.add(line.end);
+
+    const rawDirection = Vector.subtract(end, start);
+    const direction = Vector.normalize(rawDirection);
+
+    const { width, offset } = offsetFace;
+
+    const normal = Vector.multiply(Vector.up, direction);
+    const scaledNormal = Vector.multiplyScalar(normal, width / 2);
+    const invScaledNormal = Vector.multiplyScalar(scaledNormal, -1);
+
+    const offsetDirection = Vector.multiplyScalar(normal, offset);
+
+    const p1 = Vector.add(start, scaledNormal, offsetDirection);
+    const p2 = Vector.add(start, invScaledNormal, offsetDirection);
+    const p3 = Vector.add(end, invScaledNormal, offsetDirection);
+    const p4 = Vector.add(end, scaledNormal, offsetDirection);
+    return [p1, p2, p3, p4];
+  }
+
+  private updateOffsetFaces(ids: Iterable<number>) {
+    const knotsToUpdate = new Set<number>();
+    for (const id of ids) {
+      const offsetFace = this.list[id];
+      const result = this.getFacePoints(id, knotsToUpdate);
       if (result === null) continue;
 
       for (let i = 0; i < 4; i++) {
@@ -140,29 +195,6 @@ export class OffsetFaces extends Primitive {
       }
     }
     this.updateKnots(knotsToUpdate);
-  }
-
-  private getFacePoints(id: number, width: number, knots: Set<number>) {
-    const line = this.lines.list[id];
-    const start = this.lines.vertices.get(line.start);
-    const end = this.lines.vertices.get(line.end);
-    if (!start || !end) return null;
-
-    knots.add(line.start);
-    knots.add(line.end);
-
-    const rawDirection = Vector.substract(end, start);
-    const direction = Vector.normalize(rawDirection);
-
-    const normal = Vector.multiply(Vector.up, direction);
-    const scaledNormal = Vector.multiplyScalar(normal, width / 2);
-    const invScaledNormal = Vector.multiplyScalar(scaledNormal, -1);
-
-    const p1 = Vector.add(start, scaledNormal);
-    const p2 = Vector.add(start, invScaledNormal);
-    const p3 = Vector.add(end, invScaledNormal);
-    const p4 = Vector.add(end, scaledNormal);
-    return [p1, p2, p3, p4];
   }
 
   private updateKnots(ids: Iterable<number>) {
@@ -196,36 +228,54 @@ export class OffsetFaces extends Primitive {
       for (let i = 0; i < vectors.length; i++) {
         const currentLine = vectors[i];
         const currentVector = currentLine.vector;
-        const { width } = this.list[currentLine.lineID];
+        const currentOffsetFace = this.list[currentLine.lineID];
+        const isCurrentStart = point.start.has(currentLine.lineID);
+        const { width, offset } = currentOffsetFace;
 
         // If it's the last vector, the next one is the first one
         const isLastVector = i === vectors.length - 1;
         const j = isLastVector ? 0 : i + 1;
         const nextLine = vectors[j];
         const nextVector = nextLine.vector;
-        const nextWidth = this.list[nextLine.lineID].width;
+        const nextOffsetFace = this.list[nextLine.lineID];
+        const isNextStart = point.start.has(nextLine.lineID);
+        const nextWidth = nextOffsetFace.width;
+        const nextOffset = nextOffsetFace.offset;
 
         // Express the outlines as a point and a direction
         // Beware the right-handed system for the direction
 
         const n1 = Vector.multiply(Vector.up, currentVector);
-        const v1 = Vector.multiplyScalar(n1, width / 2);
+        const o1 = isCurrentStart ? -offset : offset;
+        const v1 = Vector.multiplyScalar(n1, width / 2 + o1);
         const p1 = Vector.add(coords, v1);
 
         const n2 = Vector.multiply(nextVector, Vector.up);
-        const v2 = Vector.multiplyScalar(n2, nextWidth / 2);
+        const o2 = isNextStart ? nextOffset : -nextOffset;
+        const v2 = Vector.multiplyScalar(n2, nextWidth / 2 + o2);
         const p2 = Vector.add(coords, v2);
 
-        let x: number;
-        let z: number;
-
-        const r1 = Vector.round(p1);
-        const r2 = Vector.round(p2);
+        const r1 = Vector.round(n1);
+        const r2 = Vector.round(n2);
         const areLinesParallel = r1[0] === r2[0] && r1[2] === r2[2];
 
+        const currentIndex = isCurrentStart ? 1 : 3;
+        const currentPoint = currentOffsetFace.points[currentIndex];
+        const nextIndex = isNextStart ? 0 : 2;
+        const nextPoint = nextOffsetFace.points[nextIndex];
+
         if (areLinesParallel) {
-          x = p1[0];
-          z = p1[2];
+          this.faces.setPoint(currentPoint, p1);
+          this.faces.setPoint(nextPoint, p2);
+
+          const pr1 = Vector.round(p1);
+          const pr2 = Vector.round(p2);
+          const areSamePoint = pr1[0] === pr2[0] && pr1[2] === pr2[2];
+
+          intersectionPoints.push(p1);
+          if (!areSamePoint) {
+            intersectionPoints.push(p2);
+          }
         } else {
           // Convert point-direction to implicit 2D line ax + by = d
           // Although in our case we use z instead of y
@@ -239,28 +289,20 @@ export class OffsetFaces extends Primitive {
           const b2 = n2[2];
           const d2 = p2[0] * n2[0] + p2[2] * n2[2];
 
-          x = (b2 * d1 - b1 * d2) / (a1 * b2 - a2 * b1);
-          z = (a1 * d2 - a2 * d1) / (a1 * b2 - a2 * b1);
+          const x = (b2 * d1 - b1 * d2) / (a1 * b2 - a2 * b1);
+          const z = (a1 * d2 - a2 * d1) / (a1 * b2 - a2 * b1);
+
+          // Update the vertices of both OffsetFaces
+          this.faces.setPoint(currentPoint, [x, 0, z]);
+          this.faces.setPoint(nextPoint, [x, 0, z]);
+          intersectionPoints.push([x, 0, z]);
         }
-
-        // Update the vertices of both OffsetFaces
-        const currentOffsetFace = this.list[currentLine.lineID];
-        const isCurrentStart = point.start.has(currentLine.lineID);
-        const currentIndex = isCurrentStart ? 1 : 3;
-        const currentPoint = currentOffsetFace.points[currentIndex];
-        this.faces.setPoint(currentPoint, [x, 0, z]);
-
-        const nextOffsetFace = this.list[nextLine.lineID];
-        const isNextStart = point.start.has(nextLine.lineID);
-        const nextIndex = isNextStart ? 0 : 2;
-        const nextPoint = nextOffsetFace.points[nextIndex];
-        this.faces.setPoint(nextPoint, [x, 0, z]);
-
-        intersectionPoints.push([x, 0, z]);
       }
 
       if (intersectionPoints.length > 2) {
+        // if (Polygon.isConvex(intersectionPoints)) {
         intersectionPoints.reverse();
+        // }
         const pointsIDs = this.faces.addPoints(intersectionPoints);
         this.knots[id] = this.faces.add(pointsIDs);
       }
@@ -300,7 +342,7 @@ export class OffsetFaces extends Primitive {
       if (start === null || end === null) {
         throw new Error(`Error with line ${lineID}`);
       }
-      let vector = Vector.substract(start, end);
+      let vector = Vector.subtract(start, end);
       if (flip) {
         vector = Vector.multiplyScalar(vector, -1);
       }

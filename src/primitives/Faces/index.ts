@@ -2,7 +2,7 @@ import * as THREE from "three";
 import earcut from "earcut";
 import { Vertices } from "../Vertices";
 import { Primitive } from "../Primitive";
-import { Selector, Vector } from "../../utils";
+import { Selector } from "../../utils";
 
 interface Face {
   id: number;
@@ -158,7 +158,8 @@ export class Faces extends Primitive {
 
     this.updateBuffers();
     this.updateColor([id]);
-    this.computeNormal([id]);
+    // this.computeNormal([id]);
+    this.mesh.geometry.computeVertexNormals();
 
     return id;
   }
@@ -350,29 +351,6 @@ export class Faces extends Primitive {
       this.updateColor();
     }
     this._colorBuffer.count = positionBuffer.count;
-  }
-
-  private computeNormal(ids = this._ids as Iterable<number>) {
-    const normalAttribute = this._normalBuffer;
-    for (const id of ids) {
-      const face = this.list[id];
-      if (!face) continue;
-      const coordinates: number[][] = [];
-      let counter = 0;
-      for (const pointID of face.points) {
-        if (counter++ > 2) break;
-        const point = this.points[pointID];
-        if (point !== null) {
-          coordinates.push(point.coordinates);
-        }
-      }
-      const [x, y, z] = Vector.getNormal(coordinates);
-      for (const vertexID of face.vertices) {
-        const index = this.vertices.idMap.getIndex(vertexID);
-        if (index === null) continue;
-        normalAttribute.setXYZ(index, x, y, z);
-      }
-    }
   }
 
   private updateColor(ids = this._ids as Iterable<number>) {
