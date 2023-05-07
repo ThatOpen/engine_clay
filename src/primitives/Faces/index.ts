@@ -94,8 +94,15 @@ export class Faces extends Primitive {
    * Quickly removes all the faces and releases all the memory used.
    */
   clear() {
+    this.selected.data.clear();
+    this.selectedPoints.data.clear();
+    this.mesh.geometry.setIndex([]);
     this.vertices.clear();
     this.updateBuffers();
+    this.list = {};
+    this.points = {};
+    this._faceIdGenerator = 0;
+    this._pointIdGenerator = 0;
   }
 
   /**

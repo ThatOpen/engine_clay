@@ -26,6 +26,7 @@
         }
       }
 
+
 </script>
 <script type="module">
     import * as THREE from "three";
@@ -70,16 +71,28 @@
     function setExtrusions() {
         extrusions.clear();
 
+        // Create faces
+
         extrusions.faces.addPoints([
-        [0, 0, 0],
-        [1, 0, 0],
-        [1, 0, 1],
-        [0, 0, 1],
+            [0, 0, 0],
+            [1, 0, 0],
+            [1, 0, 1],
+            [0, 0, 1],
+            [0.5, 0, 0.5],
+            [1.5, 0, 0.5],
+            [1.5, 0, 1.5],
+            [0.5, 0, 1.5],
         ]);
 
-        extrusions.faces.add([3, 2, 1, 0]);
-        extrusions.lines.addPoints([[0, 0, 0], [0, 1, 0]]);
+        extrusions.faces.add([0, 1, 2, 3], [[4, 5, 6, 7]]);
+
+        // Create axis
+
+        extrusions.lines.addPoints([[0, 0, 0], [0, 0.2, 0]]);
         extrusions.lines.add([0, 1]);
+
+        // Create extrusion
+
         extrusions.add(0, [0]);
     }
 

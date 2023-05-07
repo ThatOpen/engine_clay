@@ -61,8 +61,21 @@ export class Lines extends Primitive {
     const geometry = new THREE.BufferGeometry();
     this.mesh = new THREE.LineSegments(geometry, material);
     this._buffers = new BufferManager(geometry);
-    this._buffers.createAttribute("position");
-    this._buffers.createAttribute("color");
+    this.setupAttributes();
+  }
+
+  /**
+   * Quickly removes all the lines and releases all the memory used.
+   */
+  clear() {
+    this.selected.data.clear();
+    this.mesh.geometry.dispose();
+    this.mesh.geometry = new THREE.BufferGeometry();
+    this.setupAttributes();
+    this.vertices.clear();
+    this.idMap.reset();
+    this.list = {};
+    this.points = {};
   }
 
   /**
@@ -215,6 +228,11 @@ export class Lines extends Primitive {
     }
     this.transformLines(matrix, indices);
     this.vertices.transform(matrix, points);
+  }
+
+  private setupAttributes() {
+    this._buffers.createAttribute("position");
+    this._buffers.createAttribute("color");
   }
 
   private removeFromBuffer(id: number, buffer: THREE.BufferAttribute) {

@@ -18,61 +18,60 @@ export class Extrusions extends Primitive {
   list: {
     [id: number]: {
       id: number;
-      base: number;
-      paths: number[];
+      baseFace: number;
+      path: number;
       faces: Set<number>;
-      needsUpdate: boolean;
-      parentExtrusion: number;
-      childrenExtrusionFaces: Set<number>;
     };
   } = {};
 
   /**
-   * The geometric representation of the vertices that define this instance of faces.
+   * The geometric representation of the faces of all the extrusions.
    */
   faces: Faces = new Faces();
 
   /**
-   * The geometric representation of the vertices that define this instance of lines.
+   * The geometric representation of the lines that represent the axis.
    */
   lines: Lines = new Lines();
 
-  selectedExtrusions = new Selector();
+  selected = new Selector();
 
-  private _nextIndex = 0;
+  private _idGenerator = 0;
 
   constructor() {
     super();
+
     const material = new THREE.MeshLambertMaterial({
       side: THREE.DoubleSide,
       vertexColors: true,
     });
+
     const geometry = new THREE.BufferGeometry();
     this.mesh = new THREE.Mesh(geometry, material);
     geometry.setIndex([]);
   }
 
   clear() {
+    this.selected.data.clear();
+    this.faces.clear();
+    this.lines.clear();
+    this._idGenerator = 0;
     this.faces = new Faces();
     this.lines = new Lines();
     this.list = {};
   }
 
-  add(faceId: number, linesIds: number[]) {
-    const id = this._nextIndex;
-    const extrude = {
-      id,
-      base: faceId,
-      paths: linesIds,
-      faces: new Set<number>(),
-      needsUpdate: true,
-      parentExtrusion: -1,
-      childrenExtrusionFaces: new Set<number>(),
-    };
-    this._nextIndex++;
-    this.list[id] = extrude;
-    this.updateExtrusions();
+  add(faceID: number, pathID: number) {
+    const id = this._idGenerator++;
 
+    this.list[id] = {
+      id,
+      baseFace: faceID,
+      path: pathID,
+      faces: new Set<number>(),
+    };
+
+    this.updateExtrusions();
     return id;
   }
 
@@ -84,8 +83,8 @@ export class Extrusions extends Primitive {
     for (const id in this.list) {
       if (this.list[id].needsUpdate) {
         this.list[id].needsUpdate = false;
-        const pathIds = this.list[id].paths; // get the array of path IDs
-        const baseId = this.list[id].base;
+        const pathIds = this.list[id].path; // get the array of path IDs
+        const baseId = this.list[id].baseFace;
         // this.faces.remove(this.list[id].faces);
         const newFaces = this.updateFaces(pathIds, baseId);
         if (newFaces) {
