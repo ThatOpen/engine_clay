@@ -71,29 +71,18 @@ export class Extrusions extends Primitive {
       sideFaces: new Set<number>(),
     };
 
-    this.updateExtrusions([id]);
+    const newFaces = this.createExtrusion(faceID, pathID);
+
+    if (newFaces) {
+      const { topFace, sideFaces } = newFaces;
+      this.list[id].topFace = topFace;
+      this.list[id].sideFaces = sideFaces;
+    }
+
     return id;
   }
 
-  /**
-   * Update the extrusions by creating multiple consecutive extrusions based on the given list of extrusion objects.
-   * Each extrusion object contains a base surface and a set of curve-paths.
-   */
-  updateExtrusions(ids: Iterable<number>) {
-    for (const id of ids) {
-      const extrusion = this.list[id];
-      if (!extrusion) continue;
-      const { path, baseFace } = extrusion;
-      const newFaces = this.createExtrusionFaces(path, baseFace);
-      if (newFaces) {
-        const { topFace, sideFaces } = newFaces;
-        extrusion.topFace = topFace;
-        extrusion.sideFaces = sideFaces;
-      }
-    }
-  }
-
-  private createExtrusionFaces(pathID: number, baseFaceID: number) {
+  private createExtrusion(pathID: number, baseFaceID: number) {
     const linePoints = this.lines.get(pathID);
     if (!linePoints) return null;
     const [start, end] = linePoints;
