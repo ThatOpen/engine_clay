@@ -64,7 +64,7 @@ export class Slabs extends Primitive {
     const faceID = this.extrusions.faces.add(ids);
 
     // Create extrusion
-    const extrusionID = this.extrusions.add(faceID, [directionID]);
+    const extrusionID = this.extrusions.add(faceID, directionID);
 
     this.list[id] = {
       id,

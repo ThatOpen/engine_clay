@@ -121,7 +121,10 @@ export class Lines extends Primitive {
     const index = this.idMap.getIndex(id);
     if (index === null) return null;
     const line = this.list[index];
-    return [this.vertices.get(line.start), this.vertices.get(line.end)];
+    const start = this.vertices.get(line.start);
+    const end = this.vertices.get(line.end);
+    if (!start || !end) return null;
+    return [start, end];
   }
 
   /**

@@ -4,7 +4,7 @@ import { Vertices } from "../Vertices";
 import { Faces } from "../Faces";
 import { Lines } from "../Lines";
 import { Primitive } from "../Primitive";
-import { Selector } from "../../utils";
+import { Vector } from "../../utils";
 
 export class Extrusions extends Primitive {
   /** {@link Primitive.mesh } */
@@ -19,8 +19,9 @@ export class Extrusions extends Primitive {
     [id: number]: {
       id: number;
       baseFace: number;
+      topFace: number;
+      sideFaces: Set<number>;
       path: number;
-      faces: Set<number>;
     };
   } = {};
 
@@ -33,8 +34,6 @@ export class Extrusions extends Primitive {
    * The geometric representation of the lines that represent the axis.
    */
   lines: Lines = new Lines();
-
-  selected = new Selector();
 
   private _idGenerator = 0;
 
@@ -68,10 +67,11 @@ export class Extrusions extends Primitive {
       id,
       baseFace: faceID,
       path: pathID,
-      faces: new Set<number>(),
+      topFace: -1,
+      sideFaces: new Set<number>(),
     };
 
-    this.updateExtrusions();
+    this.updateExtrusions([id]);
     return id;
   }
 
@@ -79,113 +79,86 @@ export class Extrusions extends Primitive {
    * Update the extrusions by creating multiple consecutive extrusions based on the given list of extrusion objects.
    * Each extrusion object contains a base surface and a set of curve-paths.
    */
-  updateExtrusions() {
-    for (const id in this.list) {
-      if (this.list[id].needsUpdate) {
-        this.list[id].needsUpdate = false;
-        const pathIds = this.list[id].path; // get the array of path IDs
-        const baseId = this.list[id].baseFace;
-        // this.faces.remove(this.list[id].faces);
-        const newFaces = this.updateFaces(pathIds, baseId);
-        if (newFaces) {
-          this.list[id].faces = newFaces;
-        }
+  updateExtrusions(ids: Iterable<number>) {
+    for (const id of ids) {
+      const extrusion = this.list[id];
+      if (!extrusion) continue;
+      const { path, baseFace } = extrusion;
+      const newFaces = this.createExtrusionFaces(path, baseFace);
+      if (newFaces) {
+        const { topFace, sideFaces } = newFaces;
+        extrusion.topFace = topFace;
+        extrusion.sideFaces = sideFaces;
       }
     }
   }
 
-  private updateFaces(pathIds: number[], baseId: number) {
-    const newFaces = new Set<number>();
-    let lastVector = new THREE.Vector3();
-    for (let i = 0; i < pathIds.length; i++) {
-      const newPoints: any[] = []; // create an array to hold the new points of the extruded surface
-      const pathId = pathIds[i];
-      const linePoints = this.lines.get(pathId);
-      if (
-        linePoints === null ||
-        linePoints[0] === null ||
-        linePoints[1] === null
-      ) {
-        return null;
-      }
-      const vector = new THREE.Vector3(
-        linePoints[1][0] - linePoints[0][0],
-        linePoints[1][1] - linePoints[0][1],
-        linePoints[1][2] - linePoints[0][2]
-      );
+  private createExtrusionFaces(pathID: number, baseFaceID: number) {
+    const linePoints = this.lines.get(pathID);
+    if (!linePoints) return null;
+    const [start, end] = linePoints;
 
-      const newBasePoints: any[] = [];
+    const vector = Vector.subtract(start, end);
 
-      this.createPoints(
-        this.faces.list[baseId].points,
-        newPoints,
-        newBasePoints,
-        vector,
-        lastVector,
-        i
-      );
+    const baseFace = this.faces.list[baseFaceID];
 
-      lastVector = new THREE.Vector3(
-        lastVector.x + vector.x,
-        lastVector.y + vector.y,
-        lastVector.z + vector.z
-      );
+    // Create top face
 
-      for (let i = 0; i < this.faces.list[baseId].points.size; i++) {
-        const p1 = newBasePoints[i];
-        const p2 = newBasePoints[(i + 1) % this.faces.list[baseId].points.size];
-        const p3 = newPoints[(i + 1) % this.faces.list[baseId].points.size];
-        const p4 = newPoints[i];
-        newFaces.add(this.faces.add([p1, p2, p3, p4]));
-      }
-      newFaces.add(this.faces.add(newPoints));
+    const topFacePoints: [number, number, number][] = [];
+    const holes: [number, number, number][][] = [];
+
+    for (const pointID of baseFace.points) {
+      const coords = this.faces.points[pointID].coordinates;
+      const transformed = Vector.add(coords, vector);
+      topFacePoints.push(transformed);
     }
-    return newFaces;
+
+    for (const hole of baseFace.holes) {
+      const holeCoords: [number, number, number][] = [];
+      holes.push(holeCoords);
+      for (const pointID of hole) {
+        const coords = this.faces.points[pointID].coordinates;
+        const transformed = Vector.add(coords, vector);
+        holeCoords.push(transformed);
+      }
+    }
+
+    const topFacePointsIDs = this.faces.addPoints(topFacePoints);
+
+    const topHoleIDs: number[][] = [];
+    for (const hole of holes) {
+      const ids = this.faces.addPoints(hole);
+      topHoleIDs.push(ids);
+    }
+
+    const topFace = this.faces.add(topFacePointsIDs, topHoleIDs);
+
+    // Create side faces
+
+    const sideFaces = new Set<number>();
+    const baseFaceArray = Array.from(baseFace.points);
+    this.createSideFaces(baseFaceArray, topFacePointsIDs, sideFaces);
+
+    let i = 0;
+    for (const hole of baseFace.holes) {
+      const holeArray = Array.from(hole);
+      const topHoleArray = Array.from(topHoleIDs[i++]);
+      this.createSideFaces(holeArray, topHoleArray, sideFaces);
+    }
+
+    return { topFace, sideFaces };
   }
 
-  private createPoints(
-    points: Set<number>,
-    newPoints: any[],
-    newBasePoints: any[],
-    vector: THREE.Vector3,
-    lastVector: THREE.Vector3,
-    index: number
-  ) {
-    for (const pointID of points) {
-      const point = this.faces.points[pointID].coordinates;
-      let newBPoint = new THREE.Vector3(point[0], point[1], point[2]);
-      if (index === 0) {
-        const iter = points.values();
-        for (let i = 0; i < points.size; i++) {
-          newBasePoints.push(iter.next().value);
-        }
-      } else {
-        newBPoint = new THREE.Vector3(
-          point[0] + lastVector.x,
-          point[1] + lastVector.y,
-          point[2] + lastVector.z
-        );
-        newBasePoints.push(
-          this.faces.addPoints([[newBPoint.x, newBPoint.y, newBPoint.z]])[0]
-        );
-      }
-      if (point === null) {
-        return null;
-      }
-      const newPoint = new THREE.Vector3(
-        newBPoint.x + vector.x,
-        newBPoint.y + vector.y,
-        newBPoint.z + vector.z
-      );
-      newPoints.push(
-        this.faces.addPoints([[newPoint.x, newPoint.y, newPoint.z]])[0]
-      );
+  private createSideFaces(base: number[], top: number[], faces: Set<number>) {
+    for (let i = 0; i < base.length; i++) {
+      const isLastFace = i === base.length - 1;
+      const nextIndex = isLastFace ? 0 : i + 1;
+      const p1 = base[i];
+      const p2 = base[nextIndex];
+      const p3 = top[nextIndex];
+      const p4 = top[i];
+      const id = this.faces.add([p1, p2, p3, p4]);
+      faces.add(id);
     }
   }
-
-  // transform(matrix: THREE.Matrix4) {
-  //   // const vertices = new Set<number>();
-  //   // matrix.elements = matrix.elements;
-  //   matrix = matrix;
-  // }
 }
