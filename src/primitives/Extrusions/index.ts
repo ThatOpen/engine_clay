@@ -82,14 +82,14 @@ export class Extrusions extends Primitive {
     return id;
   }
 
-  private createExtrusion(pathID: number, baseFaceID: number) {
+  private createExtrusion(faceID: number, pathID: number) {
     const linePoints = this.lines.get(pathID);
     if (!linePoints) return null;
     const [start, end] = linePoints;
 
     const vector = Vector.subtract(start, end);
 
-    const baseFace = this.faces.list[baseFaceID];
+    const baseFace = this.faces.list[faceID];
 
     // Create top face
 

@@ -2191,13 +2191,13 @@ class Extrusions extends Primitive {
         }
         return id;
     }
-    createExtrusion(pathID, baseFaceID) {
+    createExtrusion(faceID, pathID) {
         const linePoints = this.lines.get(pathID);
         if (!linePoints)
             return null;
         const [start, end] = linePoints;
         const vector = Vector.subtract(start, end);
-        const baseFace = this.faces.list[baseFaceID];
+        const baseFace = this.faces.list[faceID];
         // Create top face
         const topFacePoints = [];
         const holes = [];
