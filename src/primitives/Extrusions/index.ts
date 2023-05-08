@@ -83,6 +83,32 @@ export class Extrusions extends Primitive {
   }
 
   /**
+   * Removes Extrusions.
+   * @param ids List of extrusions to remove. If no face is specified,
+   * removes all the selected extrusions.
+   */
+  remove(ids = this.selected.data as Iterable<number>) {
+    const faces: number[] = [];
+    for (const id of ids) {
+      const extrusion = this.list[id];
+      faces.push(extrusion.topFace);
+      faces.push(extrusion.baseFace);
+      faces.push(...extrusion.sideFaces);
+      delete this.list[id];
+    }
+
+    const points = new Set<number>();
+    for (const faceID of faces) {
+      const face = this.faces.list[faceID];
+      for (const point of face.points) {
+        points.add(point);
+      }
+    }
+
+    this.faces.removePoints(points);
+  }
+
+  /**
    * Select or unselects the given Extrusions.
    * @param active Whether to select or unselect.
    * @param ids List of extrusion IDs to select or unselect. If not

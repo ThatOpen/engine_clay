@@ -40,7 +40,8 @@
 
     const settings = {
         selectionStart: 0,
-        selectionEnd: 0
+        selectionEnd: 0,
+        remove: remove
     }
 
     // Set up the vertices
@@ -103,6 +104,10 @@
         extrusions.select(true, selection);
     }
 
+    function remove() {
+        extrusions.remove();
+    }
+
     // Control logic
 
     function resetControls() {
@@ -137,6 +142,7 @@
 
     gui.add(settings, 'selectionStart').name('Selection start').min(0).max(7).step(1).onChange(setSelected);
     gui.add(settings, 'selectionEnd').name('Selection end').min(0).max(7).step(1).onChange(setSelected);
+    gui.add(settings, 'remove').name('Remove');
 
 </script>
 </body>

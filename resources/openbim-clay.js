@@ -2203,6 +2203,29 @@ class Extrusions extends Primitive {
         return id;
     }
     /**
+     * Removes Extrusions.
+     * @param ids List of extrusions to remove. If no face is specified,
+     * removes all the selected extrusions.
+     */
+    remove(ids = this.selected.data) {
+        const faces = [];
+        for (const id of ids) {
+            const extrusion = this.list[id];
+            faces.push(extrusion.topFace);
+            faces.push(extrusion.baseFace);
+            faces.push(...extrusion.sideFaces);
+            delete this.list[id];
+        }
+        const points = new Set();
+        for (const faceID of faces) {
+            const face = this.faces.list[faceID];
+            for (const point of face.points) {
+                points.add(point);
+            }
+        }
+        this.faces.removePoints(points);
+    }
+    /**
      * Select or unselects the given Extrusions.
      * @param active Whether to select or unselect.
      * @param ids List of extrusion IDs to select or unselect. If not
@@ -2288,6 +2311,7 @@ class Walls extends Primitive {
         this.offsetFaces = new OffsetFaces();
         this.extrusions = new Extrusions();
         this.list = {};
+        this.knots = {};
         // TODO: Probably better to keep offsetfaces and extrusion faces separated
         this.extrusions.faces = this.offsetFaces.faces;
         this.mesh = this.extrusions.mesh;
@@ -2421,8 +2445,8 @@ class Walls extends Primitive {
         const [start, end] = line;
         return Vector.subtract(start, end);
     }
-    createKnotGeometry(knot) {
-        const face = this.offsetFaces.faces.list[knot];
+    createKnotGeometry(knotID) {
+        const face = this.offsetFaces.faces.list[knotID];
         const points = [];
         for (const pointID of face.points) {
             const point = this.offsetFaces.faces.points[pointID];
@@ -2430,7 +2454,11 @@ class Walls extends Primitive {
         }
         const pointsIDs = this.extrusions.faces.addPoints(points);
         const faceID = this.extrusions.faces.add(pointsIDs);
-        this.extrusions.add(faceID, this.defaultAxis);
+        const extrusion = this.extrusions.add(faceID, this.defaultAxis);
+        this.knots[knotID] = {
+            id: knotID,
+            extrusion,
+        };
     }
 }
 

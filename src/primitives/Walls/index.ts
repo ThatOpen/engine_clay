@@ -85,7 +85,6 @@ export class Walls extends Primitive {
    */
   transform(matrix: THREE.Matrix4) {
     const updatedLines = this.offsetFaces.transform(matrix);
-    const updatedKnots = this.offsetFaces.getRelatedKnots(updatedLines);
     for (const id of updatedLines) {
       const offsetFace = this.offsetFaces.list[id];
       const extrusionID = this.list[id].extrusion;
