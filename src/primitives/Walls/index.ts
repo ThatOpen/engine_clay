@@ -90,11 +90,12 @@ export class Walls extends Primitive {
     for (const id of this.offsetFaces.lines.vertices.selected.data) {
       relatedPoints.add(id);
     }
-
     const updatedLines = this.offsetFaces.getRelatedLines(relatedPoints, true);
 
-    // const updatedKnots = this.offsetFaces.getRelatedKnots(updatedLines);
-    // this.regenerateKnots(updatedKnots);
+    const updatedKnots = this.offsetFaces.getRelatedKnots(updatedLines);
+    for (const id of updatedKnots) {
+      this.updateKnotGeometry(id);
+    }
 
     for (const id of updatedLines) {
       const offsetFace = this.offsetFaces.list[id];
@@ -141,7 +142,7 @@ export class Walls extends Primitive {
     for (const knotID of ids) {
       const knot = this.offsetFaces.knots[knotID];
       if (knot === null || knot === undefined) continue;
-      this.createKnotGeometry(knot);
+      this.createKnotGeometry(knotID);
     }
   }
 
@@ -202,13 +203,59 @@ export class Walls extends Primitive {
     return Vector.subtract(start, end);
   }
 
+  private updateKnotGeometry(knotID: number) {
+    const baseKnot = this.offsetFaces.knots[knotID];
+    if (baseKnot === null || baseKnot === undefined) {
+      return;
+    }
+
+    const baseFace = this.offsetFaces.faces.list[baseKnot];
+
+    const knot = this.knots[knotID];
+    if (!knot || !knot.extrusion) {
+      this.createKnotGeometry(knotID);
+      console.log("knot didnt exist");
+      return;
+    }
+
+    const extrudedKnot = this.extrusions.list[knot.extrusion];
+    const extrudedBaseFace = this.extrusions.faces.list[extrudedKnot.baseFace];
+    const extrudedTopFace = this.extrusions.faces.list[extrudedKnot.topFace];
+
+    if (baseFace.points.size !== extrudedBaseFace.points.size) {
+      this.createKnotGeometry(knotID);
+      console.log("knot changed size");
+      return;
+    }
+
+    const verticalAxis = this.getVerticalAxis();
+
+    const basePointsArray = Array.from(extrudedBaseFace.points);
+    const topPointsArray = Array.from(extrudedTopFace.points);
+
+    let counter = 0;
+    for (const pointID of baseFace.points) {
+      const coords = this.offsetFaces.faces.points[pointID].coordinates;
+      const basePointID = basePointsArray[counter];
+      this.extrusions.faces.setPoint(basePointID, coords);
+
+      const topCoords = Vector.add(coords, verticalAxis);
+      const topPointID = topPointsArray[counter];
+      this.extrusions.faces.setPoint(topPointID, topCoords);
+      counter++;
+    }
+  }
+
   private createKnotGeometry(knotID: number) {
     if (this.knots[knotID]) {
       const knot = this.knots[knotID];
       this.extrusions.remove([knot.extrusion]);
     }
 
-    const face = this.offsetFaces.faces.list[knotID];
+    const knotFaceID = this.offsetFaces.knots[knotID];
+    if (knotFaceID === null || knotFaceID === undefined) return;
+
+    const face = this.offsetFaces.faces.list[knotFaceID];
     const points: [number, number, number][] = [];
     for (const pointID of face.points) {
       const point = this.offsetFaces.faces.points[pointID];
