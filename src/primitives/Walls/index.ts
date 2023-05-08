@@ -19,6 +19,13 @@ export class Walls extends Primitive {
     };
   } = {};
 
+  knots: {
+    [id: number]: {
+      id: number;
+      extrusion: number;
+    };
+  } = {};
+
   defaultAxis: number;
 
   constructor() {
@@ -68,6 +75,56 @@ export class Walls extends Primitive {
     }
     const selected = idsUndefined ? undefined : extrusions;
     this.extrusions.select(active, selected);
+
+    this.offsetFaces.select(active, items);
+  }
+
+  /**
+   * Applies a transformation to the selected geometries.
+   * @param matrix Transformation matrix to apply.
+   */
+  transform(matrix: THREE.Matrix4) {
+    const updatedLines = this.offsetFaces.transform(matrix);
+    const updatedKnots = this.offsetFaces.getRelatedKnots(updatedLines);
+    for (const id of updatedLines) {
+      const offsetFace = this.offsetFaces.list[id];
+      const extrusionID = this.list[id].extrusion;
+      const { baseFace, topFace } = this.extrusions.list[extrusionID];
+
+      const faces = this.extrusions.faces;
+      const [p1, p1Top, p4Top, p4] = faces.list[baseFace].points;
+      const [p2, p2Top, p3Top, p3] = faces.list[topFace].points;
+
+      const [bp1, bp2, bp3, bp4] = offsetFace.points;
+
+      const p1Coords = this.offsetFaces.faces.points[bp1].coordinates;
+      const p2Coords = this.offsetFaces.faces.points[bp2].coordinates;
+      const p3Coords = this.offsetFaces.faces.points[bp3].coordinates;
+      const p4Coords = this.offsetFaces.faces.points[bp4].coordinates;
+
+      // Set coordinates of base
+
+      this.extrusions.faces.setPoint(p1, p1Coords);
+      this.extrusions.faces.setPoint(p2, p2Coords);
+      this.extrusions.faces.setPoint(p3, p3Coords);
+      this.extrusions.faces.setPoint(p4, p4Coords);
+
+      // Set coordinates of top
+
+      const axis = this.getVerticalAxis();
+      const p1TopCoords = Vector.add(p1Coords, axis);
+      const p2TopCoords = Vector.add(p2Coords, axis);
+      const p3TopCoords = Vector.add(p3Coords, axis);
+      const p4TopCoords = Vector.add(p4Coords, axis);
+
+      this.extrusions.faces.setPoint(p1Top, p1TopCoords);
+      this.extrusions.faces.setPoint(p2Top, p2TopCoords);
+      this.extrusions.faces.setPoint(p3Top, p3TopCoords);
+      this.extrusions.faces.setPoint(p4Top, p4TopCoords);
+
+      // Set coordinates of holes in wall
+      //  ...
+    }
   }
 
   private regenerateKnots(ids = this.offsetFaces.knotsIDs as Iterable<number>) {
@@ -86,10 +143,7 @@ export class Walls extends Primitive {
     const p1 = points[p1ID].coordinates;
     const p4 = points[p4ID].coordinates;
 
-    const line = this.extrusions.lines.get(this.defaultAxis);
-    if (!line) return null;
-    const [start, end] = line;
-    const vector = Vector.subtract(start, end);
+    const vector = this.getVerticalAxis();
 
     const p1Top = Vector.add(p1, vector);
     const p4Top = Vector.add(p4, vector);
@@ -127,8 +181,19 @@ export class Walls extends Primitive {
     return extrusionID;
   }
 
-  private createKnotGeometry(knot: number) {
-    const face = this.offsetFaces.faces.list[knot];
+  // TODO: Allow each wall to have a different vertical axis
+  //  (e.g. for different heights or tilted walls)
+  private getVerticalAxis() {
+    const line = this.extrusions.lines.get(this.defaultAxis);
+    if (!line) {
+      throw new Error("Wall axis not found!");
+    }
+    const [start, end] = line;
+    return Vector.subtract(start, end);
+  }
+
+  private createKnotGeometry(knotID: number) {
+    const face = this.offsetFaces.faces.list[knotID];
     const points: [number, number, number][] = [];
     for (const pointID of face.points) {
       const point = this.offsetFaces.faces.points[pointID];
@@ -136,6 +201,10 @@ export class Walls extends Primitive {
     }
     const pointsIDs = this.extrusions.faces.addPoints(points);
     const faceID = this.extrusions.faces.add(pointsIDs);
-    this.extrusions.add(faceID, this.defaultAxis);
+    const extrusion = this.extrusions.add(faceID, this.defaultAxis);
+    this.knots[knotID] = {
+      id: knotID,
+      extrusion,
+    };
   }
 }

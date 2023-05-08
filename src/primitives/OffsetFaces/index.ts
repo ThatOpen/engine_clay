@@ -168,17 +168,6 @@ export class OffsetFaces extends Primitive {
   }
 
   /**
-   * Applies a transformation to the selected vertices.
-   * @param matrix Transformation matrix to apply.
-   */
-  transform(matrix: THREE.Matrix4) {
-    this.lines.transform(matrix);
-    const selectedPoints = this.lines.vertices.selected.data;
-    const linesToUpdate = this.getRelatedLines(selectedPoints);
-    this.updateOffsetFaces(linesToUpdate);
-  }
-
-  /**
    * Sets the offset of the specified OffsetFaces.
    * @param offset The offset to set.
    * @param ids List of knot IDs whose offset to change. If not specified,
@@ -207,6 +196,18 @@ export class OffsetFaces extends Primitive {
       offsetFace.width = width;
     }
     this.updateOffsetFaces(ids);
+  }
+
+  /**
+   * Applies a transformation to the selected vertices.
+   * @param matrix Transformation matrix to apply.
+   */
+  transform(matrix: THREE.Matrix4) {
+    this.lines.transform(matrix);
+    const selectedPoints = this.lines.vertices.selected.data;
+    const linesToUpdate = this.getRelatedLines(selectedPoints);
+    this.updateOffsetFaces(linesToUpdate);
+    return linesToUpdate;
   }
 
   getRelatedKnots(lineIDs: Iterable<number>) {

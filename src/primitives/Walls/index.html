@@ -28,9 +28,9 @@
 
 </script>
 <script type="module">
-    // import * as THREE from "three";
+    import * as THREE from "three";
     import {SimpleThreeScene} from "../../../resources/simple-three-scene.js";
-    // import {TransformControls} from "three/examples/jsm/controls/TransformControls";
+    import {TransformControls} from "three/examples/jsm/controls/TransformControls";
     import * as OBC from "../../../resources/openbim-clay.js";
     import * as dat from "three/examples/jsm/libs/lil-gui.module.min";
 
@@ -45,7 +45,9 @@
 
     const settings = {
         selectionStart: 0,
-        selectionEnd: 0
+        selectionEnd: 0,
+        pointSelectionStart: 0,
+        pointSelectionEnd: 0,
     }
 
     walls.offsetFaces.lines.addPoints([
@@ -68,12 +70,41 @@
         walls.select(true, selection);
     }
 
+    function setSelectedPoint() {
+        const selection = [];
+        for (let i = settings.pointSelectionStart; i < settings.pointSelectionEnd; i++) {
+            selection.push(i);
+        }
+        walls.offsetFaces.lines.selectPoints(false);
+        walls.offsetFaces.lines.selectPoints(true, selection);
+    }
+
+    // Set up controls
+
+    const control = new TransformControls(world.camera, world.renderer.domElement);
+    const helper = new THREE.Object3D();
+    let transform = new THREE.Matrix4();
+    world.scene.add(helper);
+    control.attach(helper);
+    world.scene.add(control);
+
+    control.addEventListener('dragging-changed', (event) => world.controls.enabled = !event.value);
+    control.addEventListener('change', () => {
+        helper.updateMatrix();
+        const temp = helper.matrix.clone();
+        temp.multiply(transform.invert());
+        walls.transform(temp);
+        transform = helper.matrix.clone();
+    });
+
     // Set up GUI
 
     const gui = new dat.GUI();
 
     gui.add(settings, 'selectionStart').name('Selection start').min(0).max(7).step(1).onChange(setSelected);
     gui.add(settings, 'selectionEnd').name('Selection end').min(0).max(7).step(1).onChange(setSelected);
+    gui.add(settings, 'pointSelectionStart').name('Point selection start').min(0).max(7).step(1).onChange(setSelectedPoint);
+    gui.add(settings, 'pointSelectionEnd').name('Point selection end').min(0).max(7).step(1).onChange(setSelectedPoint);
 
 
 </script>
