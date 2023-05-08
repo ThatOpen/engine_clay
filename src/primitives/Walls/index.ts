@@ -56,21 +56,19 @@ export class Walls extends Primitive {
    * @param ids List of walls IDs to select or unselect. If not
    * defined, all lines walls be selected or deselected.
    */
-  // select(active: boolean, ids = this.ids as Iterable<number>) {
-  //   this.selected.select(active, ids, this.ids);
-  //   for (const id of this.selected.data) {
-  //     const wall = this.list[id];
-  //   }
-  //   const faces: number[] = [];
-  //   for (const id of ids) {
-  //     const item = this.list[id];
-  //     if (item) {
-  //       faces.push(item.face);
-  //     }
-  //   }
-  //   this.faces.select(active, faces);
-  //   this.lines.select(active, ids);
-  // }
+  select(active: boolean, ids?: Iterable<number>) {
+    const idsUndefined = ids === undefined;
+    const items = idsUndefined ? this.ids : ids;
+    this.selected.select(active, items, this.ids);
+    const extrusions: number[] = [];
+    for (const id of this.selected.data) {
+      const wall = this.list[id];
+      if (!wall) continue;
+      extrusions.push(wall.extrusion);
+    }
+    const selected = idsUndefined ? undefined : extrusions;
+    this.extrusions.select(active, selected);
+  }
 
   private regenerateKnots(ids = this.offsetFaces.knotsIDs as Iterable<number>) {
     for (const knotID of ids) {

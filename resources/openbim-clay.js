@@ -2207,8 +2207,10 @@ class Extrusions extends Primitive {
      * @param ids List of extrusion IDs to select or unselect. If not
      * defined, all extrusions will be selected or deselected.
      */
-    select(active, ids = this.ids) {
-        this.selected.select(active, ids, this.ids);
+    select(active, ids) {
+        const idsUndefined = ids === undefined;
+        const items = idsUndefined ? this.ids : ids;
+        this.selected.select(active, items, this.ids);
         const faces = [];
         for (const id of this.selected.data) {
             const extrusion = this.list[id];
@@ -2218,7 +2220,7 @@ class Extrusions extends Primitive {
                 faces.push(...extrusion.sideFaces);
             }
         }
-        const selected = faces.length ? faces : undefined;
+        const selected = idsUndefined ? undefined : faces;
         this.faces.select(active, selected);
     }
     createExtrusion(faceID, pathID) {
@@ -2314,21 +2316,20 @@ class Walls extends Primitive {
      * @param ids List of walls IDs to select or unselect. If not
      * defined, all lines walls be selected or deselected.
      */
-    // select(active: boolean, ids = this.ids as Iterable<number>) {
-    //   this.selected.select(active, ids, this.ids);
-    //   for (const id of this.selected.data) {
-    //     const wall = this.list[id];
-    //   }
-    //   const faces: number[] = [];
-    //   for (const id of ids) {
-    //     const item = this.list[id];
-    //     if (item) {
-    //       faces.push(item.face);
-    //     }
-    //   }
-    //   this.faces.select(active, faces);
-    //   this.lines.select(active, ids);
-    // }
+    select(active, ids) {
+        const idsUndefined = ids === undefined;
+        const items = idsUndefined ? this.ids : ids;
+        this.selected.select(active, items, this.ids);
+        const extrusions = [];
+        for (const id of this.selected.data) {
+            const wall = this.list[id];
+            if (!wall)
+                continue;
+            extrusions.push(wall.extrusion);
+        }
+        const selected = idsUndefined ? undefined : extrusions;
+        this.extrusions.select(active, selected);
+    }
     regenerateKnots(ids = this.offsetFaces.knotsIDs) {
         for (const knotID of ids) {
             const knot = this.offsetFaces.knots[knotID];

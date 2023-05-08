@@ -88,8 +88,10 @@ export class Extrusions extends Primitive {
    * @param ids List of extrusion IDs to select or unselect. If not
    * defined, all extrusions will be selected or deselected.
    */
-  select(active: boolean, ids = this.ids as Iterable<number>) {
-    this.selected.select(active, ids, this.ids);
+  select(active: boolean, ids?: Iterable<number>) {
+    const idsUndefined = ids === undefined;
+    const items = idsUndefined ? this.ids : ids;
+    this.selected.select(active, items, this.ids);
     const faces: number[] = [];
     for (const id of this.selected.data) {
       const extrusion = this.list[id];
@@ -99,7 +101,7 @@ export class Extrusions extends Primitive {
         faces.push(...extrusion.sideFaces);
       }
     }
-    const selected = faces.length ? faces : undefined;
+    const selected = idsUndefined ? undefined : faces;
     this.faces.select(active, selected);
   }
 

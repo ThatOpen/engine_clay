@@ -32,7 +32,7 @@
     import {SimpleThreeScene} from "../../../resources/simple-three-scene.js";
     // import {TransformControls} from "three/examples/jsm/controls/TransformControls";
     import * as OBC from "../../../resources/openbim-clay.js";
-    // import * as dat from "three/examples/jsm/libs/lil-gui.module.min";
+    import * as dat from "three/examples/jsm/libs/lil-gui.module.min";
 
 
     const canvas = document.getElementById("container");
@@ -43,14 +43,37 @@
     world.scene.add(walls.offsetFaces.lines.mesh);
     world.scene.add(walls.offsetFaces.lines.vertices.mesh);
 
+    const settings = {
+        selectionStart: 0,
+        selectionEnd: 0
+    }
+
     walls.offsetFaces.lines.addPoints([
         [0, 0, 0],
         [2, 0, 0],
         [2, 0, 2],
+        [0, 0, 2],
     ]);
 
     walls.offsetFaces.add([0, 1, 2], 0.1);
+    walls.offsetFaces.add([1, 3], 0.1);
     walls.regenerate();
+
+    function setSelected() {
+        const selection = [];
+        for (let i = settings.selectionStart; i < settings.selectionEnd; i++) {
+            selection.push(i);
+        }
+        walls.select(false);
+        walls.select(true, selection);
+    }
+
+    // Set up GUI
+
+    const gui = new dat.GUI();
+
+    gui.add(settings, 'selectionStart').name('Selection start').min(0).max(7).step(1).onChange(setSelected);
+    gui.add(settings, 'selectionEnd').name('Selection end').min(0).max(7).step(1).onChange(setSelected);
 
 
 </script>
