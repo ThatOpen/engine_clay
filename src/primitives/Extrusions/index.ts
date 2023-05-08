@@ -82,6 +82,27 @@ export class Extrusions extends Primitive {
     return id;
   }
 
+  /**
+   * Select or unselects the given Extrusions.
+   * @param active Whether to select or unselect.
+   * @param ids List of extrusion IDs to select or unselect. If not
+   * defined, all extrusions will be selected or deselected.
+   */
+  select(active: boolean, ids = this.ids as Iterable<number>) {
+    this.selected.select(active, ids, this.ids);
+    const faces: number[] = [];
+    for (const id of this.selected.data) {
+      const extrusion = this.list[id];
+      if (extrusion) {
+        faces.push(extrusion.topFace);
+        faces.push(extrusion.baseFace);
+        faces.push(...extrusion.sideFaces);
+      }
+    }
+    const selected = faces.length ? faces : undefined;
+    this.faces.select(active, selected);
+  }
+
   private createExtrusion(faceID: number, pathID: number) {
     const linePoints = this.lines.get(pathID);
     if (!linePoints) return null;

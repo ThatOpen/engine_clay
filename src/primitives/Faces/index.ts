@@ -51,7 +51,7 @@ export class Faces extends Primitive {
    */
   set baseColor(color: THREE.Color) {
     super.baseColor = color;
-    const unselected = this.selected.getUnselected(this._ids);
+    const unselected = this.selected.getUnselected(this.ids);
     this.updateColor(unselected);
     this.vertices.baseColor = color;
   }
@@ -240,8 +240,8 @@ export class Faces extends Primitive {
    * @param ids List of faces IDs to select or unselect. If not
    * defined, all faces will be selected or deselected.
    */
-  select(active: boolean, ids = this._ids as Iterable<number>) {
-    const idsToUpdate = this.selected.select(active, ids, this._ids);
+  select(active: boolean, ids = this.ids as Iterable<number>) {
+    const idsToUpdate = this.selected.select(active, ids, this.ids);
     this.updateColor(idsToUpdate);
     const points: number[] = [];
     for (const id of ids) {
@@ -365,7 +365,7 @@ export class Faces extends Primitive {
     this._colorBuffer.count = positionBuffer.count;
   }
 
-  private updateColor(ids = this._ids as Iterable<number>) {
+  private updateColor(ids = this.ids as Iterable<number>) {
     const colorAttribute = this._colorBuffer;
     for (const id of ids) {
       const face = this.list[id];

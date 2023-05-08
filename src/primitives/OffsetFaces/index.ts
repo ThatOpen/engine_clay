@@ -46,7 +46,7 @@ export class OffsetFaces extends Primitive {
    */
   knots: { [id: number]: number | null } = {};
 
-  private get _knotsIds() {
+  get knotsIDs() {
     const ids: number[] = [];
     for (const id in this.knots) {
       const idNumber = parseInt(id, 10);
@@ -82,6 +82,8 @@ export class OffsetFaces extends Primitive {
     }
 
     this.updateKnots(knotsToUpdate);
+
+    return linesIDs;
   }
 
   /**
@@ -90,7 +92,7 @@ export class OffsetFaces extends Primitive {
    * @param ids List of OffsetFaces IDs to select or unselect. If not
    * defined, all lines will be selected or deselected.
    */
-  select(active: boolean, ids = this._ids as Iterable<number>) {
+  select(active: boolean, ids = this.ids as Iterable<number>) {
     const faces: number[] = [];
     for (const id of ids) {
       const item = this.list[id];
@@ -108,7 +110,7 @@ export class OffsetFaces extends Primitive {
    * @param ids List of knot IDs to select or unselect. If not
    * defined, all knots will be selected or deselected.
    */
-  selectKnots(active: boolean, ids = this._knotsIds as Iterable<number>) {
+  selectKnots(active: boolean, ids = this.knotsIDs as Iterable<number>) {
     const points: number[] = [];
     const faces: number[] = [];
     for (const id of ids) {
@@ -129,13 +131,11 @@ export class OffsetFaces extends Primitive {
    * removes all the selected OffsetFaces.
    */
   remove(ids = this.lines.selected.data as Iterable<number>) {
-    const relatedKnots = new Set<number>();
+    const relatedKnots = this.getRelatedKnots(ids);
+
     const facePoints: number[] = [];
     for (const id of ids) {
       facePoints.push(...this.list[id].points);
-      const line = this.lines.list[id];
-      relatedKnots.add(line.start);
-      relatedKnots.add(line.end);
       delete this.list[id];
     }
 
@@ -209,7 +209,17 @@ export class OffsetFaces extends Primitive {
     this.updateOffsetFaces(ids);
   }
 
-  private getRelatedLines(pointIDs: Iterable<number>) {
+  getRelatedKnots(lineIDs: Iterable<number>) {
+    const relatedKnots = new Set<number>();
+    for (const id of lineIDs) {
+      const line = this.lines.list[id];
+      relatedKnots.add(line.start);
+      relatedKnots.add(line.end);
+    }
+    return relatedKnots;
+  }
+
+  getRelatedLines(pointIDs: Iterable<number>) {
     const linesToUpdate = new Set<number>();
     for (const id of pointIDs) {
       const point = this.lines.points[id];

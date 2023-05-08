@@ -145,7 +145,7 @@ export class Lines extends Primitive {
    * @param ids List of lines IDs to select or unselect. If not
    * defined, all lines will be selected or deselected.
    */
-  select(active: boolean, ids = this._ids as Iterable<number>) {
+  select(active: boolean, ids = this.ids as Iterable<number>) {
     const allLines = this.idMap.ids;
     const lineIDs = ids || allLines;
     const idsToUpdate = this.selected.select(active, lineIDs, allLines);
@@ -268,7 +268,7 @@ export class Lines extends Primitive {
     this._positionBuffer.needsUpdate = true;
   }
 
-  private updateColor(ids = this._ids as Iterable<number>) {
+  private updateColor(ids = this.ids as Iterable<number>) {
     const colorAttribute = this._colorBuffer;
     for (const id of ids) {
       const line = this.list[id];

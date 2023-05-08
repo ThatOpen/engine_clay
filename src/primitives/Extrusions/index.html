@@ -39,15 +39,8 @@
     const world = new SimpleThreeScene(canvas);
 
     const settings = {
-        numberOfPoints: 10,
         selectionStart: 0,
-        selectionEnd: 5,
-        baseColor: 0x888888,
-        selectColor: 0xff0000,
-        transformMode: "translate",
-        distance: 0.2,
-        pointSize: 0.1,
-        remove: removeVertices
+        selectionEnd: 0
     }
 
     // Set up the vertices
@@ -81,9 +74,14 @@
             [0.6, 0, 0.3],
             [0.6, 0, 0.6],
             [0.3, 0, 0.6],
+            [2, 0, 2],
+            [3, 0, 2],
+            [3, 0, 3],
+            [2, 0, 3],
         ]);
 
         extrusions.faces.add([0, 1, 2, 3], [[4, 5, 6, 7]]);
+        extrusions.faces.add([8, 9, 10, 11]);
 
         // Create axis
 
@@ -93,6 +91,7 @@
         // Create extrusion
 
         extrusions.add(0, 0);
+        extrusions.add(1, 0);
     }
 
     function setSelected() {
@@ -100,8 +99,10 @@
         for (let i = settings.selectionStart; i < settings.selectionEnd; i++) {
             selection.push(i);
         }
-        vertices.select(false);
-        vertices.select(true, selection);
+        extrusions.select(false);
+        if(selection.length) {
+            extrusions.select(true, selection);
+        }
     }
 
     // Control logic
@@ -124,10 +125,6 @@
         transform = helper.matrix.clone();
     });
 
-    function removeVertices() {
-        vertices.remove();
-    }
-
     // Set up GUI
 
     const gui = new dat.GUI();
@@ -141,27 +138,9 @@
     // });
 
     const baseColor = new THREE.Color();
-    gui.addColor(settings, "baseColor").name("Base color").onChange(() => {
-        baseColor.set(settings.baseColor);
-        vertices.baseColor = baseColor;
-    });
 
-    const selectColor = new THREE.Color();
-    gui.addColor(settings, "selectColor").name("Select color").onChange(() => {
-        selectColor.set(settings.selectColor);
-        vertices.selectColor = selectColor;
-    });
-
-    // gui.add(settings, "selectionColor").name("Selection color").min(0).max(1000).onChange(setSelected);
-
-    gui.add(settings, "transformMode", {translate: "translate", rotate: "rotate", scale: "scale"})
-        .name("Transform mode").min(0).max(1000).onChange((result) => {
-        control.setMode(result);
-    });
-
-    gui.add(settings, "remove").name("Remove selected");
-
-    window.ondblclick = () => extrusions.faces.mesh.geometry.computeVertexNormals();
+    gui.add(settings, 'selectionStart').name('Selection start').min(0).max(7).step(1).onChange(setSelected);
+    gui.add(settings, 'selectionEnd').name('Selection end').min(0).max(7).step(1).onChange(setSelected);
 
 </script>
 </body>

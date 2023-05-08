@@ -17,6 +17,17 @@ export abstract class Primitive {
   protected _selectColor = new THREE.Color(1, 0, 0);
 
   /**
+   * The list of ids of the {@link list} of items.
+   */
+  get ids() {
+    const ids: number[] = [];
+    for (const id in this.list) {
+      ids.push(this.list[id].id);
+    }
+    return ids;
+  }
+
+  /**
    * The color of all the points.
    */
   get baseColor() {
@@ -67,13 +78,5 @@ export abstract class Primitive {
     return Object.values(
       this.mesh.geometry.attributes
     ) as THREE.BufferAttribute[];
-  }
-
-  protected get _ids() {
-    const ids: number[] = [];
-    for (const id in this.list) {
-      ids.push(this.list[id].id);
-    }
-    return ids;
   }
 }

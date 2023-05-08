@@ -39,32 +39,18 @@
     const world = new SimpleThreeScene(canvas);
 
     const walls = new OBC.Walls();
-    const offsetFaces = walls.offsetFaces;
-    world.scene.add(offsetFaces.mesh);
-    world.scene.add(offsetFaces.lines.mesh);
-    world.scene.add(offsetFaces.lines.vertices.mesh);
+    world.scene.add(walls.offsetFaces.mesh);
+    world.scene.add(walls.offsetFaces.lines.mesh);
+    world.scene.add(walls.offsetFaces.lines.vertices.mesh);
 
-    offsetFaces.lines.addPoints([
+    walls.offsetFaces.lines.addPoints([
         [0, 0, 0],
-        [10, 0, 0],
-        [10, 0, 10],
-        [0, 0, 10],
+        [2, 0, 0],
+        [2, 0, 2],
     ]);
 
-    offsetFaces.add([0, 1, 2, 3, 0], 0.1);
-    offsetFaces.add([3, 1], 0.1);
-
-    walls.extrusions.lines.addPoints([[0, 0, 0], [0, 3, 0]]);
-    walls.extrusions.lines.add([0, 1]);
-
-    walls.extrusions.add(0, 0);
-    walls.extrusions.add(1, 0);
-    walls.extrusions.add(2, 0);
-    walls.extrusions.add(3, 0);
-    walls.extrusions.add(4, 0);
-    walls.extrusions.add(5, 0);
-    walls.extrusions.add(6, 0);
-
+    walls.offsetFaces.add([0, 1, 2], 0.1);
+    walls.regenerate();
 
 
 </script>

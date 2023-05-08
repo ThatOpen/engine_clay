@@ -289,6 +289,16 @@ class Primitive {
         this.list = {};
     }
     /**
+     * The list of ids of the {@link list} of items.
+     */
+    get ids() {
+        const ids = [];
+        for (const id in this.list) {
+            ids.push(this.list[id].id);
+        }
+        return ids;
+    }
+    /**
      * The color of all the points.
      */
     get baseColor() {
@@ -323,13 +333,6 @@ class Primitive {
     }
     get _attributes() {
         return Object.values(this.mesh.geometry.attributes);
-    }
-    get _ids() {
-        const ids = [];
-        for (const id in this.list) {
-            ids.push(this.list[id].id);
-        }
-        return ids;
     }
 }
 
@@ -612,7 +615,7 @@ class Lines extends Primitive {
      * @param ids List of lines IDs to select or unselect. If not
      * defined, all lines will be selected or deselected.
      */
-    select(active, ids = this._ids) {
+    select(active, ids = this.ids) {
         const allLines = this.idMap.ids;
         const lineIDs = ids || allLines;
         const idsToUpdate = this.selected.select(active, lineIDs, allLines);
@@ -730,7 +733,7 @@ class Lines extends Primitive {
         }
         this._positionBuffer.needsUpdate = true;
     }
-    updateColor(ids = this._ids) {
+    updateColor(ids = this.ids) {
         const colorAttribute = this._colorBuffer;
         for (const id of ids) {
             const line = this.list[id];
@@ -1434,7 +1437,7 @@ class Faces extends Primitive {
      */
     set baseColor(color) {
         super.baseColor = color;
-        const unselected = this.selected.getUnselected(this._ids);
+        const unselected = this.selected.getUnselected(this.ids);
         this.updateColor(unselected);
         this.vertices.baseColor = color;
     }
@@ -1616,8 +1619,8 @@ class Faces extends Primitive {
      * @param ids List of faces IDs to select or unselect. If not
      * defined, all faces will be selected or deselected.
      */
-    select(active, ids = this._ids) {
-        const idsToUpdate = this.selected.select(active, ids, this._ids);
+    select(active, ids = this.ids) {
+        const idsToUpdate = this.selected.select(active, ids, this.ids);
         this.updateColor(idsToUpdate);
         const points = [];
         for (const id of ids) {
@@ -1736,7 +1739,7 @@ class Faces extends Primitive {
         }
         this._colorBuffer.count = positionBuffer.count;
     }
-    updateColor(ids = this._ids) {
+    updateColor(ids = this.ids) {
         const colorAttribute = this._colorBuffer;
         for (const id of ids) {
             const face = this.list[id];
@@ -1787,7 +1790,7 @@ class Faces extends Primitive {
 
 // import { Vector3 } from "three";
 class OffsetFaces extends Primitive {
-    get _knotsIds() {
+    get knotsIDs() {
         const ids = [];
         for (const id in this.knots) {
             const idNumber = parseInt(id, 10);
@@ -1838,6 +1841,7 @@ class OffsetFaces extends Primitive {
             this.list[id].face = this.faces.add(points);
         }
         this.updateKnots(knotsToUpdate);
+        return linesIDs;
     }
     /**
      * Select or unselects the given OffsetFaces.
@@ -1845,7 +1849,7 @@ class OffsetFaces extends Primitive {
      * @param ids List of OffsetFaces IDs to select or unselect. If not
      * defined, all lines will be selected or deselected.
      */
-    select(active, ids = this._ids) {
+    select(active, ids = this.ids) {
         const faces = [];
         for (const id of ids) {
             const item = this.list[id];
@@ -1862,7 +1866,7 @@ class OffsetFaces extends Primitive {
      * @param ids List of knot IDs to select or unselect. If not
      * defined, all knots will be selected or deselected.
      */
-    selectKnots(active, ids = this._knotsIds) {
+    selectKnots(active, ids = this.knotsIDs) {
         const points = [];
         const faces = [];
         for (const id of ids) {
@@ -1883,13 +1887,10 @@ class OffsetFaces extends Primitive {
      * removes all the selected OffsetFaces.
      */
     remove(ids = this.lines.selected.data) {
-        const relatedKnots = new Set();
+        const relatedKnots = this.getRelatedKnots(ids);
         const facePoints = [];
         for (const id of ids) {
             facePoints.push(...this.list[id].points);
-            const line = this.lines.list[id];
-            relatedKnots.add(line.start);
-            relatedKnots.add(line.end);
             delete this.list[id];
         }
         this.faces.removePoints(facePoints);
@@ -1953,6 +1954,15 @@ class OffsetFaces extends Primitive {
             offsetFace.width = width;
         }
         this.updateOffsetFaces(ids);
+    }
+    getRelatedKnots(lineIDs) {
+        const relatedKnots = new Set();
+        for (const id of lineIDs) {
+            const line = this.lines.list[id];
+            relatedKnots.add(line.start);
+            relatedKnots.add(line.end);
+        }
+        return relatedKnots;
     }
     getRelatedLines(pointIDs) {
         const linesToUpdate = new Set();
@@ -2191,6 +2201,26 @@ class Extrusions extends Primitive {
         }
         return id;
     }
+    /**
+     * Select or unselects the given Extrusions.
+     * @param active Whether to select or unselect.
+     * @param ids List of extrusion IDs to select or unselect. If not
+     * defined, all extrusions will be selected or deselected.
+     */
+    select(active, ids = this.ids) {
+        this.selected.select(active, ids, this.ids);
+        const faces = [];
+        for (const id of this.selected.data) {
+            const extrusion = this.list[id];
+            if (extrusion) {
+                faces.push(extrusion.topFace);
+                faces.push(extrusion.baseFace);
+                faces.push(...extrusion.sideFaces);
+            }
+        }
+        const selected = faces.length ? faces : undefined;
+        this.faces.select(active, selected);
+    }
     createExtrusion(faceID, pathID) {
         const linePoints = this.lines.get(pathID);
         if (!linePoints)
@@ -2254,9 +2284,107 @@ class Walls extends Primitive {
         super();
         this.offsetFaces = new OffsetFaces();
         this.extrusions = new Extrusions();
+        this.list = {};
         // TODO: Probably better to keep offsetfaces and extrusion faces separated
         this.extrusions.faces = this.offsetFaces.faces;
         this.mesh = this.extrusions.mesh;
+        const heightPointsID = this.extrusions.lines.addPoints([
+            [0, 0, 0],
+            [0, 3, 0],
+        ]);
+        const [axisID] = this.extrusions.lines.add(heightPointsID);
+        this.defaultAxis = axisID;
+    }
+    regenerate(ids = this.offsetFaces.ids) {
+        for (const id of ids) {
+            const extrusion = this.createGeometry(id);
+            if (extrusion === null)
+                continue;
+            this.list[id] = {
+                id,
+                extrusion,
+            };
+        }
+        const relatedKnots = this.offsetFaces.getRelatedKnots(ids);
+        this.regenerateKnots(relatedKnots);
+    }
+    /**
+     * Select or unselects the given Walls.
+     * @param active Whether to select or unselect.
+     * @param ids List of walls IDs to select or unselect. If not
+     * defined, all lines walls be selected or deselected.
+     */
+    // select(active: boolean, ids = this.ids as Iterable<number>) {
+    //   this.selected.select(active, ids, this.ids);
+    //   for (const id of this.selected.data) {
+    //     const wall = this.list[id];
+    //   }
+    //   const faces: number[] = [];
+    //   for (const id of ids) {
+    //     const item = this.list[id];
+    //     if (item) {
+    //       faces.push(item.face);
+    //     }
+    //   }
+    //   this.faces.select(active, faces);
+    //   this.lines.select(active, ids);
+    // }
+    regenerateKnots(ids = this.offsetFaces.knotsIDs) {
+        for (const knotID of ids) {
+            const knot = this.offsetFaces.knots[knotID];
+            if (knot === null || knot === undefined)
+                continue;
+            this.createKnotGeometry(knot);
+        }
+    }
+    createGeometry(offsetFaceID) {
+        const offsetFace = this.offsetFaces.list[offsetFaceID];
+        const [p1ID, p2ID, p3ID, p4ID] = offsetFace.points;
+        const points = this.offsetFaces.faces.points;
+        const p1 = points[p1ID].coordinates;
+        const p4 = points[p4ID].coordinates;
+        const line = this.extrusions.lines.get(this.defaultAxis);
+        if (!line)
+            return null;
+        const [start, end] = line;
+        const vector = Vector.subtract(start, end);
+        const p1Top = Vector.add(p1, vector);
+        const p4Top = Vector.add(p4, vector);
+        const direction = Vector.subtract(p1, p4);
+        const normalDirection = Vector.normalize(direction);
+        const normal = Vector.multiply(Vector.up, normalDirection);
+        const scaledNormal = Vector.multiplyScalar(normal, offsetFace.width);
+        const p1Normal = Vector.add(p1, scaledNormal);
+        const normalAxisPointsIDs = this.extrusions.lines.addPoints([p1, p1Normal]);
+        const [normalAxis] = this.extrusions.lines.add(normalAxisPointsIDs);
+        const pointsIDs = this.extrusions.faces.addPoints([p1, p1Top, p4Top, p4]);
+        const faceID = this.extrusions.faces.add(pointsIDs);
+        const extrusionID = this.extrusions.add(faceID, normalAxis);
+        // Correct extrusion top to fit the OffsetFace knots
+        const extrusion = this.extrusions.list[extrusionID];
+        const otherSide = this.extrusions.faces.list[extrusion.topFace];
+        const otherSidePoints = Array.from(otherSide.points);
+        const [extrP2, extrP2Top, extrP3Top, extrP3] = otherSidePoints;
+        const p2 = points[p2ID].coordinates;
+        const p3 = points[p3ID].coordinates;
+        const p2Top = Vector.add(p2, vector);
+        const p3Top = Vector.add(p3, vector);
+        this.extrusions.faces.setPoint(extrP2, p2);
+        this.extrusions.faces.setPoint(extrP3, p3);
+        this.extrusions.faces.setPoint(extrP2Top, p2Top);
+        this.extrusions.faces.setPoint(extrP3Top, p3Top);
+        return extrusionID;
+    }
+    createKnotGeometry(knot) {
+        const face = this.offsetFaces.faces.list[knot];
+        const points = [];
+        for (const pointID of face.points) {
+            const point = this.offsetFaces.faces.points[pointID];
+            points.push(point.coordinates);
+        }
+        const pointsIDs = this.extrusions.faces.addPoints(points);
+        const faceID = this.extrusions.faces.add(pointsIDs);
+        this.extrusions.add(faceID, this.defaultAxis);
     }
 }
 
