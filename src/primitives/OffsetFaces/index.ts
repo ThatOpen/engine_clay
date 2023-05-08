@@ -207,7 +207,6 @@ export class OffsetFaces extends Primitive {
     const selectedPoints = this.lines.vertices.selected.data;
     const linesToUpdate = this.getRelatedLines(selectedPoints);
     this.updateOffsetFaces(linesToUpdate);
-    return linesToUpdate;
   }
 
   getRelatedKnots(lineIDs: Iterable<number>) {
@@ -220,18 +219,33 @@ export class OffsetFaces extends Primitive {
     return relatedKnots;
   }
 
-  getRelatedLines(pointIDs: Iterable<number>) {
+  getRelatedLines(pointIDs: Iterable<number>, neighbors = false) {
     const linesToUpdate = new Set<number>();
+    this.getLinesOfPoints(pointIDs, linesToUpdate);
+
+    if (neighbors) {
+      const neighborPoints = new Set<number>();
+      for (const lineID of linesToUpdate) {
+        const line = this.lines.list[lineID];
+        neighborPoints.add(line.start);
+        neighborPoints.add(line.end);
+      }
+      this.getLinesOfPoints(neighborPoints, linesToUpdate);
+    }
+
+    return linesToUpdate;
+  }
+
+  private getLinesOfPoints(pointIDs: Iterable<number>, lines: Set<number>) {
     for (const id of pointIDs) {
       const point = this.lines.points[id];
       for (const lineID of point.start) {
-        linesToUpdate.add(lineID);
+        lines.add(lineID);
       }
       for (const lineID of point.end) {
-        linesToUpdate.add(lineID);
+        lines.add(lineID);
       }
     }
-    return linesToUpdate;
   }
 
   private getFacePoints(id: number, knots: Set<number>) {

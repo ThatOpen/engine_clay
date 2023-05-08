@@ -84,7 +84,18 @@ export class Walls extends Primitive {
    * @param matrix Transformation matrix to apply.
    */
   transform(matrix: THREE.Matrix4) {
-    const updatedLines = this.offsetFaces.transform(matrix);
+    this.offsetFaces.transform(matrix);
+
+    const relatedPoints = new Set<number>();
+    for (const id of this.offsetFaces.lines.vertices.selected.data) {
+      relatedPoints.add(id);
+    }
+
+    const updatedLines = this.offsetFaces.getRelatedLines(relatedPoints, true);
+
+    // const updatedKnots = this.offsetFaces.getRelatedKnots(updatedLines);
+    // this.regenerateKnots(updatedKnots);
+
     for (const id of updatedLines) {
       const offsetFace = this.offsetFaces.list[id];
       const extrusionID = this.list[id].extrusion;
@@ -192,15 +203,22 @@ export class Walls extends Primitive {
   }
 
   private createKnotGeometry(knotID: number) {
+    if (this.knots[knotID]) {
+      const knot = this.knots[knotID];
+      this.extrusions.remove([knot.extrusion]);
+    }
+
     const face = this.offsetFaces.faces.list[knotID];
     const points: [number, number, number][] = [];
     for (const pointID of face.points) {
       const point = this.offsetFaces.faces.points[pointID];
       points.push(point.coordinates);
     }
+
     const pointsIDs = this.extrusions.faces.addPoints(points);
     const faceID = this.extrusions.faces.add(pointsIDs);
     const extrusion = this.extrusions.add(faceID, this.defaultAxis);
+
     this.knots[knotID] = {
       id: knotID,
       extrusion,

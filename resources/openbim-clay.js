@@ -1954,7 +1954,6 @@ class OffsetFaces extends Primitive {
         const selectedPoints = this.lines.vertices.selected.data;
         const linesToUpdate = this.getRelatedLines(selectedPoints);
         this.updateOffsetFaces(linesToUpdate);
-        return linesToUpdate;
     }
     getRelatedKnots(lineIDs) {
         const relatedKnots = new Set();
@@ -1965,18 +1964,30 @@ class OffsetFaces extends Primitive {
         }
         return relatedKnots;
     }
-    getRelatedLines(pointIDs) {
+    getRelatedLines(pointIDs, neighbors = false) {
         const linesToUpdate = new Set();
+        this.getLinesOfPoints(pointIDs, linesToUpdate);
+        if (neighbors) {
+            const neighborPoints = new Set();
+            for (const lineID of linesToUpdate) {
+                const line = this.lines.list[lineID];
+                neighborPoints.add(line.start);
+                neighborPoints.add(line.end);
+            }
+            this.getLinesOfPoints(neighborPoints, linesToUpdate);
+        }
+        return linesToUpdate;
+    }
+    getLinesOfPoints(pointIDs, lines) {
         for (const id of pointIDs) {
             const point = this.lines.points[id];
             for (const lineID of point.start) {
-                linesToUpdate.add(lineID);
+                lines.add(lineID);
             }
             for (const lineID of point.end) {
-                linesToUpdate.add(lineID);
+                lines.add(lineID);
             }
         }
-        return linesToUpdate;
     }
     getFacePoints(id, knots) {
         const offsetFace = this.list[id];
@@ -2361,7 +2372,14 @@ class Walls extends Primitive {
      * @param matrix Transformation matrix to apply.
      */
     transform(matrix) {
-        const updatedLines = this.offsetFaces.transform(matrix);
+        this.offsetFaces.transform(matrix);
+        const relatedPoints = new Set();
+        for (const id of this.offsetFaces.lines.vertices.selected.data) {
+            relatedPoints.add(id);
+        }
+        const updatedLines = this.offsetFaces.getRelatedLines(relatedPoints, true);
+        // const updatedKnots = this.offsetFaces.getRelatedKnots(updatedLines);
+        // this.regenerateKnots(updatedKnots);
         for (const id of updatedLines) {
             const offsetFace = this.offsetFaces.list[id];
             const extrusionID = this.list[id].extrusion;
@@ -2446,6 +2464,10 @@ class Walls extends Primitive {
         return Vector.subtract(start, end);
     }
     createKnotGeometry(knotID) {
+        if (this.knots[knotID]) {
+            const knot = this.knots[knotID];
+            this.extrusions.remove([knot.extrusion]);
+        }
         const face = this.offsetFaces.faces.list[knotID];
         const points = [];
         for (const pointID of face.points) {
