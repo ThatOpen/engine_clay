@@ -1609,6 +1609,23 @@ class Faces extends Primitive {
         this.updateBuffers();
         this.updateColor();
     }
+    /**
+     * Adds the points that can be used by one or many faces
+     */
+    addPoints(points) {
+        const newPoints = [];
+        for (const [x, y, z] of points) {
+            const id = this._pointIdGenerator++;
+            this.points[id] = {
+                id,
+                coordinates: [x, y, z],
+                vertices: new Set(),
+                faces: new Set(),
+            };
+            newPoints.push(id);
+        }
+        return newPoints;
+    }
     removePoints(ids = this.selectedPoints.data) {
         const facesToRemove = new Set();
         for (const id of ids) {
@@ -1646,23 +1663,6 @@ class Faces extends Primitive {
             }
         }
         this.selectPoints(active, points);
-    }
-    /**
-     * Adds the points that can be used by one or many faces
-     */
-    addPoints(points) {
-        const newPoints = [];
-        for (const [x, y, z] of points) {
-            const id = this._pointIdGenerator++;
-            this.points[id] = {
-                id,
-                coordinates: [x, y, z],
-                vertices: new Set(),
-                faces: new Set(),
-            };
-            newPoints.push(id);
-        }
-        return newPoints;
     }
     /**
      * Selects or unselects the given points.
@@ -2341,6 +2341,8 @@ class Walls extends Primitive {
         this.extrusions = new Extrusions();
         this.list = {};
         this.knots = {};
+        this.holes = {};
+        this._holeIdGenerator = 0;
         // TODO: Probably better to keep offsetfaces and extrusion faces separated
         this.extrusions.faces = this.offsetFaces.faces;
         this.mesh = this.extrusions.mesh;
@@ -2352,13 +2354,17 @@ class Walls extends Primitive {
         this.defaultAxis = axisID;
     }
     regenerate(ids = this.offsetFaces.ids) {
+        this.deletePreviousExtrusions(ids);
         for (const id of ids) {
             const extrusion = this.createGeometry(id);
             if (extrusion === null)
                 continue;
+            const previous = this.list[id];
+            const holes = previous ? previous.holes : new Set();
             this.list[id] = {
                 id,
                 extrusion,
+                holes,
             };
         }
         const relatedKnots = this.offsetFaces.getRelatedKnots(ids);
@@ -2431,6 +2437,25 @@ class Walls extends Primitive {
             //  ...
         }
     }
+    addHole(id, holePointsIDs) {
+        if (!this.holes[id]) {
+            this.holes[id] = {};
+        }
+        for (const points of holePointsIDs) {
+            const holeID = this._holeIdGenerator++;
+            this.holes[id][holeID] = { points: new Set(points) };
+        }
+    }
+    deletePreviousExtrusions(ids) {
+        const previousExtrusions = [];
+        for (const id of ids) {
+            const previous = this.list[id];
+            if (previous) {
+                previousExtrusions.push(previous.extrusion);
+            }
+        }
+        this.extrusions.remove(previousExtrusions);
+    }
     regenerateKnots(ids = this.offsetFaces.knotsIDs) {
         for (const knotID of ids) {
             const knot = this.offsetFaces.knots[knotID];
@@ -2439,8 +2464,8 @@ class Walls extends Primitive {
             this.createKnotGeometry(knotID);
         }
     }
-    createGeometry(offsetFaceID) {
-        const offsetFace = this.offsetFaces.list[offsetFaceID];
+    createGeometry(id) {
+        const offsetFace = this.offsetFaces.list[id];
         const [p1ID, p2ID, p3ID, p4ID] = offsetFace.points;
         const points = this.offsetFaces.faces.points;
         const p1 = points[p1ID].coordinates;
@@ -2456,7 +2481,16 @@ class Walls extends Primitive {
         const normalAxisPointsIDs = this.extrusions.lines.addPoints([p1, p1Normal]);
         const [normalAxis] = this.extrusions.lines.add(normalAxisPointsIDs);
         const pointsIDs = this.extrusions.faces.addPoints([p1, p1Top, p4Top, p4]);
-        const faceID = this.extrusions.faces.add(pointsIDs);
+        const faceHoles = this.holes[id];
+        const holes = [];
+        if (faceHoles) {
+            for (const holeID in faceHoles) {
+                const hole = faceHoles[holeID];
+                const holePoints = Array.from(hole.points);
+                holes.push(holePoints);
+            }
+        }
+        const faceID = this.extrusions.faces.add(pointsIDs, holes);
         const extrusionID = this.extrusions.add(faceID, normalAxis);
         // Correct extrusion top to fit the OffsetFace knots
         const extrusion = this.extrusions.list[extrusionID];

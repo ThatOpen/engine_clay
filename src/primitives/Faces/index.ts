@@ -270,11 +270,6 @@ export class Faces extends Primitive {
     this.remove(facesToRemove);
   }
 
-  addHoles(id: number, points: [number, number, number][]) {
-    const face = this.list[id];
-    const { points, holes } = face;
-  }
-
   /**
    * Select or unselects the given faces.
    * @param active Whether to select or unselect.
