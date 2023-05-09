@@ -4,9 +4,16 @@ import { Vertices } from "../Vertices";
 import { Primitive } from "../Primitive";
 import { Selector } from "../../utils";
 
+interface Holes {
+  [id: string]: {
+    id: number;
+    points: Set<number>;
+  };
+}
+
 interface Face {
   id: number;
-  holes: Set<number>[];
+  holes: Holes;
   vertices: Set<number>;
   points: Set<number>;
   start: number;
@@ -45,6 +52,7 @@ export class Faces extends Primitive {
 
   private _faceIdGenerator = 0;
   private _pointIdGenerator = 0;
+  private _holeIdGenerator = 0;
 
   /**
    * The color of all the points.
@@ -103,14 +111,15 @@ export class Faces extends Primitive {
     this.points = {};
     this._faceIdGenerator = 0;
     this._pointIdGenerator = 0;
+    this._holeIdGenerator = 0;
   }
 
   /**
    * Adds a face.
    * @param ids - the IDs of the {@link points} that define that face. It's assumed that they are coplanar.
-   * @param holesIDs - the IDs of the {@link points} that define the holes.
+   * @param holesPointsIDs - the IDs of the {@link points} that define the holes.
    */
-  add(ids: number[], holesIDs: number[][] = []) {
+  add(ids: number[], holesPointsIDs: number[][] = []) {
     const id = this._faceIdGenerator++;
 
     for (const pointID of ids) {
@@ -118,10 +127,12 @@ export class Faces extends Primitive {
       point.faces.add(id);
     }
 
-    const holes: Set<number>[] = [];
-    for (const holeIDs of holesIDs) {
-      holes.push(new Set(holeIDs));
-      for (const pointID of holeIDs) {
+    const holes: Holes = {};
+    for (const pointIDs of holesPointsIDs) {
+      const id = this._holeIdGenerator++;
+      const points = new Set(pointIDs);
+      holes[id] = { id, points };
+      for (const pointID of pointIDs) {
         const point = this.points[pointID];
         point.faces.add(id);
       }
@@ -137,10 +148,11 @@ export class Faces extends Primitive {
     let holesCounter = coordinates.length / 3;
     const holeIndices: number[] = [];
 
-    for (const holeIDs of face.holes) {
+    for (const holeID in face.holes) {
       holeIndices.push(holesCounter);
-      holesCounter += holeIDs.size;
-      for (const pointID of holeIDs) {
+      const hole = face.holes[holeID];
+      holesCounter += hole.points.size;
+      for (const pointID of hole.points) {
         this.saveCoordinates(pointID, coordinates, face);
       }
     }
@@ -248,8 +260,9 @@ export class Faces extends Primitive {
       const face = this.list[id];
       if (face) {
         points.push(...face.points);
-        for (const hole of face.holes) {
-          points.push(...hole);
+        for (const holeID in face.holes) {
+          const hole = face.holes[holeID];
+          points.push(...hole.points);
         }
       }
     }
@@ -329,7 +342,7 @@ export class Faces extends Primitive {
     }
   }
 
-  private newFace(id: number, holes: Set<number>[], ids: number[]) {
+  private newFace(id: number, holes: Holes, ids: number[]) {
     return {
       id,
       holes,

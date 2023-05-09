@@ -151,10 +151,11 @@ export class Extrusions extends Primitive {
       topFacePoints.push(transformed);
     }
 
-    for (const hole of baseFace.holes) {
+    for (const holeID in baseFace.holes) {
+      const hole = baseFace.holes[holeID];
       const holeCoords: [number, number, number][] = [];
       holes.push(holeCoords);
-      for (const pointID of hole) {
+      for (const pointID of hole.points) {
         const coords = this.faces.points[pointID].coordinates;
         const transformed = Vector.add(coords, vector);
         holeCoords.push(transformed);
@@ -178,8 +179,9 @@ export class Extrusions extends Primitive {
     this.createSideFaces(baseFaceArray, topFacePointsIDs, sideFaces);
 
     let i = 0;
-    for (const hole of baseFace.holes) {
-      const holeArray = Array.from(hole);
+    for (const holeID in baseFace.holes) {
+      const hole = baseFace.holes[holeID];
+      const holeArray = Array.from(hole.points);
       const topHoleArray = Array.from(topHoleIDs[i++]);
       this.createSideFaces(holeArray, topHoleArray, sideFaces);
     }
