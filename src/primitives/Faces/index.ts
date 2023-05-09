@@ -236,6 +236,24 @@ export class Faces extends Primitive {
     this.updateColor();
   }
 
+  /**
+   * Adds the points that can be used by one or many faces
+   */
+  addPoints(points: [number, number, number][]) {
+    const newPoints = [];
+    for (const [x, y, z] of points) {
+      const id = this._pointIdGenerator++;
+      this.points[id] = {
+        id,
+        coordinates: [x, y, z],
+        vertices: new Set<number>(),
+        faces: new Set<number>(),
+      };
+      newPoints.push(id);
+    }
+    return newPoints;
+  }
+
   removePoints(ids = this.selectedPoints.data as Iterable<number>) {
     const facesToRemove = new Set<number>();
     for (const id of ids) {
@@ -250,6 +268,11 @@ export class Faces extends Primitive {
       this.selectedPoints.data.delete(id);
     }
     this.remove(facesToRemove);
+  }
+
+  addHoles(id: number, points: [number, number, number][]) {
+    const face = this.list[id];
+    const { points, holes } = face;
   }
 
   /**
@@ -273,24 +296,6 @@ export class Faces extends Primitive {
       }
     }
     this.selectPoints(active, points);
-  }
-
-  /**
-   * Adds the points that can be used by one or many faces
-   */
-  addPoints(points: [number, number, number][]) {
-    const newPoints = [];
-    for (const [x, y, z] of points) {
-      const id = this._pointIdGenerator++;
-      this.points[id] = {
-        id,
-        coordinates: [x, y, z],
-        vertices: new Set<number>(),
-        faces: new Set<number>(),
-      };
-      newPoints.push(id);
-    }
-    return newPoints;
   }
 
   /**
