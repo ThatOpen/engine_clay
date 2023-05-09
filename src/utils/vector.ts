@@ -35,8 +35,13 @@ export class Vector {
 
   static normalize(vector: number[]) {
     const [x, y, z] = vector;
-    const magnitude = Math.sqrt(x * x + y * y + z * z);
+    const magnitude = Vector.magnitude(vector);
     return [x / magnitude, y / magnitude, z / magnitude];
+  }
+
+  static magnitude(vector: number[]) {
+    const [x, y, z] = vector;
+    return Math.sqrt(x * x + y * y + z * z);
   }
 
   static add(...vectors: number[][]) {

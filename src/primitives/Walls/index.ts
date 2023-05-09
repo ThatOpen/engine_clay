@@ -30,7 +30,8 @@ export class Walls extends Primitive {
   holes: {
     [wallID: number]: {
       [id: number]: {
-        points: Set<number>;
+        basePoints: Set<number>;
+        topPoints: Set<number>;
       };
     };
   } = {};
@@ -121,24 +122,19 @@ export class Walls extends Primitive {
       const { baseFace, topFace } = this.extrusions.list[extrusionID];
 
       const faces = this.extrusions.faces;
+      const offsetFaces = this.offsetFaces.faces;
+
+      // Get new point coordinates
+
       const [p1, p1Top, p4Top, p4] = faces.list[baseFace].points;
       const [p2, p2Top, p3Top, p3] = faces.list[topFace].points;
 
       const [bp1, bp2, bp3, bp4] = offsetFace.points;
 
-      const p1Coords = this.offsetFaces.faces.points[bp1].coordinates;
-      const p2Coords = this.offsetFaces.faces.points[bp2].coordinates;
-      const p3Coords = this.offsetFaces.faces.points[bp3].coordinates;
-      const p4Coords = this.offsetFaces.faces.points[bp4].coordinates;
-
-      // Set coordinates of base
-
-      this.extrusions.faces.setPoint(p1, p1Coords);
-      this.extrusions.faces.setPoint(p2, p2Coords);
-      this.extrusions.faces.setPoint(p3, p3Coords);
-      this.extrusions.faces.setPoint(p4, p4Coords);
-
-      // Set coordinates of top
+      const p1Coords = offsetFaces.points[bp1].coordinates;
+      const p2Coords = offsetFaces.points[bp2].coordinates;
+      const p3Coords = offsetFaces.points[bp3].coordinates;
+      const p4Coords = offsetFaces.points[bp4].coordinates;
 
       const axis = this.getVerticalAxis();
       const p1TopCoords = Vector.add(p1Coords, axis);
@@ -146,13 +142,66 @@ export class Walls extends Primitive {
       const p3TopCoords = Vector.add(p3Coords, axis);
       const p4TopCoords = Vector.add(p4Coords, axis);
 
-      this.extrusions.faces.setPoint(p1Top, p1TopCoords);
-      this.extrusions.faces.setPoint(p2Top, p2TopCoords);
-      this.extrusions.faces.setPoint(p3Top, p3TopCoords);
-      this.extrusions.faces.setPoint(p4Top, p4TopCoords);
+      // Save distance from holes to p1 to keep it after transform
+      const prevP1Coordinates = faces.points[p1].coordinates;
+      const holes = this.holes[id];
 
-      // Set coordinates of holes in wall
-      //  ...
+      const distances: { [holeID: number]: [number, number, number][] } = {};
+
+      if (holes) {
+        for (const holeID in holes) {
+          distances[holeID] = [];
+          for (const pointID of holes[holeID].basePoints) {
+            const point = faces.points[pointID].coordinates;
+            const [x, y, z] = Vector.subtract(prevP1Coordinates, point);
+            const horizontalDist = Vector.magnitude([x, 0, z]);
+            distances[holeID].push([pointID, horizontalDist, y]);
+          }
+        }
+      }
+
+      // Set coordinates of base
+
+      faces.setPoint(p1, p1Coords);
+      faces.setPoint(p2, p2Coords);
+      faces.setPoint(p3, p3Coords);
+      faces.setPoint(p4, p4Coords);
+
+      // Set coordinates of top
+
+      faces.setPoint(p1Top, p1TopCoords);
+      faces.setPoint(p2Top, p2TopCoords);
+      faces.setPoint(p3Top, p3TopCoords);
+      faces.setPoint(p4Top, p4TopCoords);
+
+      // Set coordinates of holes in wall, maintaining distance to p1
+
+      const direction = Vector.subtract(p1Coords, p4Coords);
+      const normalDir = Vector.normalize(direction);
+      const normalPerp = Vector.multiply(Vector.up, normalDir);
+      const perpendicular = Vector.multiplyScalar(normalPerp, offsetFace.width);
+
+      if (holes) {
+        for (const holeID in distances) {
+          const hole = distances[holeID];
+
+          const topPoints = Array.from(holes[holeID].topPoints);
+          let counter = 0;
+
+          for (const point of hole) {
+            const [pointID, x, y] = point;
+
+            const horizontalVector = Vector.multiplyScalar(normalDir, x);
+            const vector = Vector.add(horizontalVector, [0, y, 0]);
+            const newPosition = Vector.add(p1Coords, vector);
+            faces.setPoint(pointID, newPosition);
+
+            const topPoint = topPoints[counter++];
+            const newTopPosition = Vector.add(newPosition, perpendicular);
+            faces.setPoint(topPoint, newTopPosition);
+          }
+        }
+      }
     }
   }
 
@@ -162,7 +211,10 @@ export class Walls extends Primitive {
     }
     for (const points of holePointsIDs) {
       const holeID = this._holeIdGenerator++;
-      this.holes[id][holeID] = { points: new Set(points) };
+      this.holes[id][holeID] = {
+        basePoints: new Set(points),
+        topPoints: new Set(),
+      };
     }
   }
 
@@ -213,7 +265,7 @@ export class Walls extends Primitive {
     if (faceHoles) {
       for (const holeID in faceHoles) {
         const hole = faceHoles[holeID];
-        const holePoints = Array.from(hole.points);
+        const holePoints = Array.from(hole.basePoints);
         holes.push(holePoints);
       }
     }
@@ -221,10 +273,24 @@ export class Walls extends Primitive {
     const faceID = this.extrusions.faces.add(pointsIDs, holes);
 
     const extrusionID = this.extrusions.add(faceID, normalAxis);
+    const extrusion = this.extrusions.list[extrusionID];
+
+    // Save top holes
+
+    if (faceHoles) {
+      let counter = 0;
+      const topHoles = Object.values(
+        this.extrusions.faces.list[extrusion.topFace].holes
+      );
+
+      for (const holeID in faceHoles) {
+        const hole = topHoles[counter++];
+        faceHoles[holeID].topPoints = hole.points;
+      }
+    }
 
     // Correct extrusion top to fit the OffsetFace knots
 
-    const extrusion = this.extrusions.list[extrusionID];
     const otherSide = this.extrusions.faces.list[extrusion.topFace];
     const otherSidePoints = Array.from(otherSide.points);
 
