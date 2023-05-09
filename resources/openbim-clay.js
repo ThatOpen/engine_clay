@@ -2338,6 +2338,7 @@ class Extrusions extends Primitive {
 }
 
 // import { Vector3 } from "three";
+// TODO: Clean up all, especially holes management
 class Walls extends Primitive {
     constructor() {
         super();
@@ -2401,6 +2402,17 @@ class Walls extends Primitive {
      */
     transform(matrix) {
         this.offsetFaces.transform(matrix);
+        this.update();
+    }
+    setWidth(width, ids = this.selected.data) {
+        this.offsetFaces.setWidth(width, ids);
+        this.update();
+    }
+    setOffset(offset, ids = this.selected.data) {
+        this.offsetFaces.setOffset(offset, ids);
+        this.update();
+    }
+    update() {
         const relatedPoints = new Set();
         for (const id of this.offsetFaces.lines.vertices.selected.data) {
             relatedPoints.add(id);
@@ -2410,7 +2422,10 @@ class Walls extends Primitive {
         for (const id of updatedKnots) {
             this.updateKnotGeometry(id);
         }
-        for (const id of updatedLines) {
+        this.updateWalls(updatedLines);
+    }
+    updateWalls(walls) {
+        for (const id of walls) {
             const offsetFace = this.offsetFaces.list[id];
             const extrusionID = this.list[id].extrusion;
             const { baseFace, topFace } = this.extrusions.list[extrusionID];

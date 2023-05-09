@@ -5,6 +5,8 @@ import { OffsetFaces } from "../OffsetFaces";
 import { Extrusions } from "../Extrusions";
 import { Vector } from "../../utils";
 
+// TODO: Clean up all, especially holes management
+
 export class Walls extends Primitive {
   /** {@link Primitive.mesh } */
   mesh: THREE.Mesh;
@@ -104,19 +106,36 @@ export class Walls extends Primitive {
    */
   transform(matrix: THREE.Matrix4) {
     this.offsetFaces.transform(matrix);
+    this.update();
+  }
 
+  setWidth(width: number, ids = this.selected.data) {
+    this.offsetFaces.setWidth(width, ids);
+    this.update();
+  }
+
+  setOffset(offset: number, ids = this.selected.data) {
+    this.offsetFaces.setOffset(offset, ids);
+    this.update();
+  }
+
+  private update() {
     const relatedPoints = new Set<number>();
     for (const id of this.offsetFaces.lines.vertices.selected.data) {
       relatedPoints.add(id);
     }
-    const updatedLines = this.offsetFaces.getRelatedLines(relatedPoints, true);
 
+    const updatedLines = this.offsetFaces.getRelatedLines(relatedPoints, true);
     const updatedKnots = this.offsetFaces.getRelatedKnots(updatedLines);
     for (const id of updatedKnots) {
       this.updateKnotGeometry(id);
     }
 
-    for (const id of updatedLines) {
+    this.updateWalls(updatedLines);
+  }
+
+  private updateWalls(walls: Iterable<number>) {
+    for (const id of walls) {
       const offsetFace = this.offsetFaces.list[id];
       const extrusionID = this.list[id].extrusion;
       const { baseFace, topFace } = this.extrusions.list[extrusionID];
