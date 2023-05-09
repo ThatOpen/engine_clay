@@ -4,20 +4,18 @@ import { Vertices } from "../Vertices";
 import { Primitive } from "../Primitive";
 import { Selector } from "../../utils";
 
-interface Holes {
-  [id: string]: {
-    id: number;
-    points: Set<number>;
-  };
-}
-
 interface Face {
   id: number;
-  holes: Holes;
   vertices: Set<number>;
   points: Set<number>;
   start: number;
   end: number;
+  holes: {
+    [id: string]: {
+      id: number;
+      points: Set<number>;
+    };
+  };
 }
 
 interface FacePoint {
@@ -127,7 +125,8 @@ export class Faces extends Primitive {
       point.faces.add(id);
     }
 
-    const holes: Holes = {};
+    const holes: { [id: string]: { id: number; points: Set<number> } } = {};
+
     for (const pointIDs of holesPointsIDs) {
       const id = this._holeIdGenerator++;
       const points = new Set(pointIDs);
@@ -138,7 +137,14 @@ export class Faces extends Primitive {
       }
     }
 
-    const face = this.newFace(id, holes, ids);
+    const face = {
+      id,
+      holes,
+      vertices: new Set<number>(),
+      points: new Set<number>(ids),
+      start: 0,
+      end: 0,
+    };
 
     const coordinates: number[] = [];
     for (const pointID of face.points) {
@@ -340,17 +346,6 @@ export class Faces extends Primitive {
       if (coords === null) continue;
       point.coordinates = coords;
     }
-  }
-
-  private newFace(id: number, holes: Holes, ids: number[]) {
-    return {
-      id,
-      holes,
-      vertices: new Set<number>(),
-      points: new Set<number>(ids),
-      start: 0,
-      end: 0,
-    };
   }
 
   private saveCoordinates(pointID: number, coordinates: number[], face: Face) {

@@ -1525,7 +1525,14 @@ class Faces extends Primitive {
                 point.faces.add(id);
             }
         }
-        const face = this.newFace(id, holes, ids);
+        const face = {
+            id,
+            holes,
+            vertices: new Set(),
+            points: new Set(ids),
+            start: 0,
+            end: 0,
+        };
         const coordinates = [];
         for (const pointID of face.points) {
             this.saveCoordinates(pointID, coordinates, face);
@@ -1711,16 +1718,6 @@ class Faces extends Primitive {
                 continue;
             point.coordinates = coords;
         }
-    }
-    newFace(id, holes, ids) {
-        return {
-            id,
-            holes,
-            vertices: new Set(),
-            points: new Set(ids),
-            start: 0,
-            end: 0,
-        };
     }
     saveCoordinates(pointID, coordinates, face) {
         const point = this.points[pointID];
@@ -2185,6 +2182,7 @@ class Extrusions extends Primitive {
          */
         this.lines = new Lines();
         this._idGenerator = 0;
+        this._holeIdGenerator = 0;
         const material = new THREE.MeshLambertMaterial({
             side: THREE.DoubleSide,
             vertexColors: true,
@@ -2198,24 +2196,24 @@ class Extrusions extends Primitive {
         this.faces.clear();
         this.lines.clear();
         this._idGenerator = 0;
+        this._holeIdGenerator = 0;
         this.faces = new Faces();
         this.lines = new Lines();
         this.list = {};
     }
     add(faceID, pathID) {
         const id = this._idGenerator++;
-        this.list[id] = {
-            id,
-            baseFace: faceID,
-            path: pathID,
-            topFace: -1,
-            sideFaces: new Set(),
-        };
         const newFaces = this.createExtrusion(faceID, pathID);
         if (newFaces) {
-            const { topFace, sideFaces } = newFaces;
-            this.list[id].topFace = topFace;
-            this.list[id].sideFaces = sideFaces;
+            const { topFaceID, sideFacesIDs, holes } = newFaces;
+            this.list[id] = {
+                id,
+                holes,
+                baseFace: faceID,
+                path: pathID,
+                topFace: topFaceID,
+                sideFaces: sideFacesIDs,
+            };
         }
         return id;
     }
@@ -2259,6 +2257,10 @@ class Extrusions extends Primitive {
                 faces.push(extrusion.topFace);
                 faces.push(extrusion.baseFace);
                 faces.push(...extrusion.sideFaces);
+                for (const holeID in extrusion.holes) {
+                    const hole = extrusion.holes[holeID];
+                    faces.push(...hole.faces);
+                }
             }
         }
         const selected = idsUndefined ? undefined : faces;
@@ -2273,7 +2275,7 @@ class Extrusions extends Primitive {
         const baseFace = this.faces.list[faceID];
         // Create top face
         const topFacePoints = [];
-        const holes = [];
+        const holesCoordinates = [];
         for (const pointID of baseFace.points) {
             const coords = this.faces.points[pointID].coordinates;
             const transformed = Vector.add(coords, vector);
@@ -2282,7 +2284,7 @@ class Extrusions extends Primitive {
         for (const holeID in baseFace.holes) {
             const hole = baseFace.holes[holeID];
             const holeCoords = [];
-            holes.push(holeCoords);
+            holesCoordinates.push(holeCoords);
             for (const pointID of hole.points) {
                 const coords = this.faces.points[pointID].coordinates;
                 const transformed = Vector.add(coords, vector);
@@ -2290,24 +2292,32 @@ class Extrusions extends Primitive {
             }
         }
         const topFacePointsIDs = this.faces.addPoints(topFacePoints);
-        const topHoleIDs = [];
-        for (const hole of holes) {
+        const topHolesPoints = [];
+        for (const hole of holesCoordinates) {
             const ids = this.faces.addPoints(hole);
-            topHoleIDs.push(ids);
+            topHolesPoints.push(ids);
         }
-        const topFace = this.faces.add(topFacePointsIDs, topHoleIDs);
+        const topFaceID = this.faces.add(topFacePointsIDs, topHolesPoints);
         // Create side faces
-        const sideFaces = new Set();
+        const sideFacesIDs = new Set();
         const baseFaceArray = Array.from(baseFace.points);
-        this.createSideFaces(baseFaceArray, topFacePointsIDs, sideFaces);
-        let i = 0;
-        for (const holeID in baseFace.holes) {
-            const hole = baseFace.holes[holeID];
-            const holeArray = Array.from(hole.points);
-            const topHoleArray = Array.from(topHoleIDs[i++]);
-            this.createSideFaces(holeArray, topHoleArray, sideFaces);
+        this.createSideFaces(baseFaceArray, topFacePointsIDs, sideFacesIDs);
+        // Define holes
+        const holes = {};
+        const topFace = this.faces.list[topFaceID];
+        const baseHolesIDs = Object.keys(baseFace.holes);
+        const topHolesIDs = Object.keys(topFace.holes);
+        for (let i = 0; i < baseHolesIDs.length; i++) {
+            const faces = new Set();
+            const baseHole = baseFace.holes[baseHolesIDs[i]];
+            const topHole = topFace.holes[topHolesIDs[i]];
+            const holeID = this._holeIdGenerator++;
+            holes[holeID] = { base: baseHole.id, top: topHole.id, faces };
+            const holePointsIdsArray = Array.from(baseHole.points);
+            const topHoleCoordsArray = Array.from(topHolesPoints[i]);
+            this.createSideFaces(holePointsIdsArray, topHoleCoordsArray, faces);
         }
-        return { topFace, sideFaces };
+        return { topFaceID, sideFacesIDs, holes };
     }
     createSideFaces(base, top, faces) {
         for (let i = 0; i < base.length; i++) {
