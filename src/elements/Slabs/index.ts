@@ -1,8 +1,6 @@
 import * as THREE from "three";
 // import { Vector3 } from "three";
-import { Primitive } from "../Primitive";
-import { Extrusions } from "../Extrusions";
-import { Lines } from "../Lines";
+import { Primitive, Extrusions, Lines } from "../../primitives";
 
 export class Slabs extends Primitive {
   /** {@link Primitive.mesh } */
@@ -12,6 +10,7 @@ export class Slabs extends Primitive {
   lines = new Lines();
 
   private _nextIndex = 0;
+  private _extrusionSlabMap = new Map<number, number>();
 
   list: {
     [slabID: number]: {
@@ -64,7 +63,9 @@ export class Slabs extends Primitive {
     const faceID = this.extrusions.faces.add(ids);
 
     // Create extrusion
+
     const extrusionID = this.extrusions.add(faceID, directionID);
+    this._extrusionSlabMap.set(extrusionID, id);
 
     this.list[id] = {
       id,
@@ -72,5 +73,17 @@ export class Slabs extends Primitive {
       lines: new Set(lineIDs),
       extrusion: extrusionID,
     };
+  }
+
+  /**
+   * Given a face index, returns the slab ID that contains it.
+   * @param faceIndex The index of the face whose slab ID to get.
+   */
+  getFromIndex(faceIndex: number) {
+    const faceID = this.extrusions.faces.getFromIndex(faceIndex);
+    if (faceID === undefined) return undefined;
+    const extrusionID = this.extrusions.getFromFace(faceID);
+    if (extrusionID === undefined) return undefined;
+    return this._extrusionSlabMap.get(extrusionID);
   }
 }

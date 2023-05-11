@@ -60,6 +60,27 @@
     ]);
 
     walls.offsetFaces.add([0, 1, 2, 3, 0], 0.1);
+
+    // Create (points in local coordinates)
+    // pointsIDs = walls.lines.addPoints(...);
+    // linesIDs = walls.lines.add(pointsIDs);
+    // holeID = walls.addHole(wallID, linesIDs)
+    // Beware: the same profile can be shared among many holes
+
+    // Retrieve hole info
+    // linesIDs = walls.holes[holeID];
+
+    // Update (programmer)
+    // walls.lines.setPoint(pointID);
+    // walls.update(wallID);
+
+    // Update (user interaction)
+    // walls.selectHole(holeID);
+    // walls.transform(...)
+
+    // Delete
+    // walls.deleteHole(holeID);
+
     // walls.offsetFaces.add([1, 3], 0.1);
 
     // Add hole

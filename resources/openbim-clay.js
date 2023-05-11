@@ -1464,7 +1464,7 @@ class Faces extends Primitive {
         /** {@link Primitive.mesh } */
         this.mesh = new THREE.Mesh();
         /**
-         * The list of outer points that define the faces. Each point corresponds to a set of {@link Vertices}. This way,
+         * The list of points that define the faces. Each point corresponds to a set of {@link Vertices}. This way,
          * we can provide an API of faces that share vertices, but under the hood the vertices are duplicated per face
          * (and thus being able to contain the normals as a vertex attribute).
          */
@@ -1477,7 +1477,11 @@ class Faces extends Primitive {
          * The geometric representation of the vertices that define this instance of faces.
          */
         this.vertices = new Vertices();
+        /**
+         * The list of selected {@link points}.
+         */
         this.selectedPoints = new Selector();
+        this._vertexFaceMap = new Map();
         this._faceIdGenerator = 0;
         this._pointIdGenerator = 0;
         this._holeIdGenerator = 0;
@@ -1515,6 +1519,7 @@ class Faces extends Primitive {
      */
     add(ids, holesPointsIDs = []) {
         const id = this._faceIdGenerator++;
+        // Add face references to points
         for (const pointID of ids) {
             const point = this.points[pointID];
             point.faces.add(id);
@@ -1534,9 +1539,8 @@ class Faces extends Primitive {
             holes,
             vertices: new Set(),
             points: new Set(ids),
-            start: 0,
-            end: 0,
         };
+        // Create face vertices
         const coordinates = [];
         for (const pointID of face.points) {
             this.saveCoordinates(pointID, coordinates, face);
@@ -1551,8 +1555,8 @@ class Faces extends Primitive {
                 this.saveCoordinates(pointID, coordinates, face);
             }
         }
+        // Generate face indices
         const allIndices = Array.from(this._index.array);
-        face.start = allIndices.length;
         const faceIndices = this.triangulate(coordinates, holeIndices);
         let offset = 0;
         for (const index of allIndices) {
@@ -1563,7 +1567,6 @@ class Faces extends Primitive {
             const absoluteIndex = faceIndex + offset;
             allIndices.push(absoluteIndex);
         }
-        face.end = allIndices.length;
         this.mesh.geometry.setIndex(allIndices);
         this.list[id] = face;
         this.updateBuffers();
@@ -1583,6 +1586,7 @@ class Faces extends Primitive {
             const face = this.list[id];
             for (const vertex of face.vertices) {
                 verticesToRemove.add(vertex);
+                this._vertexFaceMap.delete(vertex);
             }
             for (const pointID of face.points) {
                 const point = this.points[pointID];
@@ -1723,10 +1727,20 @@ class Faces extends Primitive {
             point.coordinates = coords;
         }
     }
+    /**
+     * Given a face index, returns the face ID.
+     * @param faceIndex The index of the face whose ID to get.
+     */
+    getFromIndex(faceIndex) {
+        const vertexIndex = this._index.array[faceIndex * 3];
+        const vertexID = this.vertices.idMap.getId(vertexIndex);
+        return this._vertexFaceMap.get(vertexID);
+    }
     saveCoordinates(pointID, coordinates, face) {
         const point = this.points[pointID];
         coordinates.push(...point.coordinates);
         const [id] = this.vertices.add([point.coordinates]);
+        this._vertexFaceMap.set(id, face.id);
         point.vertices.add(id);
         face.vertices.add(id);
     }
@@ -2185,6 +2199,7 @@ class Extrusions extends Primitive {
          * The geometric representation of the lines that represent the axis.
          */
         this.lines = new Lines();
+        this._faceExtrusionMap = new Map();
         this._idGenerator = 0;
         this._holeIdGenerator = 0;
         const material = new THREE.MeshLambertMaterial({
@@ -2210,6 +2225,11 @@ class Extrusions extends Primitive {
         const newFaces = this.createExtrusion(faceID, pathID);
         if (newFaces) {
             const { topFaceID, sideFacesIDs, holes } = newFaces;
+            this._faceExtrusionMap.set(topFaceID, id);
+            this._faceExtrusionMap.set(faceID, id);
+            for (const sideFaceID of sideFacesIDs) {
+                this._faceExtrusionMap.set(sideFaceID, id);
+            }
             this.list[id] = {
                 id,
                 holes,
@@ -2229,10 +2249,15 @@ class Extrusions extends Primitive {
     remove(ids = this.selected.data) {
         const faces = [];
         for (const id of ids) {
-            const extrusion = this.list[id];
-            faces.push(extrusion.topFace);
-            faces.push(extrusion.baseFace);
-            faces.push(...extrusion.sideFaces);
+            const { topFace, baseFace, sideFaces } = this.list[id];
+            faces.push(topFace);
+            faces.push(baseFace);
+            faces.push(...sideFaces);
+            this._faceExtrusionMap.delete(topFace);
+            this._faceExtrusionMap.delete(baseFace);
+            for (const sideFace of sideFaces) {
+                this._faceExtrusionMap.delete(sideFace);
+            }
             delete this.list[id];
         }
         const points = new Set();
@@ -2243,6 +2268,13 @@ class Extrusions extends Primitive {
             }
         }
         this.faces.removePoints(points);
+    }
+    /**
+     * Given a face, returns the extrusion that contains it.
+     * @param faceID The ID of the face whose extrusion to get.
+     */
+    getFromFace(faceID) {
+        return this._faceExtrusionMap.get(faceID);
     }
     /**
      * Select or unselects the given Extrusions.
@@ -2650,6 +2682,7 @@ class Slabs extends Primitive {
         this.extrusions = new Extrusions();
         this.lines = new Lines();
         this._nextIndex = 0;
+        this._extrusionSlabMap = new Map();
         this.list = {};
         this.mesh = this.extrusions.mesh;
     }
@@ -2684,6 +2717,7 @@ class Slabs extends Primitive {
         const faceID = this.extrusions.faces.add(ids);
         // Create extrusion
         const extrusionID = this.extrusions.add(faceID, directionID);
+        this._extrusionSlabMap.set(extrusionID, id);
         this.list[id] = {
             id,
             direction: directionID,
@@ -2691,6 +2725,19 @@ class Slabs extends Primitive {
             extrusion: extrusionID,
         };
     }
+    /**
+     * Given a face index, returns the slab ID that contains it.
+     * @param faceIndex The index of the face whose slab ID to get.
+     */
+    getFromIndex(faceIndex) {
+        const faceID = this.extrusions.faces.getFromIndex(faceIndex);
+        if (faceID === undefined)
+            return undefined;
+        const extrusionID = this.extrusions.getFromFace(faceID);
+        if (extrusionID === undefined)
+            return undefined;
+        return this._extrusionSlabMap.get(extrusionID);
+    }
 }
 
-export { BufferManager, Extrusions, Faces, IdIndexMap, Lines, OffsetFaces, Selector, Slabs, Vector, Vertices, Walls };
+export { BufferManager, Extrusions, Faces, IdIndexMap, Lines, OffsetFaces, Primitive, Selector, Slabs, Vector, Vertices, Walls };

@@ -42,6 +42,8 @@ export class Extrusions extends Primitive {
    */
   lines: Lines = new Lines();
 
+  private _faceExtrusionMap = new Map<number, number>();
+
   private _idGenerator = 0;
   private _holeIdGenerator = 0;
 
@@ -76,6 +78,13 @@ export class Extrusions extends Primitive {
 
     if (newFaces) {
       const { topFaceID, sideFacesIDs, holes } = newFaces;
+
+      this._faceExtrusionMap.set(topFaceID, id);
+      this._faceExtrusionMap.set(faceID, id);
+      for (const sideFaceID of sideFacesIDs) {
+        this._faceExtrusionMap.set(sideFaceID, id);
+      }
+
       this.list[id] = {
         id,
         holes,
@@ -97,10 +106,17 @@ export class Extrusions extends Primitive {
   remove(ids = this.selected.data as Iterable<number>) {
     const faces: number[] = [];
     for (const id of ids) {
-      const extrusion = this.list[id];
-      faces.push(extrusion.topFace);
-      faces.push(extrusion.baseFace);
-      faces.push(...extrusion.sideFaces);
+      const { topFace, baseFace, sideFaces } = this.list[id];
+      faces.push(topFace);
+      faces.push(baseFace);
+      faces.push(...sideFaces);
+
+      this._faceExtrusionMap.delete(topFace);
+      this._faceExtrusionMap.delete(baseFace);
+      for (const sideFace of sideFaces) {
+        this._faceExtrusionMap.delete(sideFace);
+      }
+
       delete this.list[id];
     }
 
@@ -113,6 +129,14 @@ export class Extrusions extends Primitive {
     }
 
     this.faces.removePoints(points);
+  }
+
+  /**
+   * Given a face, returns the extrusion that contains it.
+   * @param faceID The ID of the face whose extrusion to get.
+   */
+  getFromFace(faceID: number) {
+    return this._faceExtrusionMap.get(faceID);
   }
 
   /**

@@ -3,5 +3,5 @@ export * from "./Lines";
 export * from "./Faces";
 export * from "./OffsetFaces";
 export * from "./Extrusions";
-export * from "./Walls";
-export * from "./Slabs";
+export * from "./OffsetFaces3D";
+export * from "./Primitive";

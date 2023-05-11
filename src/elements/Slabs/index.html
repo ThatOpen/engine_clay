@@ -29,7 +29,7 @@
 
 </script>
 <script type="module">
-	// import * as THREE from "three";
+	import * as THREE from "three";
 	import { SimpleThreeScene } from '../../../resources/simple-three-scene.js';
 	// import {TransformControls} from "three/examples/jsm/controls/TransformControls";
 	import * as OBC from '../../../resources/openbim-clay.js';
@@ -54,6 +54,25 @@
 	const lineIDs = slabs.lines.add(pointsIDs);
 
 	slabs.add(lineIDs, 0.3);
+
+	const spointsIDs = slabs.lines.addPoints([
+		[6, 0, 0],
+		[11, 0, 0],
+		[11, 0, 5],
+		[6, 0, 5],
+	]);
+
+	const slineIDs = slabs.lines.add(spointsIDs);
+
+	slabs.add(slineIDs, 0.3);
+
+	window.ondblclick = (event) => {
+    const hit = world.castRay(event, [slabs.extrusions.faces.mesh]);
+		if(!hit.length) return;
+		const firstFace = hit[0].faceIndex;
+		const slabID = slabs.getFromIndex(firstFace);
+		console.log(slabID);
+  }
 
 </script>
 </body>

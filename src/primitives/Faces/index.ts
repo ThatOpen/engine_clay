@@ -8,8 +8,6 @@ interface Face {
   id: number;
   vertices: Set<number>;
   points: Set<number>;
-  start: number;
-  end: number;
   holes: {
     [id: string]: {
       id: number;
@@ -30,7 +28,7 @@ export class Faces extends Primitive {
   mesh: THREE.Mesh = new THREE.Mesh();
 
   /**
-   * The list of outer points that define the faces. Each point corresponds to a set of {@link Vertices}. This way,
+   * The list of points that define the faces. Each point corresponds to a set of {@link Vertices}. This way,
    * we can provide an API of faces that share vertices, but under the hood the vertices are duplicated per face
    * (and thus being able to contain the normals as a vertex attribute).
    */
@@ -46,7 +44,12 @@ export class Faces extends Primitive {
    */
   vertices: Vertices = new Vertices();
 
+  /**
+   * The list of selected {@link points}.
+   */
   selectedPoints = new Selector();
+
+  private _vertexFaceMap = new Map<number, number>();
 
   private _faceIdGenerator = 0;
   private _pointIdGenerator = 0;
@@ -120,6 +123,8 @@ export class Faces extends Primitive {
   add(ids: number[], holesPointsIDs: number[][] = []) {
     const id = this._faceIdGenerator++;
 
+    // Add face references to points
+
     for (const pointID of ids) {
       const point = this.points[pointID];
       point.faces.add(id);
@@ -142,9 +147,9 @@ export class Faces extends Primitive {
       holes,
       vertices: new Set<number>(),
       points: new Set<number>(ids),
-      start: 0,
-      end: 0,
     };
+
+    // Create face vertices
 
     const coordinates: number[] = [];
     for (const pointID of face.points) {
@@ -163,8 +168,9 @@ export class Faces extends Primitive {
       }
     }
 
+    // Generate face indices
+
     const allIndices = Array.from(this._index.array);
-    face.start = allIndices.length;
     const faceIndices = this.triangulate(coordinates, holeIndices);
 
     let offset = 0;
@@ -177,7 +183,6 @@ export class Faces extends Primitive {
       allIndices.push(absoluteIndex);
     }
 
-    face.end = allIndices.length;
     this.mesh.geometry.setIndex(allIndices);
     this.list[id] = face;
 
@@ -200,6 +205,7 @@ export class Faces extends Primitive {
       const face = this.list[id];
       for (const vertex of face.vertices) {
         verticesToRemove.add(vertex);
+        this._vertexFaceMap.delete(vertex);
       }
       for (const pointID of face.points) {
         const point = this.points[pointID];
@@ -348,10 +354,21 @@ export class Faces extends Primitive {
     }
   }
 
+  /**
+   * Given a face index, returns the face ID.
+   * @param faceIndex The index of the face whose ID to get.
+   */
+  getFromIndex(faceIndex: number) {
+    const vertexIndex = this._index.array[faceIndex * 3];
+    const vertexID = this.vertices.idMap.getId(vertexIndex);
+    return this._vertexFaceMap.get(vertexID);
+  }
+
   private saveCoordinates(pointID: number, coordinates: number[], face: Face) {
     const point = this.points[pointID];
     coordinates.push(...point.coordinates);
     const [id] = this.vertices.add([point.coordinates]);
+    this._vertexFaceMap.set(id, face.id);
     point.vertices.add(id);
     face.vertices.add(id);
   }
