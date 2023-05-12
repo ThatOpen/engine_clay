@@ -2706,16 +2706,17 @@ class Slabs extends Primitive {
         this.list = {};
         this.mesh = this.extrusions.mesh;
     }
-    add(lineIDs, height) {
+    add(lineIDs, holes, height) {
         const id = this._nextIndex++;
         const directionID = this.getDirection(height);
-        const extrusionID = this.createSlabExtrusion(lineIDs, directionID);
+        const extrusionID = this.createSlab(lineIDs, directionID, holes);
         this._extrusionSlabMap.set(extrusionID, id);
         this.list[id] = {
             id,
             direction: directionID,
             lines: new Set(lineIDs),
             extrusion: extrusionID,
+            holes,
         };
     }
     remove(ids) {
@@ -2740,9 +2741,9 @@ class Slabs extends Primitive {
         this.list[id].extrusion = null;
     }
     addExtrusion(id) {
-        const { lines, direction } = this.list[id];
+        const { lines, direction, holes } = this.list[id];
         const linesIDs = Array.from(lines);
-        const extrusionID = this.createSlabExtrusion(linesIDs, direction);
+        const extrusionID = this.createSlab(linesIDs, direction, holes);
         this.list[id].extrusion = extrusionID;
         this._extrusionSlabMap.set(extrusionID, id);
     }
@@ -2759,14 +2760,16 @@ class Slabs extends Primitive {
             return undefined;
         return this._extrusionSlabMap.get(extrusionID);
     }
-    createSlabExtrusion(lineIDs, directionID) {
-        const allCoordinates = this.getAllCoordinates(lineIDs);
-        const faceID = this.createBaseFace(allCoordinates);
-        return this.extrusions.add(faceID, directionID);
-    }
-    createBaseFace(allCoordinates) {
+    createSlab(outlines, direction, holes) {
+        const { allCoordinates, holesCoordinates } = this.getAllCoordinates(outlines, holes);
         const ids = this.extrusions.faces.addPoints(allCoordinates);
-        return this.extrusions.faces.add(ids);
+        const holesPointsIDs = [];
+        for (const coords of holesCoordinates) {
+            const holesIDs = this.extrusions.faces.addPoints(coords);
+            holesPointsIDs.push(holesIDs);
+        }
+        const faceID = this.extrusions.faces.add(ids, holesPointsIDs);
+        return this.extrusions.add(faceID, direction);
     }
     getDirection(height) {
         // TODO: Make direction normal to face
@@ -2777,8 +2780,8 @@ class Slabs extends Primitive {
         const [directionID] = this.extrusions.lines.add(directionPointsIDs);
         return directionID;
     }
-    getAllCoordinates(lineIDs) {
-        const pointsIDs = this.getPoints(lineIDs);
+    getAllCoordinates(lineIDs, holes) {
+        const { pointsIDs, holesPointsIDs } = this.getPoints(lineIDs, holes);
         const allCoordinates = [];
         for (const id of pointsIDs) {
             const coordinates = this.lines.vertices.get(id);
@@ -2787,9 +2790,21 @@ class Slabs extends Primitive {
             }
             allCoordinates.push(coordinates);
         }
-        return allCoordinates;
+        const holesCoordinates = [];
+        for (const hole of holesPointsIDs) {
+            const holesCoords = [];
+            holesCoordinates.push(holesCoords);
+            for (const pointID of hole) {
+                const coordinates = this.lines.vertices.get(pointID);
+                if (!coordinates) {
+                    continue;
+                }
+                holesCoords.push(coordinates);
+            }
+        }
+        return { allCoordinates, holesCoordinates };
     }
-    getPoints(lineIDs) {
+    getPoints(lineIDs, holes) {
         const pointsIDs = [];
         let first = true;
         for (const id of lineIDs) {
@@ -2800,9 +2815,23 @@ class Slabs extends Primitive {
             }
             pointsIDs.push(line.end);
         }
+        const holesPointsIDs = [];
+        first = true;
+        for (const hole of holes) {
+            const ids = [];
+            holesPointsIDs.push(ids);
+            for (const lineID of hole) {
+                const line = this.lines.list[lineID];
+                if (first) {
+                    ids.push(line.start);
+                    first = false;
+                }
+                ids.push(line.end);
+            }
+        }
         // Remove last point, as it's already the first point
         pointsIDs.pop();
-        return pointsIDs;
+        return { pointsIDs, holesPointsIDs };
     }
 }
 

@@ -75,7 +75,11 @@
 			editSlab();
 		}
 		else if(event.code === 'KeyC') {
-			createSlabPoint();
+			if(mode === "edit") {
+				createInteriorSlabPoint();
+      } else {
+				createSlabPoint();
+      }
 		}
 		else if(event.code === 'KeyS') {
 			selectPoint();
@@ -102,7 +106,15 @@
 
 	function createSlabPoint() {
 		setMode("create");
+		createPoint();
+	}
 
+	function createInteriorSlabPoint() {
+		if(mode !== "edit") return;
+		createPoint();
+  }
+
+	function createPoint() {
 		const hit = world.castRay([floorPlane]);
 		if (!hit.length) return;
 		const { x, y, z } = hit[0].point;
@@ -110,6 +122,7 @@
 		if (!newSlabPoints.length) {
 			const [firstPoint] = slabs.lines.addPoints([[x, y, z]]);
 			newSlabPoints.push(firstPoint);
+			window.addEventListener('mousemove', moveLastPoint);
 		}
 
 		const previousPoint = newSlabPoints[newSlabPoints.length - 1];
@@ -118,12 +131,10 @@
 
 		const [newLine] = slabs.lines.add([previousPoint, newPoint]);
 		newSlabLines.push(newLine);
-
-		window.addEventListener("mousemove", moveLastPoint);
 	}
 
 	function moveLastPoint() {
-		if(mode !== "create") {
+		if(newSlabPoints.length === 0) {
 			window.removeEventListener("mousemove", moveLastPoint);
 			return;
     }
@@ -209,6 +220,8 @@
 		selectedSlab = null;
 		setMode("default");
 		slabs.lines.selectPoints(false);
+		newSlabLines.length = 0;
+		newSlabPoints.length = 0;
   }
 
 	function cancelSlabCreation() {
