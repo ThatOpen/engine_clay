@@ -118,9 +118,7 @@ export class Lines extends Primitive {
   }
 
   get(id: number) {
-    const index = this.idMap.getIndex(id);
-    if (index === null) return null;
-    const line = this.list[index];
+    const line = this.list[id];
     const start = this.vertices.get(line.start);
     const end = this.vertices.get(line.end);
     if (!start || !end) return null;
@@ -212,25 +210,45 @@ export class Lines extends Primitive {
     this.remove(lines);
   }
 
+  /**
+   * Sets a point of the line to a specific position.
+   * @param id The point whose position to set.
+   * @param coordinates The new coordinates of the point.
+   */
+  setPoint(id: number, coordinates: [number, number, number]) {
+    const indices = new Set<number>();
+    this.getPointIndices(id, indices);
+    this.setLines(coordinates, indices);
+    this.vertices.set([id], coordinates);
+  }
+
   transform(matrix: THREE.Matrix4) {
     const indices = new Set<number>();
     const points = new Set<number>();
     for (const id of this.vertices.selected.data) {
       points.add(id);
-      const point = this.points[id];
-      for (const id of point.start) {
-        const index = this.idMap.getIndex(id);
-        if (index === null) continue;
-        indices.add(index * 2);
-      }
-      for (const id of point.end) {
-        const index = this.idMap.getIndex(id);
-        if (index === null) continue;
-        indices.add(index * 2 + 1);
-      }
+      this.getPointIndices(id, indices);
     }
     this.transformLines(matrix, indices);
     this.vertices.transform(matrix, points);
+  }
+
+  private getPointIndices(id: number, indices: Set<number>) {
+    const point = this.points[id];
+    for (const id of point.start) {
+      const index = this.idMap.getIndex(id);
+      if (index === null) {
+        continue;
+      }
+      indices.add(index * 2);
+    }
+    for (const id of point.end) {
+      const index = this.idMap.getIndex(id);
+      if (index === null) {
+        continue;
+      }
+      indices.add(index * 2 + 1);
+    }
   }
 
   private setupAttributes() {
@@ -264,6 +282,14 @@ export class Lines extends Primitive {
       vector.set(x, y, z);
       vector.applyMatrix4(matrix);
       this._positionBuffer.setXYZ(index, vector.x, vector.y, vector.z);
+    }
+    this._positionBuffer.needsUpdate = true;
+  }
+
+  private setLines(coords: number[], indices: Iterable<number>) {
+    const [x, y, z] = coords;
+    for (const index of indices) {
+      this._positionBuffer.setXYZ(index, x, y, z);
     }
     this._positionBuffer.needsUpdate = true;
   }

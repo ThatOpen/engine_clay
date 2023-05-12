@@ -15,6 +15,7 @@ export class SimpleThreeScene {
   stats;
   raycaster;
   mouse;
+  mouseEvent;
 
   constructor(canvas) {
     this.initializeScene(canvas);
@@ -72,9 +73,17 @@ export class SimpleThreeScene {
     this.controls = new OrbitControls(this.camera, this.canvas);
     this.controls.enableDamping = true;
 
-    // Set up raycaster
+    // Track mouse position
     this.mouse = new THREE.Vector2();
+    this.mouseEvent = new THREE.Vector2();
+    window.addEventListener("mousemove", (event) => {
+      this.mouseEvent.x = event.clientX;
+      this.mouseEvent.y = event.clientY;
+    });
+
+    // Set up raycaster
     this.raycaster = new THREE.Raycaster();
+    this.raycaster.params.Points.threshold = 0.2;
 
     // Stats
     this.stats = new Stats();
@@ -102,10 +111,12 @@ export class SimpleThreeScene {
     });
   }
 
-  castRay(event, items) {
+  castRay(items) {
+    const x = this.mouseEvent.x;
+    const y = this.mouseEvent.y;
     const b = this.renderer.domElement.getBoundingClientRect();
-    this.mouse.x = ((event.clientX - b.left) / (b.right - b.left)) * 2 - 1;
-    this.mouse.y = -((event.clientY - b.top) / (b.bottom - b.top)) * 2 + 1;
+    this.mouse.x = ((x - b.left) / (b.right - b.left)) * 2 - 1;
+    this.mouse.y = -((y - b.top) / (b.bottom - b.top)) * 2 + 1;
 
     this.raycaster.setFromCamera(this.mouse, this.camera);
     return this.raycaster.intersectObjects(items);

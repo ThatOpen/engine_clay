@@ -27,13 +27,14 @@
       }
 
 
+
 </script>
 <script type="module">
-	import * as THREE from "three";
+	import * as THREE from 'three';
 	import { SimpleThreeScene } from '../../../resources/simple-three-scene.js';
 	// import {TransformControls} from "three/examples/jsm/controls/TransformControls";
 	import * as OBC from '../../../resources/openbim-clay.js';
-	// import * as dat from "three/examples/jsm/libs/lil-gui.module.min";
+	import * as dat from 'three/examples/jsm/libs/lil-gui.module.min';
 
 
 	const canvas = document.getElementById('container');
@@ -44,35 +45,205 @@
 	world.scene.add(slabs.lines.mesh);
 	world.scene.add(slabs.lines.vertices.mesh);
 
-	const pointsIDs = slabs.lines.addPoints([
-		[0, 0, 0],
-		[5, 0, 0],
-		[5, 0, 5],
-		[0, 0, 5],
-	]);
+	const floorPlaneGeom = new THREE.PlaneGeometry(1000, 1000);
+	const floorPlaneMaterial = new THREE.MeshLambertMaterial({ transparent: true, opacity: 0.7 });
+	const floorPlane = new THREE.Mesh(floorPlaneGeom, floorPlaneMaterial);
+	floorPlane.rotation.x = -Math.PI / 2;
+	floorPlane.position.y += 0.01;
+	world.scene.add(floorPlane);
 
-	const lineIDs = slabs.lines.add(pointsIDs);
+	const newSlabPoints = [];
+	const newSlabLines = [];
 
-	slabs.add(lineIDs, 0.3);
+	// default | create | edit
+	let mode = "default";
+	let selectedSlab = null;
 
-	const spointsIDs = slabs.lines.addPoints([
-		[6, 0, 0],
-		[11, 0, 0],
-		[11, 0, 5],
-		[6, 0, 5],
-	]);
+	window.addEventListener('keydown', (event) => {
+		if (event.code === 'Escape') {
+			if(mode === "edit") {
+				finishEditSlab();
+      }
+			else if(mode === "create") {
+				finishSlabCreation();
+      }
+		}
+		else if(event.code === 'Delete') {
+			deleteSlab();
+		}
+		else if(event.code === 'KeyE') {
+			editSlab();
+		}
+		else if(event.code === 'KeyC') {
+			createSlabPoint();
+		}
+		else if(event.code === 'KeyS') {
+			selectPoint();
+		}
+		else if(event.code === 'KeyG') {
+			toggleMoveMode();
+		}
+	});
 
-	const slineIDs = slabs.lines.add(spointsIDs);
-
-	slabs.add(slineIDs, 0.3);
-
-	window.ondblclick = (event) => {
-    const hit = world.castRay(event, [slabs.extrusions.faces.mesh]);
-		if(!hit.length) return;
-		const firstFace = hit[0].faceIndex;
-		const slabID = slabs.getFromIndex(firstFace);
-		console.log(slabID);
+	function setMode(newMode) {
+		if(newMode !== mode) {
+			mode = newMode;
+			console.log(`Mode: ${mode}`);
+    }
   }
+
+	function deleteSlab() {
+		if(mode !== "default") return;
+		pickFace();
+		if(selectedSlab === null || selectedSlab === undefined) return;
+		slabs.remove([selectedSlab]);
+		selectedSlab = null;
+  }
+
+	function createSlabPoint() {
+		setMode("create");
+
+		const hit = world.castRay([floorPlane]);
+		if (!hit.length) return;
+		const { x, y, z } = hit[0].point;
+
+		if (!newSlabPoints.length) {
+			const [firstPoint] = slabs.lines.addPoints([[x, y, z]]);
+			newSlabPoints.push(firstPoint);
+		}
+
+		const previousPoint = newSlabPoints[newSlabPoints.length - 1];
+		const [newPoint] = slabs.lines.addPoints([[x, y, z]]);
+		newSlabPoints.push(newPoint);
+
+		const [newLine] = slabs.lines.add([previousPoint, newPoint]);
+		newSlabLines.push(newLine);
+
+		window.addEventListener("mousemove", moveLastPoint);
+	}
+
+	function moveLastPoint() {
+		if(mode !== "create") {
+			window.removeEventListener("mousemove", moveLastPoint);
+			return;
+    }
+		const newPoint = newSlabPoints[newSlabPoints.length - 1];
+		const hit = world.castRay([floorPlane]);
+		if (!hit.length) return;
+		const { x, y, z } = hit[0].point;
+		slabs.lines.setPoint(newPoint, [x, y, z]);
+  }
+
+	function selectPoint() {
+		if(mode !== "edit") return;
+
+		//TODO: Do this inside library each time a face is created
+		slabs.lines.vertices.mesh.geometry.computeBoundingSphere();
+
+		const hit = world.castRay([slabs.lines.vertices.mesh]);
+		if (!hit.length) return;
+		console.log(hit);
+		const found = hit[0].index;
+		const pointID = slabs.lines.vertices.idMap.getId(found);
+		slabs.lines.selectPoints(false);
+		slabs.lines.selectPoints(true, [pointID]);
+	}
+
+	let moveMode = false;
+	let firstMove = true;
+	let previousTransform = new THREE.Matrix4();
+	let currentTransform = new THREE.Matrix4();
+
+	function toggleMoveMode() {
+		if(mode !== "edit") return;
+		moveMode = !moveMode;
+
+		if(moveMode) {
+			window.addEventListener("mousemove", moveSelectedPoints);
+    } else {
+			window.removeEventListener("mousemove", moveSelectedPoints);
+			previousTransform.identity();
+			currentTransform.identity();
+			firstMove = true;
+    }
+  }
+
+	function moveSelectedPoints() {
+		const hit = world.castRay([floorPlane]);
+		if (!hit.length) return;
+		currentTransform.setPosition(hit[0].point);
+		if(firstMove) {
+			previousTransform.setPosition(hit[0].point);
+			firstMove = false;
+    }
+		const temp = currentTransform.clone();
+		currentTransform.multiply(previousTransform.invert());
+		slabs.lines.transform(currentTransform);
+		previousTransform = temp;
+  }
+
+	function editSlab() {
+
+		if(mode === "create") {
+			return;
+    }
+
+		pickFace();
+		if(selectedSlab === null || selectedSlab === undefined) return;
+
+		setMode("edit");
+
+		slabs.removeExtrusion(selectedSlab);
+	}
+
+	function pickFace() {
+		const hit = world.castRay([slabs.extrusions.faces.mesh]);
+		if (!hit.length) return;
+		const faceIndex = hit[0].faceIndex;
+		selectedSlab = slabs.getFromIndex(faceIndex);
+  }
+
+	function finishEditSlab() {
+		if(mode !== "edit") return;
+		slabs.addExtrusion(selectedSlab);
+		selectedSlab = null;
+		setMode("default");
+		slabs.lines.selectPoints(false);
+  }
+
+	function cancelSlabCreation() {
+		setMode("default");
+		slabs.lines.removePoints(newSlabPoints);
+		newSlabPoints.length = 0;
+		newSlabLines.length = 0;
+  }
+
+	function finishSlabCreation() {
+		setMode("default");
+		if (newSlabPoints.length < 4) return;
+		window.onmousemove = undefined;
+		newSlabLines.pop();
+		const lastPoint = newSlabPoints.pop();
+		slabs.lines.removePoints([lastPoint]);
+
+		const last = newSlabPoints[newSlabPoints.length - 1];
+		const first = newSlabPoints[0];
+		const lastLine = slabs.lines.add([last, first]);
+		newSlabLines.push(lastLine);
+
+		slabs.add(newSlabLines, 0.2);
+		newSlabLines.length = 0;
+		newSlabPoints.length = 0;
+
+		//TODO: Do this inside library each time a face is created
+		slabs.extrusions.faces.mesh.geometry.computeBoundingSphere();
+	}
+
+
+
+	// Set up GUI
+
+	const gui = new dat.GUI();
 
 </script>
 </body>

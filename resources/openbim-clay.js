@@ -592,10 +592,7 @@ class Lines extends Primitive {
         return createdIDs;
     }
     get(id) {
-        const index = this.idMap.getIndex(id);
-        if (index === null)
-            return null;
-        const line = this.list[index];
+        const line = this.list[id];
         const start = this.vertices.get(line.start);
         const end = this.vertices.get(line.end);
         if (!start || !end)
@@ -684,27 +681,43 @@ class Lines extends Primitive {
         this.vertices.remove(ids);
         this.remove(lines);
     }
+    /**
+     * Sets a point of the line to a specific position.
+     * @param id The point whose position to set.
+     * @param coordinates The new coordinates of the point.
+     */
+    setPoint(id, coordinates) {
+        const indices = new Set();
+        this.getPointIndices(id, indices);
+        this.setLines(coordinates, indices);
+        this.vertices.set([id], coordinates);
+    }
     transform(matrix) {
         const indices = new Set();
         const points = new Set();
         for (const id of this.vertices.selected.data) {
             points.add(id);
-            const point = this.points[id];
-            for (const id of point.start) {
-                const index = this.idMap.getIndex(id);
-                if (index === null)
-                    continue;
-                indices.add(index * 2);
-            }
-            for (const id of point.end) {
-                const index = this.idMap.getIndex(id);
-                if (index === null)
-                    continue;
-                indices.add(index * 2 + 1);
-            }
+            this.getPointIndices(id, indices);
         }
         this.transformLines(matrix, indices);
         this.vertices.transform(matrix, points);
+    }
+    getPointIndices(id, indices) {
+        const point = this.points[id];
+        for (const id of point.start) {
+            const index = this.idMap.getIndex(id);
+            if (index === null) {
+                continue;
+            }
+            indices.add(index * 2);
+        }
+        for (const id of point.end) {
+            const index = this.idMap.getIndex(id);
+            if (index === null) {
+                continue;
+            }
+            indices.add(index * 2 + 1);
+        }
     }
     setupAttributes() {
         this._buffers.createAttribute("position");
@@ -734,6 +747,13 @@ class Lines extends Primitive {
             vector.set(x, y, z);
             vector.applyMatrix4(matrix);
             this._positionBuffer.setXYZ(index, vector.x, vector.y, vector.z);
+        }
+        this._positionBuffer.needsUpdate = true;
+    }
+    setLines(coords, indices) {
+        const [x, y, z] = coords;
+        for (const index of indices) {
+            this._positionBuffer.setXYZ(index, x, y, z);
         }
         this._positionBuffer.needsUpdate = true;
     }
@@ -2688,35 +2708,8 @@ class Slabs extends Primitive {
     }
     add(lineIDs, height) {
         const id = this._nextIndex++;
-        const pointsIDs = [];
-        let first = true;
-        for (const id of lineIDs) {
-            const line = this.lines.list[id];
-            if (first) {
-                pointsIDs.push(line.start);
-                first = false;
-            }
-            pointsIDs.push(line.end);
-        }
-        const allCoordinates = [];
-        for (const id of pointsIDs) {
-            const coordinates = this.lines.vertices.get(id);
-            if (!coordinates)
-                continue;
-            allCoordinates.push(coordinates);
-        }
-        // Create axis
-        // TODO: Make direction normal to face
-        const directionPointsIDs = this.extrusions.lines.addPoints([
-            [0, 0, 0],
-            [0, height, 0],
-        ]);
-        const [directionID] = this.extrusions.lines.add(directionPointsIDs);
-        // Create base face
-        const ids = this.extrusions.faces.addPoints(allCoordinates);
-        const faceID = this.extrusions.faces.add(ids);
-        // Create extrusion
-        const extrusionID = this.extrusions.add(faceID, directionID);
+        const directionID = this.getDirection(height);
+        const extrusionID = this.createSlabExtrusion(lineIDs, directionID);
         this._extrusionSlabMap.set(extrusionID, id);
         this.list[id] = {
             id,
@@ -2724,6 +2717,34 @@ class Slabs extends Primitive {
             lines: new Set(lineIDs),
             extrusion: extrusionID,
         };
+    }
+    remove(ids) {
+        const pointsToDelete = new Set();
+        for (const id of ids) {
+            const slab = this.list[id];
+            this.removeExtrusion(id);
+            for (const line of slab.lines) {
+                const { start, end } = this.lines.list[line];
+                pointsToDelete.add(start);
+                pointsToDelete.add(end);
+            }
+        }
+        this.lines.removePoints(pointsToDelete);
+    }
+    removeExtrusion(id) {
+        const slab = this.list[id];
+        const extrusion = slab.extrusion;
+        if (extrusion === null)
+            return;
+        this.extrusions.remove([extrusion]);
+        this.list[id].extrusion = null;
+    }
+    addExtrusion(id) {
+        const { lines, direction } = this.list[id];
+        const linesIDs = Array.from(lines);
+        const extrusionID = this.createSlabExtrusion(linesIDs, direction);
+        this.list[id].extrusion = extrusionID;
+        this._extrusionSlabMap.set(extrusionID, id);
     }
     /**
      * Given a face index, returns the slab ID that contains it.
@@ -2737,6 +2758,51 @@ class Slabs extends Primitive {
         if (extrusionID === undefined)
             return undefined;
         return this._extrusionSlabMap.get(extrusionID);
+    }
+    createSlabExtrusion(lineIDs, directionID) {
+        const allCoordinates = this.getAllCoordinates(lineIDs);
+        const faceID = this.createBaseFace(allCoordinates);
+        return this.extrusions.add(faceID, directionID);
+    }
+    createBaseFace(allCoordinates) {
+        const ids = this.extrusions.faces.addPoints(allCoordinates);
+        return this.extrusions.faces.add(ids);
+    }
+    getDirection(height) {
+        // TODO: Make direction normal to face
+        const directionPointsIDs = this.extrusions.lines.addPoints([
+            [0, 0, 0],
+            [0, height, 0],
+        ]);
+        const [directionID] = this.extrusions.lines.add(directionPointsIDs);
+        return directionID;
+    }
+    getAllCoordinates(lineIDs) {
+        const pointsIDs = this.getPoints(lineIDs);
+        const allCoordinates = [];
+        for (const id of pointsIDs) {
+            const coordinates = this.lines.vertices.get(id);
+            if (!coordinates) {
+                continue;
+            }
+            allCoordinates.push(coordinates);
+        }
+        return allCoordinates;
+    }
+    getPoints(lineIDs) {
+        const pointsIDs = [];
+        let first = true;
+        for (const id of lineIDs) {
+            const line = this.lines.list[id];
+            if (first) {
+                pointsIDs.push(line.start);
+                first = false;
+            }
+            pointsIDs.push(line.end);
+        }
+        // Remove last point, as it's already the first point
+        pointsIDs.pop();
+        return pointsIDs;
     }
 }
 
