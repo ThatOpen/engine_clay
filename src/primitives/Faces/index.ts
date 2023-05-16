@@ -203,6 +203,7 @@ export class Faces extends Primitive {
     const verticesToRemove = new Set<number>();
     for (const id of ids) {
       const face = this.list[id];
+      if (face === undefined) continue;
       for (const vertex of face.vertices) {
         verticesToRemove.add(vertex);
         this._vertexFaceMap.delete(vertex);

@@ -28,6 +28,7 @@
 
 
 
+
 </script>
 <script type="module">
 	import * as THREE from 'three';
@@ -35,7 +36,6 @@
 	// import {TransformControls} from "three/examples/jsm/controls/TransformControls";
 	import * as OBC from '../../../resources/openbim-clay.js';
 	import * as dat from 'three/examples/jsm/libs/lil-gui.module.min';
-
 
 	const canvas = document.getElementById('container');
 	const world = new SimpleThreeScene(canvas);
@@ -45,84 +45,149 @@
 	world.scene.add(slabs.lines.mesh);
 	world.scene.add(slabs.lines.vertices.mesh);
 
+	const settings = {
+		interior: false
+  }
+
+
 	const floorPlaneGeom = new THREE.PlaneGeometry(1000, 1000);
 	const floorPlaneMaterial = new THREE.MeshLambertMaterial({ transparent: true, opacity: 0.7 });
 	const floorPlane = new THREE.Mesh(floorPlaneGeom, floorPlaneMaterial);
 	floorPlane.rotation.x = -Math.PI / 2;
 	floorPlane.position.y += 0.01;
+	floorPlane.visible = false;
 	world.scene.add(floorPlane);
 
 	const newSlabPoints = [];
 	const newSlabLines = [];
+	const polylines = [];
 
-	// default | create | edit
-	let mode = "default";
+	// default | create
+	let mode = 'default';
 	let selectedSlab = null;
 
 	window.addEventListener('keydown', (event) => {
 		if (event.code === 'Escape') {
-			if(mode === "edit") {
-				finishEditSlab();
-      }
-			else if(mode === "create") {
-				finishSlabCreation();
-      }
-		}
-		else if(event.code === 'Delete') {
-			deleteSlab();
-		}
-		else if(event.code === 'KeyE') {
+
+		} else if (event.code === 'Delete') {
+
+		} else if (event.code === 'KeyE') {
 			editSlab();
-		}
-		else if(event.code === 'KeyC') {
-			if(mode === "edit") {
-				createInteriorSlabPoint();
-      } else {
-				createSlabPoint();
-      }
-		}
-		else if(event.code === 'KeyS') {
-			selectPoint();
-		}
-		else if(event.code === 'KeyG') {
-			toggleMoveMode();
+		} else if (event.code === 'KeyD') {
+			setCreateMode(true);
+		} else if (event.code === 'KeyC') {
+			addPoint();
+		} else if (event.code === 'KeyS') {
+      saveSlab();
 		}
 	});
 
-	function setMode(newMode) {
-		if(newMode !== mode) {
-			mode = newMode;
-			console.log(`Mode: ${mode}`);
-    }
-  }
+	let found;
+	let firstPointID;
+	let isClosingLines = false;
 
-	function deleteSlab() {
-		if(mode !== "default") return;
-		pickFace();
-		if(selectedSlab === null || selectedSlab === undefined) return;
-		slabs.remove([selectedSlab]);
-		selectedSlab = null;
-  }
+	function setCreateMode(active) {
+		const isCreateActive = mode === 'create';
+		if (isCreateActive === active) return;
 
-	function createSlabPoint() {
-		setMode("create");
-		createPoint();
+		floorPlane.visible = active;
+
+		if (active) {
+			window.addEventListener('mousemove', updateMouse);
+		} else {
+			window.removeEventListener('mousemove', updateMouse);
+		}
+		mode = active ? 'create' : 'default';
 	}
 
-	function createInteriorSlabPoint() {
-		if(mode !== "edit") return;
-		createPoint();
+	function editSlab() {
+		if(mode === "create") return;
+		const hit = world.castRay([slabs.extrusions.faces.mesh]);
+		if(!hit.length) return;
+		const index = hit[0].faceIndex;
+		const slabID = slabs.getFromIndex(index);
+		if(slabID === undefined) return;
+		slabs.removeExtrusion(slabID);
+		const slab = slabs.list[slabID];
+		polylines.push(...slab.polylines);
+		setCreateMode(true);
   }
 
-	function createPoint() {
-		const hit = world.castRay([floorPlane]);
-		if (!hit.length) return;
-		const { x, y, z } = hit[0].point;
+	function saveSlab() {
+		if(!polylines.length) return;
+		slabs.add(polylines, 0.3);
+		slabs.extrusions.faces.mesh.geometry.computeBoundingSphere();
+		setCreateMode(false);
+		polylines.length = 0;
+  }
+
+	function updateMouse() {
+		const hit = world.castRay([floorPlane, slabs.lines.vertices.mesh]);
+
+		if (!hit.length) {
+			found = null;
+			return;
+		}
+
+		found = hit;
+
+		if (mode === 'create' && newSlabPoints.length) {
+			moveLastPoint();
+		}
+	}
+
+	function moveLastPoint() {
+		if (!found) {
+			isClosingLines = false;
+			return;
+		}
+
+		const lastPoint = newSlabPoints[newSlabPoints.length - 1];
+
+		let foundFirstPoint = false;
+		let foundBasePlane;
+
+		const index = slabs.lines.vertices.idMap.getIndex(firstPointID);
+		for(const item of found) {
+			if(item.object === floorPlane) {
+				foundBasePlane = item;
+      }
+			if(item.object === slabs.lines.vertices.mesh && item.index === index) {
+				foundFirstPoint = true;
+			}
+    }
+
+		if (foundFirstPoint) {
+				const coords = slabs.lines.vertices.get(firstPointID);
+				if (coords) {
+					const [x, y, z] = coords;
+					slabs.lines.setPoint(lastPoint, [x, y, z]);
+					isClosingLines = true;
+					return;
+				}
+		} else if(foundBasePlane) {
+			const { x, y, z } = foundBasePlane.point;
+			slabs.lines.setPoint(lastPoint, [x, y, z]);
+    }
+
+		isClosingLines = false;
+	}
+
+	function addPoint() {
+		if(mode !== "create") return;
+		if (!found) return;
+
+		const { x, y, z } = found[0].point;
 
 		if (!newSlabPoints.length) {
 			const [firstPoint] = slabs.lines.addPoints([[x, y, z]]);
+			firstPointID = firstPoint;
 			newSlabPoints.push(firstPoint);
-			window.addEventListener('mousemove', moveLastPoint);
+		}
+
+		if(isClosingLines) {
+			finishPolyline();
+			return;
 		}
 
 		const previousPoint = newSlabPoints[newSlabPoints.length - 1];
@@ -131,132 +196,27 @@
 
 		const [newLine] = slabs.lines.add([previousPoint, newPoint]);
 		newSlabLines.push(newLine);
-	}
 
-	function moveLastPoint() {
-		if(newSlabPoints.length === 0) {
-			window.removeEventListener("mousemove", moveLastPoint);
-			return;
-    }
-		const newPoint = newSlabPoints[newSlabPoints.length - 1];
-		const hit = world.castRay([floorPlane]);
-		if (!hit.length) return;
-		const { x, y, z } = hit[0].point;
-		slabs.lines.setPoint(newPoint, [x, y, z]);
-  }
-
-	function selectPoint() {
-		if(mode !== "edit") return;
-
-		//TODO: Do this inside library each time a face is created
 		slabs.lines.vertices.mesh.geometry.computeBoundingSphere();
 
-		const hit = world.castRay([slabs.lines.vertices.mesh]);
-		if (!hit.length) return;
-		console.log(hit);
-		const found = hit[0].index;
-		const pointID = slabs.lines.vertices.idMap.getId(found);
-		slabs.lines.selectPoints(false);
-		slabs.lines.selectPoints(true, [pointID]);
+
 	}
 
-	let moveMode = false;
-	let firstMove = true;
-	let previousTransform = new THREE.Matrix4();
-	let currentTransform = new THREE.Matrix4();
+	function finishPolyline() {
+		const isInterior = settings.interior;
+		const polyline = slabs.addPolyline(newSlabLines, isInterior);
+    polylines.push(polyline);
 
-	function toggleMoveMode() {
-		if(mode !== "edit") return;
-		moveMode = !moveMode;
-
-		if(moveMode) {
-			window.addEventListener("mousemove", moveSelectedPoints);
-    } else {
-			window.removeEventListener("mousemove", moveSelectedPoints);
-			previousTransform.identity();
-			currentTransform.identity();
-			firstMove = true;
-    }
-  }
-
-	function moveSelectedPoints() {
-		const hit = world.castRay([floorPlane]);
-		if (!hit.length) return;
-		currentTransform.setPosition(hit[0].point);
-		if(firstMove) {
-			previousTransform.setPosition(hit[0].point);
-			firstMove = false;
-    }
-		const temp = currentTransform.clone();
-		currentTransform.multiply(previousTransform.invert());
-		slabs.lines.transform(currentTransform);
-		previousTransform = temp;
-  }
-
-	function editSlab() {
-
-		if(mode === "create") {
-			return;
-    }
-
-		pickFace();
-		if(selectedSlab === null || selectedSlab === undefined) return;
-
-		setMode("edit");
-
-		slabs.removeExtrusion(selectedSlab);
+		newSlabLines.length = 0;
+		newSlabPoints.length = 0;
+		isClosingLines = false;
 	}
-
-	function pickFace() {
-		const hit = world.castRay([slabs.extrusions.faces.mesh]);
-		if (!hit.length) return;
-		const faceIndex = hit[0].faceIndex;
-		selectedSlab = slabs.getFromIndex(faceIndex);
-  }
-
-	function finishEditSlab() {
-		if(mode !== "edit") return;
-		slabs.addExtrusion(selectedSlab);
-		selectedSlab = null;
-		setMode("default");
-		slabs.lines.selectPoints(false);
-		newSlabLines.length = 0;
-		newSlabPoints.length = 0;
-  }
-
-	function cancelSlabCreation() {
-		setMode("default");
-		slabs.lines.removePoints(newSlabPoints);
-		newSlabPoints.length = 0;
-		newSlabLines.length = 0;
-  }
-
-	function finishSlabCreation() {
-		setMode("default");
-		if (newSlabPoints.length < 4) return;
-		window.onmousemove = undefined;
-		newSlabLines.pop();
-		const lastPoint = newSlabPoints.pop();
-		slabs.lines.removePoints([lastPoint]);
-
-		const last = newSlabPoints[newSlabPoints.length - 1];
-		const first = newSlabPoints[0];
-		const lastLine = slabs.lines.add([last, first]);
-		newSlabLines.push(lastLine);
-
-		slabs.add(newSlabLines, 0.2);
-		newSlabLines.length = 0;
-		newSlabPoints.length = 0;
-
-		//TODO: Do this inside library each time a face is created
-		slabs.extrusions.faces.mesh.geometry.computeBoundingSphere();
-	}
-
 
 
 	// Set up GUI
 
 	const gui = new dat.GUI();
+	gui.add(settings, "interior");
 
 </script>
 </body>

@@ -106,10 +106,15 @@ export class Extrusions extends Primitive {
   remove(ids = this.selected.data as Iterable<number>) {
     const faces: number[] = [];
     for (const id of ids) {
-      const { topFace, baseFace, sideFaces } = this.list[id];
+      const { topFace, baseFace, sideFaces, holes } = this.list[id];
       faces.push(topFace);
       faces.push(baseFace);
       faces.push(...sideFaces);
+
+      for (const holeID in holes) {
+        const hole = holes[holeID];
+        faces.push(...hole.faces);
+      }
 
       this._faceExtrusionMap.delete(topFace);
       this._faceExtrusionMap.delete(baseFace);

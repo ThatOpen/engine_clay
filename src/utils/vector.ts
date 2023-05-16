@@ -44,6 +44,11 @@ export class Vector {
     return Math.sqrt(x * x + y * y + z * z);
   }
 
+  static squaredMagnitude(vector: number[]) {
+    const [x, y, z] = vector;
+    return x * x + y * y + z * z;
+  }
+
   static add(...vectors: number[][]) {
     const result = [0, 0, 0];
     for (const vector of vectors) {
