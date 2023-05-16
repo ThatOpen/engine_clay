@@ -26,7 +26,6 @@ export class Slabs extends Primitive {
     [id: number]: {
       id: number;
       lines: Set<number>;
-      inner: boolean;
     };
   } = {};
 
@@ -47,14 +46,17 @@ export class Slabs extends Primitive {
     return this._extrusionSlabMap.get(extrusionID);
   }
 
-  addPolyline(lines: number[], inner: boolean) {
+  addPolyline(lines: number[]) {
     const id = this._nextPolylineIndex++;
     this.polylines[id] = {
       id,
-      inner,
       lines: new Set(lines),
     };
     return id;
+  }
+
+  setPolylines(id: number, lines: number[]) {
+    this.list[id].polylines = new Set(lines);
   }
 
   add(polylines: number[], height: number) {
@@ -94,14 +96,14 @@ export class Slabs extends Primitive {
 
       let outline: number[] = [];
       const holes: number[][] = [];
+      const outlineID = this.getOutline(id);
 
       for (const polyID of slab.polylines) {
         const pointIDs = this.createPoints(polyID);
-        const inner = this.polylines[polyID].inner;
-        if (inner) {
-          holes.push(pointIDs);
-        } else if (!outline.length) {
+        if (polyID === outlineID) {
           outline = pointIDs;
+        } else {
+          holes.push(pointIDs);
         }
       }
 
@@ -121,13 +123,46 @@ export class Slabs extends Primitive {
     this.list[id].extrusion = null;
   }
 
-  // addExtrusion(id: number) {
-  // const { lines, direction, holes } = this.list[id];
-  // const linesIDs = Array.from(lines);
-  // const extrusionID = this.createSlab(linesIDs, direction, holes);
-  // this.list[id].extrusion = extrusionID;
-  // this._extrusionSlabMap.set(extrusionID, id);
-  // }
+  private getOutline(id: number) {
+    const slab = this.list[id];
+    let biggestSize = 0;
+    let biggestPolyline = 0;
+    for (const polyID of slab.polylines) {
+      const size = this.getPolylineSize(polyID);
+      if (size > biggestSize) {
+        biggestSize = size;
+        biggestPolyline = polyID;
+      }
+    }
+    return biggestPolyline;
+  }
+
+  private getPolylineSize(id: number) {
+    const polyline = this.polylines[id];
+
+    const max = Number.MAX_VALUE;
+
+    const biggest = [-max, -max, -max];
+    const smallest = [max, max, max];
+
+    for (const lineID of polyline.lines) {
+      const line = this.lines.list[lineID];
+      const end = this.lines.vertices.get(line.end);
+      if (!end) continue;
+      if (end[0] > biggest[0]) biggest[0] = end[0];
+      if (end[1] > biggest[1]) biggest[1] = end[1];
+      if (end[2] > biggest[2]) biggest[2] = end[2];
+      if (end[0] < smallest[0]) smallest[0] = end[0];
+      if (end[1] < smallest[1]) smallest[1] = end[1];
+      if (end[2] < smallest[2]) smallest[2] = end[2];
+    }
+
+    const x = Math.abs(biggest[0] - smallest[0]);
+    const y = Math.abs(biggest[1] - smallest[1]);
+    const z = Math.abs(biggest[2] - smallest[2]);
+
+    return x + y + z;
+  }
 
   private createPoints(id: number) {
     const polyline = this.polylines[id];

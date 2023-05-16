@@ -45,10 +45,6 @@
 	world.scene.add(slabs.lines.mesh);
 	world.scene.add(slabs.lines.vertices.mesh);
 
-	const settings = {
-		interior: false
-  }
-
 
 	const floorPlaneGeom = new THREE.PlaneGeometry(1000, 1000);
 	const floorPlaneMaterial = new THREE.MeshLambertMaterial({ transparent: true, opacity: 0.7 });
@@ -64,11 +60,12 @@
 
 	// default | create
 	let mode = 'default';
-	let selectedSlab = null;
+	let editedSlab = null;
 
 	window.addEventListener('keydown', (event) => {
 		if (event.code === 'Escape') {
-
+			deselectPoints();
+			cancelSlabDraw();
 		} else if (event.code === 'Delete') {
 
 		} else if (event.code === 'KeyE') {
@@ -79,6 +76,11 @@
 			addPoint();
 		} else if (event.code === 'KeyS') {
       saveSlab();
+		} else if (event.code === 'KeyA') {
+			selectPoint(event);
+		}
+		else if (event.code === 'KeyG') {
+			toggleMoveMode();
 		}
 	});
 
@@ -100,12 +102,18 @@
 		mode = active ? 'create' : 'default';
 	}
 
+	// Draw polyline as rectangle
+  // Split line in polyline (adding a point)
+  // Remove point in polyline
+  // Snapping: draw ortho, basic references
+
 	function editSlab() {
-		if(mode === "create") return;
+		if(mode !== "default") return;
 		const hit = world.castRay([slabs.extrusions.faces.mesh]);
 		if(!hit.length) return;
 		const index = hit[0].faceIndex;
 		const slabID = slabs.getFromIndex(index);
+		editedSlab = slabID;
 		if(slabID === undefined) return;
 		slabs.removeExtrusion(slabID);
 		const slab = slabs.list[slabID];
@@ -115,10 +123,20 @@
 
 	function saveSlab() {
 		if(!polylines.length) return;
+		if(editedSlab !== null) {
+			slabs.setPolylines(editedSlab, polylines);
+			slabs.regenerate([editedSlab]);
+			setCreateMode(false);
+			polylines.length = 0;
+			editedSlab = null;
+			deselectPoints();
+			return;
+    }
 		slabs.add(polylines, 0.3);
 		slabs.extrusions.faces.mesh.geometry.computeBoundingSphere();
 		setCreateMode(false);
 		polylines.length = 0;
+		deselectPoints();
   }
 
 	function updateMouse() {
@@ -177,17 +195,17 @@
 		if(mode !== "create") return;
 		if (!found) return;
 
+		if(isClosingLines) {
+			finishPolyline();
+			return;
+		}
+
 		const { x, y, z } = found[0].point;
 
 		if (!newSlabPoints.length) {
 			const [firstPoint] = slabs.lines.addPoints([[x, y, z]]);
 			firstPointID = firstPoint;
 			newSlabPoints.push(firstPoint);
-		}
-
-		if(isClosingLines) {
-			finishPolyline();
-			return;
 		}
 
 		const previousPoint = newSlabPoints[newSlabPoints.length - 1];
@@ -198,13 +216,21 @@
 		newSlabLines.push(newLine);
 
 		slabs.lines.vertices.mesh.geometry.computeBoundingSphere();
-
-
 	}
 
 	function finishPolyline() {
-		const isInterior = settings.interior;
-		const polyline = slabs.addPolyline(newSlabLines, isInterior);
+
+		const last = newSlabPoints.pop();
+		slabs.lines.removePoints([last]);
+		newSlabLines.pop();
+
+		const lastPoint = newSlabPoints[newSlabPoints.length - 1];
+		const firstPoint = newSlabPoints[0];
+		const [newLine] = slabs.lines.add([lastPoint, firstPoint]);
+		newSlabLines.push(newLine);
+
+
+		const polyline = slabs.addPolyline(newSlabLines);
     polylines.push(polyline);
 
 		newSlabLines.length = 0;
@@ -212,11 +238,78 @@
 		isClosingLines = false;
 	}
 
+	function selectPoint(event) {
+		slabs.lines.vertices.mesh.geometry.computeBoundingSphere();
+		if(mode !== "create") return;
+		const hit = world.castRay([slabs.lines.vertices.mesh]);
+		if(!hit.length) return;
+		const index = hit[0].index;
+		const pointID = slabs.lines.vertices.idMap.getId(index);
+		if(!event.shiftKey) {
+			deselectPoints();
+    }
+		slabs.lines.vertices.select(true, [pointID]);
+	}
+
+	const currentTransform = new THREE.Matrix4();
+	const previousTransform = new THREE.Matrix4();
+	let isMoving = false;
+	let firstMove = true;
+
+	function toggleMoveMode() {
+		isMoving = !isMoving;
+		if(isMoving) {
+			window.addEventListener("mousemove", moveSelectedPoints)
+    } else {
+			firstMove = true;
+      window.removeEventListener("mousemove", moveSelectedPoints)
+    }
+  }
+
+	function moveSelectedPoints() {
+		const hit = world.castRay([floorPlane]);
+		if (!hit.length) return;
+		currentTransform.setPosition(hit[0].point);
+		if(firstMove) {
+			previousTransform.setPosition(hit[0].point);
+			firstMove = false;
+		}
+		const temp = currentTransform.clone();
+		currentTransform.multiply(previousTransform.invert());
+		slabs.lines.transform(currentTransform);
+		previousTransform.copy(temp);
+	}
+
+	function deselectPoints() {
+		slabs.lines.vertices.select(false);
+  }
+
+	function cancelSlabDraw() {
+		if(editedSlab !== null) {
+			saveSlab();
+			return;
+    }
+		const pointsToRemove = [...newSlabPoints];
+		for(const id of polylines) {
+			const polyline = slabs.polylines[id];
+			for(const lineID of polyline.lines) {
+				const line = slabs.lines.list[lineID]
+        pointsToRemove.push(line.end);
+      }
+    }
+
+		slabs.lines.removePoints(pointsToRemove);
+
+		newSlabPoints.length = 0;
+		newSlabLines.length = 0;
+		polylines.length = 0;
+		setCreateMode(false);
+  }
+
 
 	// Set up GUI
 
 	const gui = new dat.GUI();
-	gui.add(settings, "interior");
 
 </script>
 </body>
