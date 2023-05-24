@@ -286,6 +286,47 @@ class Vector {
     }
 }
 
+class Raycaster {
+    get trackMouse() {
+        return this._trackMouse;
+    }
+    set trackMouse(active) {
+        this._trackMouse = active;
+        if (active) {
+            window.addEventListener("mousemove", this.getMousePosition);
+        }
+        else {
+            window.removeEventListener("mousemove", this.getMousePosition);
+        }
+    }
+    constructor() {
+        this._mouse = new THREE.Vector2();
+        this._mouseEvent = new THREE.Vector2();
+        this._trackMouse = false;
+        this.getMousePosition = (event) => {
+            this._mouseEvent.x = event.clientX;
+            this._mouseEvent.y = event.clientY;
+        };
+        this._caster = new THREE.Raycaster();
+        if (!this._caster.params.Points) {
+            throw new Error("Raycaster has undefined Points");
+        }
+        this._caster.params.Points.threshold = 0.2;
+    }
+    cast(items) {
+        if (!this.domElement || !this.camera) {
+            throw new Error("DOM element and camera must be initialized!");
+        }
+        const x = this._mouseEvent.x;
+        const y = this._mouseEvent.y;
+        const b = this.domElement.getBoundingClientRect();
+        this._mouse.x = ((x - b.left) / (b.right - b.left)) * 2 - 1;
+        this._mouse.y = -((y - b.top) / (b.bottom - b.top)) * 2 + 1;
+        this._caster.setFromCamera(this._mouse, this.camera);
+        return this._caster.intersectObjects(items);
+    }
+}
+
 class Primitive {
     constructor() {
         /**
@@ -2860,4 +2901,150 @@ class Slabs extends Primitive {
     }
 }
 
-export { BufferManager, Extrusions, Faces, IdIndexMap, Lines, OffsetFaces, Primitive, Selector, Slabs, Vector, Vertices, Walls };
+class Polygons {
+    get editMode() {
+        return this._editMode;
+    }
+    set editMode(active) {
+        this.workPlane.visible = active;
+        this._caster.trackMouse = active;
+        this._editMode = active;
+        if (active) {
+            window.addEventListener("mousemove", this.update);
+        }
+        else {
+            window.removeEventListener("mousemove", this.update);
+        }
+        const wasPolygonInProcess = Boolean(this._newPoints.length);
+        const wasDrawingCancelled = wasPolygonInProcess && !active;
+        if (wasDrawingCancelled) {
+            this.cancel();
+        }
+    }
+    set camera(camera) {
+        this._caster.camera = camera;
+    }
+    set domElement(element) {
+        this._caster.domElement = element;
+    }
+    constructor() {
+        this.lines = new Lines();
+        this.list = {};
+        this._editMode = false;
+        this._caster = new Raycaster();
+        this._foundItems = [];
+        this._isClosingPolygon = false;
+        this._newPoints = [];
+        this._newLines = [];
+        this._firstPointID = null;
+        this._nextIndex = 0;
+        this.update = () => {
+            this._foundItems = this._caster.cast([
+                this.workPlane,
+                this.lines.vertices.mesh,
+            ]);
+            if (this.editMode) {
+                this.updateCurrentPoint();
+            }
+        };
+        this.workPlane = this.newWorkPlane();
+    }
+    add() {
+        if (!this._editMode)
+            return;
+        if (!this._foundItems.length)
+            return;
+        if (this._isClosingPolygon) {
+            this.finishPolygon();
+            return;
+        }
+        const { x, y, z } = this._foundItems[0].point;
+        if (!this._newPoints.length) {
+            const [firstPoint] = this.lines.addPoints([[x, y, z]]);
+            this._firstPointID = firstPoint;
+            this._newPoints.push(firstPoint);
+        }
+        const previousPoint = this._newPoints[this._newPoints.length - 1];
+        const [newPoint] = this.lines.addPoints([[x, y, z]]);
+        this._newPoints.push(newPoint);
+        const [newLine] = this.lines.add([previousPoint, newPoint]);
+        this._newLines.push(newLine);
+        this.lines.vertices.mesh.geometry.computeBoundingSphere();
+    }
+    cancel() {
+        this.lines.removePoints(this._newPoints);
+        this._newPoints.length = 0;
+        this._newLines.length = 0;
+        this._firstPointID = null;
+    }
+    addPolygon(lines) {
+        const id = this._nextIndex++;
+        this.list[id] = {
+            id,
+            lines: new Set(lines),
+        };
+        return id;
+    }
+    finishPolygon() {
+        const last = this._newPoints.pop();
+        if (last !== undefined) {
+            this.lines.removePoints([last]);
+        }
+        this._newLines.pop();
+        const lastPoint = this._newPoints[this._newPoints.length - 1];
+        const firstPoint = this._newPoints[0];
+        const [newLine] = this.lines.add([lastPoint, firstPoint]);
+        this._newLines.push(newLine);
+        this.addPolygon(this._newLines);
+        this._newLines.length = 0;
+        this._newPoints.length = 0;
+        this._isClosingPolygon = false;
+        this._firstPointID = null;
+    }
+    updateCurrentPoint() {
+        if (!this._foundItems.length || this._firstPointID === null) {
+            this._isClosingPolygon = false;
+            return;
+        }
+        const lastIndex = this._newPoints.length - 1;
+        const lastPoint = this._newPoints[lastIndex];
+        let foundFirstPoint = false;
+        let foundBasePlane = null;
+        const index = this.lines.vertices.idMap.getIndex(this._firstPointID);
+        for (const item of this._foundItems) {
+            if (item.object === this.workPlane) {
+                foundBasePlane = item;
+            }
+            if (item.object === this.lines.vertices.mesh && item.index === index) {
+                foundFirstPoint = true;
+            }
+        }
+        if (foundFirstPoint) {
+            const coords = this.lines.vertices.get(this._firstPointID);
+            if (coords) {
+                const [x, y, z] = coords;
+                this.lines.setPoint(lastPoint, [x, y, z]);
+                this._isClosingPolygon = true;
+                return;
+            }
+        }
+        else if (foundBasePlane) {
+            const { x, y, z } = foundBasePlane.point;
+            this.lines.setPoint(lastPoint, [x, y, z]);
+        }
+        this._isClosingPolygon = false;
+    }
+    newWorkPlane() {
+        const floorPlaneGeom = new THREE.PlaneGeometry(1000, 1000);
+        const floorPlaneMaterial = new THREE.MeshLambertMaterial({
+            transparent: true,
+            opacity: 0.7,
+        });
+        const plane = new THREE.Mesh(floorPlaneGeom, floorPlaneMaterial);
+        plane.rotation.x = -Math.PI / 2;
+        plane.visible = false;
+        return plane;
+    }
+}
+
+export { BufferManager, Extrusions, Faces, IdIndexMap, Lines, OffsetFaces, Polygons, Primitive, Raycaster, Selector, Slabs, Vector, Vertices, Walls };
