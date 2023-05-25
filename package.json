@@ -2,6 +2,8 @@
   "name": "openbim-clay",
   "main": "dist/index.js",
   "version": "0.0.1",
+  "author": "antonio gonzalez viegas, quim moya",
+  "license": "MIT",
   "packageManager": "yarn@3.2.1",
   "scripts": {
     "test": "jest",
@@ -13,10 +15,8 @@
   "devDependencies": {
     "@rollup/plugin-commonjs": "^22.0.2",
     "@rollup/plugin-node-resolve": "^14.1.0",
-    "@types/earcut": "^2.1.1",
-    "@types/jest": "^26.0.23",
     "@types/node": "^14.14.31",
-    "@types/three": "0.146",
+    "@types/three": "^0.143.0",
     "@typescript-eslint/eslint-plugin": "^4.27.0",
     "@typescript-eslint/parser": "^4.27.0",
     "cpy-cli": "^3.1.1",
@@ -35,6 +35,6 @@
   "dependencies": {
     "earcut": "^2.2.4",
     "openbim-components": "^0.0.51",
-    "three": "^0.146.0"
+    "three": "^0.135.0"
   }
 }

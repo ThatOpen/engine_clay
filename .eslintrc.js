@@ -10,7 +10,7 @@ module.exports = {
     sourceType: "module",
   },
   plugins: ["@typescript-eslint", "prettier"],
-  ignorePatterns: ["**/dist/*", "**/node_modules/*", "**/*.json"],
+  ignorePatterns: ["**/dist/*", "**/node_modules/*", "**/*.json", "**/*.js"],
   rules: {
     "prettier/prettier": [
       "error",
@@ -57,7 +57,7 @@ module.exports = {
   },
   overrides: [
     {
-      files: ["*.spec.ts", "*.test.ts"],
+      files: ["*.test.ts"],
       env: {
         jest: true,
       },
