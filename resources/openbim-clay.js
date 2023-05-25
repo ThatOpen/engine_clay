@@ -3035,10 +3035,11 @@ class Polygons {
         this._isClosingPolygon = false;
     }
     newWorkPlane() {
-        const floorPlaneGeom = new THREE.PlaneGeometry(1000, 1000);
-        const floorPlaneMaterial = new THREE.MeshLambertMaterial({
+        const floorPlaneGeom = new THREE.PlaneGeometry(10, 10);
+        const floorPlaneMaterial = new THREE.MeshBasicMaterial({
             transparent: true,
             opacity: 0.7,
+            color: 0xc4adef,
         });
         const plane = new THREE.Mesh(floorPlaneGeom, floorPlaneMaterial);
         plane.rotation.x = -Math.PI / 2;

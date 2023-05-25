@@ -29,7 +29,7 @@
 <script type="module">
 	import * as THREE from 'three';
 	import { SimpleThreeScene } from '../../../resources/simple-three-scene.js';
-	// import {TransformControls} from "three/examples/jsm/controls/TransformControls";
+	import {TransformControls} from "three/examples/jsm/controls/TransformControls";
 	import * as OBC from '../../../resources/openbim-clay.js';
 	import * as dat from 'three/examples/jsm/libs/lil-gui.module.min';
 
@@ -55,6 +55,7 @@
     editMode: "E",
     createPoint: "C (In edit mode)",
     cancel: "Escape (In edit mode)",
+    transformMode: "translate"
 		// save: "S",
     // edit: "E",
     // select: "A (In edit mode)",
@@ -71,12 +72,22 @@
 		if(command) command();
 	});
 
+	// Set up controls
+
+
+
 	// Set up GUI
 
 	const gui = new dat.GUI();
 
 	gui.add(settings, "editMode").name("Edit mode");
 	gui.add(settings, "createPoint").name("Create point");
+
+	gui.add(settings, 'transformMode', { translate: 'translate', rotate: 'rotate', scale: 'scale' })
+		.name('Transform mode').onChange((result) => {
+		control.setMode(result);
+	});
+
 	// gui.add(settings, "save").name("Save slab");
 	// gui.add(settings, "edit").name("Edit slab");
 	// gui.add(settings, "select").name("Select");
