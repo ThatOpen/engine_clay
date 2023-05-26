@@ -43,13 +43,26 @@
 
 	const settings = {
     add: "A",
-    transform: "G",
-    transformMode: "TRANSLATE"
+    move: "M",
+    rotate: "R",
+    scale: "S",
+    select: "Click",
   }
 
 	const commands = {
 		KeyA: () => planes.add(),
-		KeyG: () => planes.transform(),
+		KeyM: () => {
+			planes.transformMode = "TRANSLATE";
+			planes.transform();
+		},
+		KeyR: () => {
+			planes.transformMode = "ROTATE";
+			planes.transform();
+		},
+		KeyS: () => {
+			planes.transformMode = "SCALE";
+			planes.transform();
+		},
   }
 
 	window.addEventListener('keydown', (event) => {
@@ -62,11 +75,8 @@
 	const gui = new dat.GUI();
 
 	gui.add(settings, "add").name("New plane");
-
-	gui.add(settings, 'transformMode', { Translate: 'TRANSLATE', Rotate: 'ROTATE', Scale: 'SCALE' })
-		.name('Transform mode').onChange((mode) => {
-		  planes.transformMode = mode;
-	});
+	gui.add(settings, "select").name("Select");
+	gui.add(settings, "move").name("Move");
 
 	// gui.add(settings, "save").name("Save slab");
 	// gui.add(settings, "edit").name("Edit slab");
