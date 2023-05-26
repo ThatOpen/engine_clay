@@ -27,9 +27,9 @@
       }
 </script>
 <script type="module">
-	import * as THREE from 'three';
+	// import * as THREE from 'three';
 	import { SimpleThreeScene } from '../../../resources/simple-three-scene.js';
-	import {TransformControls} from "three/examples/jsm/controls/TransformControls";
+	// import {TransformControls} from "three/examples/jsm/controls/TransformControls";
 	import * as OBC from '../../../resources/openbim-clay.js';
 	import * as dat from 'three/examples/jsm/libs/lil-gui.module.min';
 
@@ -43,13 +43,15 @@
 	// Set base plane
 	// Snapping: draw ortho, basic references
 
-	const polygons = new OBC.Polygons();
-	world.scene.add(polygons.lines.mesh);
-	world.scene.add(polygons.lines.vertices.mesh);
-	world.scene.add(polygons.workPlane);
+  const {camera, renderer, scene} = world;
 
-	polygons.camera = world.camera;
-	polygons.domElement = world.renderer.domElement;
+	const polygons = new OBC.Polygons();
+	polygons.camera = camera;
+	polygons.domElement = renderer.domElement;
+	world.scene.add(...polygons.items);
+
+
+	window.addEventListener("dblclick", () => polygons.workPlane.rotation.y += Math.PI / 20)
 
 	const settings = {
     editMode: "E",
@@ -72,21 +74,12 @@
 		if(command) command();
 	});
 
-	// Set up controls
-
-
-
 	// Set up GUI
 
 	const gui = new dat.GUI();
 
 	gui.add(settings, "editMode").name("Edit mode");
 	gui.add(settings, "createPoint").name("Create point");
-
-	gui.add(settings, 'transformMode', { translate: 'translate', rotate: 'rotate', scale: 'scale' })
-		.name('Transform mode').onChange((result) => {
-		control.setMode(result);
-	});
 
 	// gui.add(settings, "save").name("Save slab");
 	// gui.add(settings, "edit").name("Edit slab");

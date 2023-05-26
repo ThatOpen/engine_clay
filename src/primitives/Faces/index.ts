@@ -191,6 +191,9 @@ export class Faces extends Primitive {
     // this.computeNormal([id]);
     this.mesh.geometry.computeVertexNormals();
 
+    this.mesh.geometry.computeBoundingSphere();
+    this.mesh.geometry.computeBoundingBox();
+
     return id;
   }
 
@@ -363,6 +366,43 @@ export class Faces extends Primitive {
     const vertexIndex = this._index.array[faceIndex * 3];
     const vertexID = this.vertices.idMap.getId(vertexIndex);
     return this._vertexFaceMap.get(vertexID);
+  }
+
+  /**
+   * Gets the center point of a face.
+   * @param id The face whose center to get.
+   */
+  getCenter(id: number) {
+    const face = this.list[id];
+    if (!face) return null;
+    let sumX = 0;
+    let sumY = 0;
+    let sumZ = 0;
+    for (const pointID of face.points) {
+      const point = this.points[pointID];
+      const [x, y, z] = point.coordinates;
+      sumX += x;
+      sumY += y;
+      sumZ += z;
+    }
+    const size = face.points.size;
+    return [sumX / size, sumY / size, sumZ / size];
+  }
+
+  /**
+   * Gets the normalVector of a face.
+   * @param id The face whose normal vector to get.
+   */
+  getNormal(id: number) {
+    const face = this.list[id];
+    const firstVertex = Array.from(face.vertices)[0];
+    const index = this.vertices.idMap.getIndex(firstVertex);
+    if (index === null) return null;
+    const normal = this.vertices.mesh.geometry.attributes.normal;
+    const x = normal.getX(index);
+    const y = normal.getY(index);
+    const z = normal.getZ(index);
+    return [x, y, z];
   }
 
   private saveCoordinates(pointID: number, coordinates: number[], face: Face) {

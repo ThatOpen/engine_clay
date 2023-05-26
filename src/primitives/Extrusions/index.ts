@@ -1,6 +1,5 @@
 import * as THREE from "three";
 // import earcut from "earcut";
-import { Vertices } from "../Vertices";
 import { Faces } from "../Faces";
 import { Lines } from "../Lines";
 import { Primitive } from "../Primitive";

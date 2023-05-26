@@ -951,6 +951,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/earcut@npm:^2.1.1":
+  version: 2.1.1
+  resolution: "@types/earcut@npm:2.1.1"
+  checksum: 7845dab97ba2bf379caeb4fb91bb732e6710b0ce018a8e357f023cb96ac2fa5c64352461e93ecac2504966dcf6b0b882d117c2258cf15a679bd0063b3cee0e14
+  languageName: node
+  linkType: hard
+
 "@types/estree@npm:*":
   version: 0.0.52
   resolution: "@types/estree@npm:0.0.52"
@@ -5308,6 +5315,7 @@ __metadata:
   dependencies:
     "@rollup/plugin-commonjs": ^22.0.2
     "@rollup/plugin-node-resolve": ^14.1.0
+    "@types/earcut": ^2.1.1
     "@types/node": ^14.14.31
     "@types/three": ^0.143.0
     "@typescript-eslint/eslint-plugin": ^4.27.0

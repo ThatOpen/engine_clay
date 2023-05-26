@@ -15,6 +15,7 @@
   "devDependencies": {
     "@rollup/plugin-commonjs": "^22.0.2",
     "@rollup/plugin-node-resolve": "^14.1.0",
+    "@types/earcut": "^2.1.1",
     "@types/node": "^14.14.31",
     "@types/three": "^0.143.0",
     "@typescript-eslint/eslint-plugin": "^4.27.0",

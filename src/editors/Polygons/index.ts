@@ -1,12 +1,10 @@
 import * as THREE from "three";
-import { TransformControls } from "three/examples/jsm/controls/TransformControls";
 import { Lines } from "../../primitives";
 import { Raycaster } from "../../utils";
 
 export class Polygons {
   lines = new Lines();
   workPlane: THREE.Mesh;
-  control: TransformControls;
 
   list: {
     [id: number]: {
@@ -25,6 +23,10 @@ export class Polygons {
   private _firstPointID: number | null = null;
 
   private _nextIndex = 0;
+
+  get items() {
+    return [this.lines.mesh, this.lines.vertices.mesh, this.workPlane];
+  }
 
   get editMode() {
     return this._editMode;
@@ -50,15 +52,13 @@ export class Polygons {
 
   set camera(camera: THREE.Camera) {
     this._caster.camera = camera;
-    this.control.camera = camera;
   }
 
   set domElement(element: HTMLCanvasElement) {
     this._caster.domElement = element;
-    this.control.domElement = element;
   }
 
-  constructor(camera: THREE.Camera, element: HTMLCanvasElement) {
+  constructor() {
     this.workPlane = this.newWorkPlane();
   }
 
@@ -147,13 +147,13 @@ export class Polygons {
     const lastPoint = this._newPoints[lastIndex];
 
     let foundFirstPoint = false;
-    let foundBasePlane: THREE.Intersection | null = null;
+    let basePlane: THREE.Intersection | null = null;
 
     const index = this.lines.vertices.idMap.getIndex(this._firstPointID);
 
     for (const item of this._foundItems) {
       if (item.object === this.workPlane) {
-        foundBasePlane = item;
+        basePlane = item;
       }
       if (item.object === this.lines.vertices.mesh && item.index === index) {
         foundFirstPoint = true;
@@ -168,8 +168,8 @@ export class Polygons {
         this._isClosingPolygon = true;
         return;
       }
-    } else if (foundBasePlane) {
-      const { x, y, z } = foundBasePlane.point;
+    } else if (basePlane) {
+      const { x, y, z } = basePlane.point;
       this.lines.setPoint(lastPoint, [x, y, z]);
     }
 
