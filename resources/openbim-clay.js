@@ -19498,8 +19498,7 @@ class Planes {
         this._transformActive = false;
         this._previousTransform = new THREE.Matrix4();
         this._newTransform = new THREE.Matrix4();
-        this._angleSelected = false;
-        this._angleStarted = false;
+        this._state = "IDLE";
         this.updateTransform = () => {
             const result = this._components.raycaster.castRay([this._helperPlane]);
             if (result === null)
@@ -19513,7 +19512,7 @@ class Planes {
                 this.faces.transform(temp);
             }
             else if (this.transformMode === "ROTATE") {
-                if (!this._angleSelected) {
+                if (this._state === "ANGLE_AXIS_1") {
                     this._lines.setPoint(this._helperLine1.end, [x, y, z]);
                 }
                 else {
@@ -19556,8 +19555,8 @@ class Planes {
                     this._newTransform.multiply(invMove);
                     this._newTransform.multiply(this._helperPlane.matrix);
                     const temp = this._newTransform.clone();
-                    if (!this._angleStarted) {
-                        this._angleStarted = true;
+                    if (this._state === "ANGLE_AXIS_2") {
+                        this._state = "ANGLE_FINISHING";
                         this._previousTransform = this._newTransform.clone();
                     }
                     temp.multiply(this._previousTransform.invert());
@@ -19570,12 +19569,12 @@ class Planes {
             this._previousTransform.copy(this._newTransform);
         };
         this.startDrawingAngle = () => {
-            this._angleSelected = true;
+            this._state = "ANGLE_AXIS_2";
             window.removeEventListener("click", this.startDrawingAngle);
             window.addEventListener("click", this.finishDrawing);
         };
         this.finishDrawing = () => {
-            this._angleSelected = false;
+            this._state = "IDLE";
             window.removeEventListener("click", this.finishDrawing);
             this.transform(false);
         };
@@ -19620,6 +19619,8 @@ class Planes {
         scene.add(this.faces.mesh);
         scene.add(this._helperPlane);
     }
+    // private _angleSelected = false;
+    // private _angleStarted = false;
     get enabled() {
         return this._enabled;
     }
@@ -19644,6 +19645,8 @@ class Planes {
     transform(active = !this._transformActive) {
         if (active === this._transformActive)
             return;
+        if (active && this._selected === null)
+            return;
         this._transformActive = active;
         if (!active) {
             this.setHelperLineVisible(false);
@@ -19656,8 +19659,10 @@ class Planes {
             return;
         this.setHelperLineVisible(true);
         const center = this.faces.getCenter(this._selected);
-        if (center === null)
+        if (center === null) {
+            this.transform(false);
             return;
+        }
         const [cx, cy, cz] = center;
         this._helperPlane.position.set(cx, cy, cz);
         const camera = this._components.camera.get();
@@ -19665,8 +19670,10 @@ class Planes {
         this._helperPlane.updateMatrix();
         this._helperPlane.updateMatrixWorld();
         const result = this._components.raycaster.castRay([this._helperPlane]);
-        if (result === null)
+        if (result === null) {
+            this.transform(false);
             return;
+        }
         this._previousTransform.setPosition(result.point);
         this._newTransform.setPosition(result.point);
         const { x, y, z } = result.point;
@@ -19678,8 +19685,9 @@ class Planes {
             window.addEventListener("click", this.finishDrawing);
         }
         else if (this.transformMode === "ROTATE") {
-            this._angleSelected = false;
-            this._angleStarted = false;
+            // this._angleSelected = false;
+            // this._angleStarted = false;
+            this._state = "ANGLE_AXIS_1";
             window.addEventListener("click", this.startDrawingAngle);
         }
         window.addEventListener("mousemove", this.updateTransform);

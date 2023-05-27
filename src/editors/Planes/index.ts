@@ -4,6 +4,12 @@ import { Faces, Lines } from "../../primitives";
 
 export type PlaneTransformMode = "TRANSLATE" | "ROTATE" | "SCALE";
 
+type TransformState =
+  | "IDLE"
+  | "ANGLE_AXIS_1"
+  | "ANGLE_AXIS_2"
+  | "ANGLE_FINISHING";
+
 export class Planes {
   faces = new Faces();
 
@@ -31,8 +37,7 @@ export class Planes {
   private _previousTransform = new THREE.Matrix4();
   private _newTransform = new THREE.Matrix4();
 
-  private _angleSelected = false;
-  private _angleStarted = false;
+  private _state: TransformState = "IDLE";
 
   get enabled() {
     return this._enabled;
@@ -95,6 +100,8 @@ export class Planes {
 
   transform(active = !this._transformActive) {
     if (active === this._transformActive) return;
+    if (active && this._selected === null) return;
+
     this._transformActive = active;
 
     if (!active) {
@@ -111,7 +118,10 @@ export class Planes {
 
     const center = this.faces.getCenter(this._selected);
 
-    if (center === null) return;
+    if (center === null) {
+      this.transform(false);
+      return;
+    }
 
     const [cx, cy, cz] = center;
     this._helperPlane.position.set(cx, cy, cz);
@@ -122,7 +132,10 @@ export class Planes {
     this._helperPlane.updateMatrixWorld();
 
     const result = this._components.raycaster.castRay([this._helperPlane]);
-    if (result === null) return;
+    if (result === null) {
+      this.transform(false);
+      return;
+    }
 
     this._previousTransform.setPosition(result.point);
     this._newTransform.setPosition(result.point);
@@ -136,8 +149,7 @@ export class Planes {
     if (this.transformMode === "TRANSLATE") {
       window.addEventListener("click", this.finishDrawing);
     } else if (this.transformMode === "ROTATE") {
-      this._angleSelected = false;
-      this._angleStarted = false;
+      this._state = "ANGLE_AXIS_1";
       window.addEventListener("click", this.startDrawingAngle);
     }
 
@@ -157,7 +169,7 @@ export class Planes {
       this._lines.setPoint(this._helperLine1.end, [x, y, z]);
       this.faces.transform(temp);
     } else if (this.transformMode === "ROTATE") {
-      if (!this._angleSelected) {
+      if (this._state === "ANGLE_AXIS_1") {
         this._lines.setPoint(this._helperLine1.end, [x, y, z]);
       } else {
         this._lines.setPoint(this._helperLine2.end, [x, y, z]);
@@ -219,8 +231,8 @@ export class Planes {
 
         const temp = this._newTransform.clone();
 
-        if (!this._angleStarted) {
-          this._angleStarted = true;
+        if (this._state === "ANGLE_AXIS_2") {
+          this._state = "ANGLE_FINISHING";
           this._previousTransform = this._newTransform.clone();
         }
 
@@ -235,13 +247,13 @@ export class Planes {
   };
 
   private startDrawingAngle = () => {
-    this._angleSelected = true;
+    this._state = "ANGLE_AXIS_2";
     window.removeEventListener("click", this.startDrawingAngle);
     window.addEventListener("click", this.finishDrawing);
   };
 
   private finishDrawing = () => {
-    this._angleSelected = false;
+    this._state = "IDLE";
     window.removeEventListener("click", this.finishDrawing);
     this.transform(false);
   };
