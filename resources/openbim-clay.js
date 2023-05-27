@@ -19572,11 +19572,11 @@ class Planes {
         this.startDrawingAngle = () => {
             this._angleSelected = true;
             window.removeEventListener("click", this.startDrawingAngle);
-            window.addEventListener("click", this.finishDrawingAngle);
+            window.addEventListener("click", this.finishDrawing);
         };
-        this.finishDrawingAngle = () => {
+        this.finishDrawing = () => {
             this._angleSelected = false;
-            window.removeEventListener("click", this.finishDrawingAngle);
+            window.removeEventListener("click", this.finishDrawing);
             this.transform(false);
         };
         this.pick = () => {
@@ -19674,7 +19674,10 @@ class Planes {
         this._lines.setPoint(this._helperLine1.end, [x, y, z]);
         this._lines.setPoint(this._helperLine2.start, [x, y, z]);
         this._lines.setPoint(this._helperLine2.end, [x, y, z]);
-        if (this.transformMode === "ROTATE") {
+        if (this.transformMode === "TRANSLATE") {
+            window.addEventListener("click", this.finishDrawing);
+        }
+        else if (this.transformMode === "ROTATE") {
             this._angleSelected = false;
             this._angleStarted = false;
             window.addEventListener("click", this.startDrawingAngle);
