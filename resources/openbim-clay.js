@@ -19739,4 +19739,53 @@ class Planes {
     }
 }
 
-export { BufferManager, Control, Extrusions, Faces, IdIndexMap, Lines, OffsetFaces, Planes, Polygons, Primitive, Raycaster, Selector, Slabs, Vector, Vertices, Walls };
+class Snapper {
+    constructor(components) {
+        this.vertices = [];
+        this.vertexFound = new Event();
+        this.setVertexSnap = (found) => {
+            const scene = this._components.scene.get();
+            if (!found) {
+                scene.remove(this._vertexIcon);
+                return;
+            }
+            const { id, vertices } = found;
+            const coordinates = vertices.get(id);
+            if (!coordinates)
+                return;
+            const [x, y, z] = coordinates;
+            this._vertexIcon.position.set(x, y, z);
+            scene.add(this._vertexIcon);
+        };
+        this._components = components;
+        this.threshold = 0.3;
+        const element = document.createElement("div");
+        element.className = "clay-snap-vertex";
+        this._vertexIcon = new CSS2DObject(element);
+        this.vertexFound.on(this.setVertexSnap);
+    }
+    set threshold(threshold) {
+        // TODO: Add the get() method to the raycaster definition in components
+        const casterComponent = this._components.raycaster;
+        const rayCaster = casterComponent.get();
+        rayCaster.params.Points = { threshold };
+    }
+    findPoint() {
+        const meshes = this.vertices.map((vertex) => vertex.mesh);
+        // TODO: Fix raycaster types to accept more than meshes
+        const result = this._components.raycaster.castRay(meshes);
+        if (result !== null && result.index !== undefined) {
+            const mesh = result.object;
+            const vertices = this.vertices.find((vertex) => vertex.mesh === mesh);
+            if (!vertices)
+                return;
+            const id = vertices.idMap.getId(result.index);
+            this.vertexFound.trigger({ id, vertices });
+        }
+        else {
+            this.setVertexSnap();
+        }
+    }
+}
+
+export { BufferManager, Control, Extrusions, Faces, IdIndexMap, Lines, OffsetFaces, Planes, Polygons, Primitive, Raycaster, Selector, Slabs, Snapper, Vector, Vertices, Walls };

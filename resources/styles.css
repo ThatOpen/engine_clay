@@ -12,3 +12,9 @@ body {
     width: 100vw;
     height: 100vh;
 }
+
+.clay-snap-vertex {
+    width: 1rem;
+    height: 1rem;
+    border: 3px solid #ff0000;
+}
