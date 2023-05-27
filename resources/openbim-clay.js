@@ -19742,49 +19742,93 @@ class Planes {
 class Snapper {
     constructor(components) {
         this.vertices = [];
-        this.vertexFound = new Event();
-        this.setVertexSnap = (found) => {
+        this.lines = [];
+        this.snap = new Event();
+        this.mode = "ALL";
+        this.previewSnap = (found) => {
             const scene = this._components.scene.get();
             if (!found) {
                 scene.remove(this._vertexIcon);
                 return;
             }
-            const { id, vertices } = found;
-            const coordinates = vertices.get(id);
-            if (!coordinates)
-                return;
+            const { coordinates } = found;
             const [x, y, z] = coordinates;
             this._vertexIcon.position.set(x, y, z);
             scene.add(this._vertexIcon);
         };
         this._components = components;
-        this.threshold = 0.3;
+        this.vertexThreshold = 0.5;
+        this.lineThreshold = 0.3;
         const element = document.createElement("div");
         element.className = "clay-snap-vertex";
         this._vertexIcon = new CSS2DObject(element);
-        this.vertexFound.on(this.setVertexSnap);
+        this.snap.on(this.previewSnap);
     }
-    set threshold(threshold) {
+    set vertexThreshold(threshold) {
         // TODO: Add the get() method to the raycaster definition in components
-        const casterComponent = this._components.raycaster;
-        const rayCaster = casterComponent.get();
+        const rayCaster = this.getRaycaster();
         rayCaster.params.Points = { threshold };
     }
-    findPoint() {
-        const meshes = this.vertices.map((vertex) => vertex.mesh);
-        // TODO: Fix raycaster types to accept more than meshes
-        const result = this._components.raycaster.castRay(meshes);
+    set lineThreshold(threshold) {
+        const rayCaster = this.getRaycaster();
+        rayCaster.params.Line = { threshold };
+    }
+    find() {
+        const result = this.raycastMeshes();
         if (result !== null && result.index !== undefined) {
-            const mesh = result.object;
-            const vertices = this.vertices.find((vertex) => vertex.mesh === mesh);
-            if (!vertices)
+            const item = this.getFoundItem(result.object);
+            if (!item)
                 return;
-            const id = vertices.idMap.getId(result.index);
-            this.vertexFound.trigger({ id, vertices });
+            const id = item.idMap.getId(result.index);
+            const coordinates = this.getSnapCoordinates(item, id, result);
+            if (!coordinates)
+                return;
+            this.snap.trigger({ id, item, coordinates });
         }
         else {
-            this.setVertexSnap();
+            this.previewSnap();
         }
+    }
+    getFoundItem(mesh) {
+        const itemList = [];
+        if (this.mode === "VERTEX" || this.mode === "ALL") {
+            for (const vertices of this.vertices) {
+                itemList.push(vertices);
+            }
+        }
+        if (this.mode === "LINE" || this.mode === "ALL") {
+            for (const lines of this.lines) {
+                itemList.push(lines);
+            }
+        }
+        const found = itemList.find((vertex) => vertex.mesh === mesh);
+        return found;
+    }
+    raycastMeshes() {
+        // TODO: Fix raycaster types to accept more than meshes
+        const meshes = [];
+        if (this.mode === "VERTEX" || this.mode === "ALL") {
+            for (const vertices of this.vertices) {
+                meshes.push(vertices.mesh);
+            }
+        }
+        if (this.mode === "LINE" || this.mode === "ALL") {
+            for (const lines of this.lines) {
+                meshes.push(lines.mesh);
+            }
+        }
+        return this._components.raycaster.castRay(meshes);
+    }
+    getSnapCoordinates(item, id, result) {
+        if (item instanceof Vertices) {
+            return item.get(id);
+        }
+        const { x, y, z } = result.point;
+        return [x, y, z];
+    }
+    getRaycaster() {
+        const casterComponent = this._components.raycaster;
+        return casterComponent.get();
     }
 }
 

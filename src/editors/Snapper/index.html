@@ -56,9 +56,10 @@
     lines.add(ids);
 
     snapper.vertices.push(lines.vertices);
+    snapper.lines.push(lines);
 
     window.addEventListener("mousemove", () => {
-        snapper.findPoint();
+        snapper.find();
     })
 
 
