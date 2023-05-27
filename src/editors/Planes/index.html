@@ -41,6 +41,16 @@
 	const planes = new OBC.Planes(components);
 	planes.enabled = true;
 
+    // Vertex snapping
+    // Edge (and extension) snapping
+    // Align faces
+    // Align edges
+    // Editable numeric values for move, rotate, scale
+    // Editable numeric values for transform (move, rotate, scale)
+    // Lock transform to axis (move, rotate, scale)
+    // Lock transform to plane (move, scale)
+
+
 	const settings = {
     add: "A",
     move: "M",
@@ -77,6 +87,8 @@
 	gui.add(settings, "add").name("New plane");
 	gui.add(settings, "select").name("Select");
 	gui.add(settings, "move").name("Move");
+	gui.add(settings, "rotate").name("Rotate");
+	gui.add(settings, "scale").name("Scale");
 
 	// gui.add(settings, "save").name("Save slab");
 	// gui.add(settings, "edit").name("Edit slab");

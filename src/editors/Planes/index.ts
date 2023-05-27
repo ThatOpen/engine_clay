@@ -6,9 +6,9 @@ export type PlaneTransformMode = "TRANSLATE" | "ROTATE" | "SCALE";
 
 type TransformState =
   | "IDLE"
-  | "ANGLE_AXIS_1"
-  | "ANGLE_AXIS_2"
-  | "ANGLE_FINISHING";
+  | "DRAWING_AXIS_1"
+  | "START_DRAWING_AXIS_2"
+  | "FINISH_DRAWING_AXIS_2";
 
 export class Planes {
   faces = new Faces();
@@ -36,6 +36,7 @@ export class Planes {
   private _transformActive = false;
   private _previousTransform = new THREE.Matrix4();
   private _newTransform = new THREE.Matrix4();
+  private _tempTransform = new THREE.Matrix4();
 
   private _state: TransformState = "IDLE";
 
@@ -146,11 +147,12 @@ export class Planes {
     this._lines.setPoint(this._helperLine2.start, [x, y, z]);
     this._lines.setPoint(this._helperLine2.end, [x, y, z]);
 
+    this._state = "DRAWING_AXIS_1";
+
     if (this.transformMode === "TRANSLATE") {
       window.addEventListener("click", this.finishDrawing);
-    } else if (this.transformMode === "ROTATE") {
-      this._state = "ANGLE_AXIS_1";
-      window.addEventListener("click", this.startDrawingAngle);
+    } else {
+      window.addEventListener("click", this.startDrawing);
     }
 
     window.addEventListener("mousemove", this.updateTransform);
@@ -159,96 +161,133 @@ export class Planes {
   private updateTransform = () => {
     const result = this._components.raycaster.castRay([this._helperPlane]);
     if (result === null) return;
-
-    const { x, y, z } = result.point;
-
-    if (this.transformMode === "TRANSLATE") {
-      this._newTransform.setPosition(result.point);
-      const temp = this._newTransform.clone();
-      temp.multiply(this._previousTransform.invert());
-      this._lines.setPoint(this._helperLine1.end, [x, y, z]);
-      this.faces.transform(temp);
-    } else if (this.transformMode === "ROTATE") {
-      if (this._state === "ANGLE_AXIS_1") {
-        this._lines.setPoint(this._helperLine1.end, [x, y, z]);
-      } else {
-        this._lines.setPoint(this._helperLine2.end, [x, y, z]);
-
-        const first = this._lines.get(this._helperLine1.id);
-        const second = this._lines.get(this._helperLine2.id);
-        if (first === null || second === null) return;
-
-        const [[ax, ay, az], [bx, by, bz]] = first;
-        const [[cx, cy, cz], [dx, dy, dz]] = second;
-
-        this._v1.set(ax, ay, az);
-        this._v2.set(bx, by, bz);
-        this._v3.set(cx, cy, cz);
-        this._v4.set(dx, dy, dz);
-
-        this._v2.sub(this._v1);
-        this._v4.sub(this._v3);
-
-        let angle = this._v4.angleTo(this._v2);
-
-        // Correct angle sign (otherwise it's always the shorter unsigned angle)
-
-        this._v3.set(0, 0, 1);
-        this._v3.applyEuler(this._helperPlane.rotation);
-        this._v4.cross(this._v2);
-        const dot = this._v4.dot(this._v3);
-        if (dot > 0) {
-          angle *= -1;
-        }
-
-        // Get axis from camera
-
-        const axis = new THREE.Vector3();
-        axis.set(0, 0, 1);
-        const camera = this._components.camera.get();
-        axis.applyEuler(camera.rotation);
-        this._q.setFromAxisAngle(axis, angle);
-
-        console.log(angle);
-
-        this._newTransform.identity();
-
-        const move = new THREE.Matrix4().makeTranslation(
-          this._v1.x,
-          this._v1.y,
-          this._v1.z
-        );
-
-        const rotation = new THREE.Matrix4();
-        rotation.makeRotationFromQuaternion(this._q);
-
-        const invMove = move.clone().invert();
-
-        this._newTransform.multiply(move);
-        this._newTransform.multiply(rotation);
-        this._newTransform.multiply(invMove);
-        this._newTransform.multiply(this._helperPlane.matrix);
-
-        const temp = this._newTransform.clone();
-
-        if (this._state === "ANGLE_AXIS_2") {
-          this._state = "ANGLE_FINISHING";
-          this._previousTransform = this._newTransform.clone();
-        }
-
-        temp.multiply(this._previousTransform.invert());
-        this.faces.transform(temp);
-      }
-    } else if (this.transformMode === "SCALE") {
-      console.log("scale");
-    }
-
-    this._previousTransform.copy(this._newTransform);
+    this.updateAxis(result);
+    this.getTransformData();
+    this.applyTransform();
   };
 
-  private startDrawingAngle = () => {
-    this._state = "ANGLE_AXIS_2";
-    window.removeEventListener("click", this.startDrawingAngle);
+  private updateAxis(result: THREE.Intersection) {
+    const { x, y, z } = result.point;
+    const isFirstAxis = this._state === "DRAWING_AXIS_1";
+    const axis = isFirstAxis ? this._helperLine1 : this._helperLine2;
+    this._lines.setPoint(axis.end, [x, y, z]);
+  }
+
+  private getTransformData() {
+    if (this.transformMode === "TRANSLATE") {
+      this.getTranslation();
+    } else if (this.transformMode === "ROTATE") {
+      this.getRotation();
+    } else if (this.transformMode === "SCALE") {
+      this.getScale();
+    }
+  }
+
+  private getTranslation() {
+    const endPoint = this._lines.vertices.get(this._helperLine1.end);
+    if (endPoint === null) return;
+    const [x, y, z] = endPoint;
+    this._v1.set(x, y, z);
+    this._newTransform.setPosition(this._v1);
+  }
+
+  private getScale() {
+    if (this._state === "DRAWING_AXIS_1") return;
+    this.getSegmentVectors();
+
+    const firstLength = this._v2.length();
+    const secondLength = this._v4.length();
+    const factor = secondLength / firstLength;
+
+    this._newTransform.identity();
+
+    const { x, y, z } = this._v1;
+    const move = new THREE.Matrix4().makeTranslation(x, y, z);
+    const scale = new THREE.Matrix4().makeScale(factor, factor, factor);
+    const invMove = move.clone().invert();
+
+    this._newTransform.multiply(move);
+    this._newTransform.multiply(scale);
+    this._newTransform.multiply(invMove);
+    this._newTransform.multiply(this._helperPlane.matrix);
+  }
+
+  private getRotation() {
+    if (this._state === "DRAWING_AXIS_1") return;
+    this.getSegmentVectors();
+
+    let angle = this._v4.angleTo(this._v2);
+
+    // Correct angle sign (otherwise it's always the shorter unsigned angle)
+
+    this._v3.set(0, 0, 1);
+    this._v3.applyEuler(this._helperPlane.rotation);
+    this._v4.cross(this._v2);
+    const dot = this._v4.dot(this._v3);
+    if (dot > 0) {
+      angle *= -1;
+    }
+
+    // Get axis from camera
+
+    const axis = new THREE.Vector3();
+    axis.set(0, 0, 1);
+    const camera = this._components.camera.get();
+    axis.applyEuler(camera.rotation);
+    this._q.setFromAxisAngle(axis, angle);
+
+    this._newTransform.identity();
+
+    const { x, y, z } = this._v1;
+    const move = new THREE.Matrix4().makeTranslation(x, y, z);
+    const rotation = new THREE.Matrix4().makeRotationFromQuaternion(this._q);
+    const invMove = move.clone().invert();
+
+    this._newTransform.multiply(move);
+    this._newTransform.multiply(rotation);
+    this._newTransform.multiply(invMove);
+    this._newTransform.multiply(this._helperPlane.matrix);
+  }
+
+  private getSegmentVectors() {
+    const first = this._lines.get(this._helperLine1.id);
+    const second = this._lines.get(this._helperLine2.id);
+    if (first === null || second === null) return;
+
+    const [[ax, ay, az], [bx, by, bz]] = first;
+    const [[cx, cy, cz], [dx, dy, dz]] = second;
+
+    this._v1.set(ax, ay, az);
+    this._v2.set(bx, by, bz);
+    this._v3.set(cx, cy, cz);
+    this._v4.set(dx, dy, dz);
+
+    this._v2.sub(this._v1);
+    this._v4.sub(this._v3);
+  }
+
+  private applyTransform() {
+    // Rotation and scale only update when updating the second axis
+    const isNotMove = this.transformMode !== "TRANSLATE";
+    const isFirstAxis = this._state === "DRAWING_AXIS_1";
+    if (isFirstAxis && isNotMove) return;
+
+    this._tempTransform.copy(this._newTransform);
+
+    if (this._state === "START_DRAWING_AXIS_2") {
+      this._state = "FINISH_DRAWING_AXIS_2";
+      this._previousTransform = this._newTransform.clone();
+    }
+
+    this._tempTransform.multiply(this._previousTransform.invert());
+    this.faces.transform(this._tempTransform);
+
+    this._previousTransform.copy(this._newTransform);
+  }
+
+  private startDrawing = () => {
+    this._state = "START_DRAWING_AXIS_2";
+    window.removeEventListener("click", this.startDrawing);
     window.addEventListener("click", this.finishDrawing);
   };
 
