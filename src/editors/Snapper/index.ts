@@ -17,6 +17,14 @@ export class Snapper {
 
   mode: "LINE" | "VERTEX" | "ALL" = "ALL";
 
+  private _helperLines = new Lines();
+  private _midPoint: number | null = null;
+
+  private _lastLineWithMidpoint: {
+    item?: Lines;
+    id?: number;
+  } = {};
+
   private readonly _components: OBC.Components;
   private readonly _vertexIcon: CSS2DObject;
 
@@ -34,13 +42,17 @@ export class Snapper {
   constructor(components: OBC.Components) {
     this._components = components;
     this.vertexThreshold = 0.5;
-    this.lineThreshold = 0.3;
+    this.lineThreshold = 0.2;
 
     const element = document.createElement("div");
     element.className = "clay-snap-vertex";
     this._vertexIcon = new CSS2DObject(element);
 
+    const scene = components.scene.get();
+    scene.add(this._helperLines.mesh);
+
     this.snap.on(this.previewSnap);
+    this.snap.on(this.updateMidPoint);
   }
 
   find() {
@@ -48,7 +60,9 @@ export class Snapper {
     if (result !== null && result.index !== undefined) {
       const item = this.getFoundItem(result.object);
       if (!item) return;
+      if (item instanceof Lines) result.index /= 2;
       const id = item.idMap.getId(result.index);
+      if (id === undefined) return;
       const coordinates = this.getSnapCoordinates(item, id, result);
       if (!coordinates) return;
       this.snap.trigger({ id, item, coordinates });
@@ -70,16 +84,42 @@ export class Snapper {
     scene.add(this._vertexIcon);
   };
 
+  private updateMidPoint = (found?: FoundItem) => {
+    if (!found) return;
+
+    if (found.item instanceof Lines) {
+      if (!this._midPoint) {
+        const [midPoint] = this._helperLines.addPoints([[0, 0, 0]]);
+        this._midPoint = midPoint;
+      }
+
+      const { item, id } = this._lastLineWithMidpoint;
+      if (item === found.item && id === found.id) return;
+      this._lastLineWithMidpoint.item = found.item;
+      this._lastLineWithMidpoint.id = found.id;
+
+      const line = found.item.get(found.id);
+      if (line === null) return;
+
+      const [[ax, ay, az], [bx, by, bz]] = line;
+
+      const midPoint = [(ax + bx) / 2, (ay + by) / 2, (az + bz) / 2];
+      this._helperLines.setPoint(this._midPoint, midPoint);
+    }
+  };
+
   private getFoundItem(mesh: any) {
     const itemList: any[] = [];
 
     if (this.mode === "VERTEX" || this.mode === "ALL") {
+      itemList.push(this._helperLines.vertices);
       for (const vertices of this.vertices) {
         itemList.push(vertices);
       }
     }
 
     if (this.mode === "LINE" || this.mode === "ALL") {
+      itemList.push(this._helperLines);
       for (const lines of this.lines) {
         itemList.push(lines);
       }
@@ -94,12 +134,14 @@ export class Snapper {
     const meshes: any[] = [];
 
     if (this.mode === "VERTEX" || this.mode === "ALL") {
+      meshes.push(this._helperLines.vertices.mesh);
       for (const vertices of this.vertices) {
         meshes.push(vertices.mesh);
       }
     }
 
     if (this.mode === "LINE" || this.mode === "ALL") {
+      meshes.push(this._helperLines.mesh);
       for (const lines of this.lines) {
         meshes.push(lines.mesh);
       }

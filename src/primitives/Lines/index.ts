@@ -215,7 +215,7 @@ export class Lines extends Primitive {
    * @param id The point whose position to set.
    * @param coordinates The new coordinates of the point.
    */
-  setPoint(id: number, coordinates: [number, number, number]) {
+  setPoint(id: number, coordinates: number[]) {
     const indices = new Set<number>();
     this.getPointIndices(id, indices);
     this.setLines(coordinates, indices);

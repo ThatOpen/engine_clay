@@ -68,7 +68,7 @@ export class Vertices extends Primitive {
    * @param ids the vertices to edit.
    * @param coordinates the new coordinates for the vertex.
    */
-  set(ids: Iterable<number>, coordinates: [number, number, number]) {
+  set(ids: Iterable<number>, coordinates: number[]) {
     const [x, y, z] = coordinates;
     for (const id of ids) {
       const index = this.idMap.getIndex(id);
@@ -96,6 +96,8 @@ export class Vertices extends Primitive {
       this._colorBuffer.setXYZ(index, r, g, b);
     }
     this._buffers.updateCount(this.idMap.size);
+    this.mesh.geometry.computeBoundingSphere();
+    this.mesh.geometry.computeBoundingBox();
     return ids;
   }
 

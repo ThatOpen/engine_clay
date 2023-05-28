@@ -16861,6 +16861,8 @@ class Vertices extends Primitive {
             this._colorBuffer.setXYZ(index, r, g, b);
         }
         this._buffers.updateCount(this.idMap.size);
+        this.mesh.geometry.computeBoundingSphere();
+        this.mesh.geometry.computeBoundingBox();
         return ids;
     }
     /**
@@ -19745,6 +19747,9 @@ class Snapper {
         this.lines = [];
         this.snap = new Event();
         this.mode = "ALL";
+        this._helperLines = new Lines();
+        this._midPoint = null;
+        this._lastLineWithMidpoint = {};
         this.previewSnap = (found) => {
             const scene = this._components.scene.get();
             if (!found) {
@@ -19756,13 +19761,37 @@ class Snapper {
             this._vertexIcon.position.set(x, y, z);
             scene.add(this._vertexIcon);
         };
+        this.updateMidPoint = (found) => {
+            if (!found)
+                return;
+            if (found.item instanceof Lines) {
+                if (!this._midPoint) {
+                    const [midPoint] = this._helperLines.addPoints([[0, 0, 0]]);
+                    this._midPoint = midPoint;
+                }
+                const { item, id } = this._lastLineWithMidpoint;
+                if (item === found.item && id === found.id)
+                    return;
+                this._lastLineWithMidpoint.item = found.item;
+                this._lastLineWithMidpoint.id = found.id;
+                const line = found.item.get(found.id);
+                if (line === null)
+                    return;
+                const [[ax, ay, az], [bx, by, bz]] = line;
+                const midPoint = [(ax + bx) / 2, (ay + by) / 2, (az + bz) / 2];
+                this._helperLines.setPoint(this._midPoint, midPoint);
+            }
+        };
         this._components = components;
         this.vertexThreshold = 0.5;
-        this.lineThreshold = 0.3;
+        this.lineThreshold = 0.2;
         const element = document.createElement("div");
         element.className = "clay-snap-vertex";
         this._vertexIcon = new CSS2DObject(element);
+        const scene = components.scene.get();
+        scene.add(this._helperLines.mesh);
         this.snap.on(this.previewSnap);
+        this.snap.on(this.updateMidPoint);
     }
     set vertexThreshold(threshold) {
         // TODO: Add the get() method to the raycaster definition in components
@@ -19779,7 +19808,11 @@ class Snapper {
             const item = this.getFoundItem(result.object);
             if (!item)
                 return;
+            if (item instanceof Lines)
+                result.index /= 2;
             const id = item.idMap.getId(result.index);
+            if (id === undefined)
+                return;
             const coordinates = this.getSnapCoordinates(item, id, result);
             if (!coordinates)
                 return;
@@ -19792,11 +19825,13 @@ class Snapper {
     getFoundItem(mesh) {
         const itemList = [];
         if (this.mode === "VERTEX" || this.mode === "ALL") {
+            itemList.push(this._helperLines.vertices);
             for (const vertices of this.vertices) {
                 itemList.push(vertices);
             }
         }
         if (this.mode === "LINE" || this.mode === "ALL") {
+            itemList.push(this._helperLines);
             for (const lines of this.lines) {
                 itemList.push(lines);
             }
@@ -19808,11 +19843,13 @@ class Snapper {
         // TODO: Fix raycaster types to accept more than meshes
         const meshes = [];
         if (this.mode === "VERTEX" || this.mode === "ALL") {
+            meshes.push(this._helperLines.vertices.mesh);
             for (const vertices of this.vertices) {
                 meshes.push(vertices.mesh);
             }
         }
         if (this.mode === "LINE" || this.mode === "ALL") {
+            meshes.push(this._helperLines.mesh);
             for (const lines of this.lines) {
                 meshes.push(lines.mesh);
             }
