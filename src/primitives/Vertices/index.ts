@@ -83,7 +83,7 @@ export class Vertices extends Primitive {
    * @param coordinates Points to add.
    * @returns the list of ids of the created vertices.
    */
-  add(coordinates: [number, number, number][]) {
+  add(coordinates: number[][]) {
     this._buffers.resizeIfNeeded(coordinates.length);
     const ids: number[] = [];
     const { r, g, b } = this._baseColor;

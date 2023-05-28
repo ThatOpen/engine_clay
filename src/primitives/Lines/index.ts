@@ -114,6 +114,8 @@ export class Lines extends Primitive {
     }
     const allVerticesCount = this.idMap.size * 2;
     this._buffers.updateCount(allVerticesCount);
+    this.mesh.geometry.computeBoundingSphere();
+    this.mesh.geometry.computeBoundingBox();
     return createdIDs;
   }
 
@@ -129,7 +131,7 @@ export class Lines extends Primitive {
    * Adds the points that can be used by one or many lines.
    * @param points the list of (x, y, z) coordinates of the points.
    */
-  addPoints(points: [number, number, number][]) {
+  addPoints(points: number[][]) {
     const ids = this.vertices.add(points);
     for (const id of ids) {
       this.points[id] = { start: new Set(), end: new Set() };

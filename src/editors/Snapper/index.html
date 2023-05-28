@@ -64,9 +64,13 @@
     })
 
 
-    const settings = {}
+    const settings = {
+        "escape": "Remove helper lines"
+    }
 
-    const commands = {}
+    const commands = {
+        "Escape": () => snapper.removeHelpers()
+    }
 
     window.addEventListener('keydown', (event) => {
         const command = commands[event.code];
@@ -77,7 +81,7 @@
 
     const gui = new dat.GUI();
 
-    // gui.add(settings, "save").name("Save slab");
+    gui.add(settings, "escape");
     // gui.add(settings, "edit").name("Edit slab");
     // gui.add(settings, "select").name("Select");
     // gui.add(settings, "move").name("Move");
