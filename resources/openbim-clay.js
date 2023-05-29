@@ -19769,6 +19769,8 @@ class Snapper {
         this.updateLastSelection = (found) => {
             if (found && found.item !== this._helper && found.item instanceof Lines) {
                 this._lastSelectedLine = { ...found };
+                found.item.select(false);
+                found.item.select(true, [found.id]);
             }
         };
         this.updateMidPoint = (found) => {
