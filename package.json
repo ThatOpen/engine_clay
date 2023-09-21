@@ -1,7 +1,7 @@
 {
   "name": "openbim-clay",
-  "main": "dist/index.js",
-  "version": "1.0.0-alpha.1",
+  "main": "index.js",
+  "version": "0.0.2",
   "author": "antonio gonzalez viegas, quim moya",
   "license": "MIT",
   "packageManager": "yarn@3.2.1",

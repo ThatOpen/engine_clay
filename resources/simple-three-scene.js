@@ -24,6 +24,7 @@ export class SimpleThreeScene {
   initializeScene(canvas) {
     // Creates the Three.js scene
     this.scene = new THREE.Scene();
+    this.scene.background = new THREE.Color(0x202932);
 
     // Object to store the size of the viewport
     this.size = {
