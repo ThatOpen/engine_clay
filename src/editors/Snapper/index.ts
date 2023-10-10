@@ -56,10 +56,10 @@ export class Snapper {
     helperMat.opacity = 0.2;
     this._helper.baseColor = new THREE.Color(0xff0000);
 
-    this.snap.on(this.updateLastSelection);
-    this.snap.on(this.previewSnap);
-    this.snap.on(this.updateMidPoint);
-    this.snap.on(this.updateHelperLines);
+    this.snap.add(this.updateLastSelection);
+    this.snap.add(this.previewSnap);
+    this.snap.add(this.updateMidPoint);
+    this.snap.add(this.updateHelperLines);
 
     window.addEventListener("mousemove", () => {
       window.clearTimeout(this._helperLinesTimeout);

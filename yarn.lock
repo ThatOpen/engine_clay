@@ -5009,11 +5009,11 @@ __metadata:
   linkType: hard
 
 "jiti@npm:^1.18.2":
-  version: 1.19.3
-  resolution: "jiti@npm:1.19.3"
+  version: 1.20.0
+  resolution: "jiti@npm:1.20.0"
   bin:
     jiti: bin/jiti.js
-  checksum: de3dacdfe30948d96b69712b04cc28127c17f43d5233a5aa069933e04ac4c9aaf265bef4cdf2b0c2a6f5af236a58aea9bfea83e8e289e2490802bdff7f99bff7
+  checksum: 7924062b5675142e3e272a27735be84b7bfc0a0eb73217fc2dcafa034f37c4f7b4b9ffc07dd98bcff0f739a8811ce1544db205ae7e97b1c86f0df92c65ce3c72
   languageName: node
   linkType: hard
 
@@ -6000,6 +6000,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"openbim-clay@npm:0.0.3":
+  version: 0.0.3
+  resolution: "openbim-clay@npm:0.0.3"
+  dependencies:
+    earcut: ^2.2.4
+    openbim-components: 1.0.0-alpha.102
+    three: 0.152.2
+  checksum: e2e343a9a4f210462449555a9b6ba81fa434f91bf6e48a0bdf63801f114c15d2cf012dfc5003a176960b161a250e849b9130782bd6a34418f97d47989cfdc1f5
+  languageName: node
+  linkType: hard
+
 "openbim-clay@workspace:.":
   version: 0.0.0-use.local
   resolution: "openbim-clay@workspace:."
@@ -6020,13 +6031,15 @@ __metadata:
     eslint-plugin-import: ^2.23.4
     eslint-plugin-prettier: ^3.4.0
     jest: 27.0.4
-    openbim-components: 1.0.0-alpha.102
+    openbim-components: ^1.1.2
     prettier: ^2.3.1
     rollup: 3.2.3
     three: 0.152.2
     ts-jest: ^27.0.3
     ts-node: ^10.0.0
     typescript: ^4.3.2
+  peerDependencies:
+    openbim-components: ^1.1.2
   languageName: unknown
   linkType: soft
 
@@ -6050,6 +6063,30 @@ __metadata:
     top-tool-package-reader: 0.0.3
     web-ifc: 0.0.42
   checksum: 69ac9401e6189624fee0e4a67edf08e1f7855de2cc78f01f4dcfa35aa62f3b26014b6b21d542268950cb9e0c9df45f0e2df6222300ca157c9a080904fdf07373
+  languageName: node
+  linkType: hard
+
+"openbim-components@npm:^1.1.2":
+  version: 1.1.2
+  resolution: "openbim-components@npm:1.1.2"
+  dependencies:
+    "@popperjs/core": latest
+    bim-fragment: 1.0.22
+    camera-controls: ^1.36.0
+    dexie: ^3.2.3
+    dxf-writer: ^1.18.4
+    earcut: ^2.2.4
+    mapbox-gl: ^2.15.0
+    n8ao: ^1.5.1
+    openbim-clay: 0.0.3
+    postprocessing: ^6.31.0
+    stats.js: ^0.17.0
+    tailwindcss: ^3.3.2
+    three: 0.152.2
+    three-mesh-bvh: 0.6.0
+    top-tool-package-reader: 0.0.3
+    web-ifc: 0.0.44
+  checksum: 600b6fed5c8bf71e17544e78fbfdc380b03d21a5d53d77c6e08fe9c08f36a78e4324a5f857f33f7cfd13193fec7797a0c783831995866702fb74a8bfa428c450
   languageName: node
   linkType: hard
 
@@ -6397,22 +6434,22 @@ __metadata:
   linkType: hard
 
 "postcss@npm:^8.4.23":
-  version: 8.4.29
-  resolution: "postcss@npm:8.4.29"
+  version: 8.4.31
+  resolution: "postcss@npm:8.4.31"
   dependencies:
     nanoid: ^3.3.6
     picocolors: ^1.0.0
     source-map-js: ^1.0.2
-  checksum: dd6daa25e781db9ae5b651d9b7bfde0ec6e60e86a37da69a18eb4773d5ddd51e28fc4ff054fbdc04636a31462e6bf09a1e50986f69ac52b10d46b7457cd36d12
+  checksum: 1d8611341b073143ad90486fcdfeab49edd243377b1f51834dc4f6d028e82ce5190e4f11bb2633276864503654fb7cab28e67abdc0fbf9d1f88cad4a0ff0beea
   languageName: node
   linkType: hard
 
 "postprocessing@npm:^6.31.0":
-  version: 6.33.0
-  resolution: "postprocessing@npm:6.33.0"
+  version: 6.33.2
+  resolution: "postprocessing@npm:6.33.2"
   peerDependencies:
-    three: ">= 0.138.0 < 0.156.0"
-  checksum: a82cf04d96791f3275b0d696cc7454e7e50ef28e2c3a6fd02478bb4461eb1846f33e78eda6bbf7433666b224b20506045c4369cccad93f91fd6f1c64251f555a
+    three: ">= 0.138.0 < 0.158.0"
+  checksum: ef9626eecfa79d217392ed1e77373f41851280a78ff49cfc031b06868a38feb85c1360c503f695ac726fd5bf0339252197fa02ccc49958ccb3dbe07f666c29ae
   languageName: node
   linkType: hard
 
@@ -6725,7 +6762,20 @@ __metadata:
   languageName: node
   linkType: hard
 
-"resolve@npm:^1.1.7, resolve@npm:^1.10.0, resolve@npm:^1.20.0, resolve@npm:^1.22.1, resolve@npm:^1.22.2, resolve@npm:^1.22.4":
+"resolve@npm:^1.1.7, resolve@npm:^1.22.2":
+  version: 1.22.6
+  resolution: "resolve@npm:1.22.6"
+  dependencies:
+    is-core-module: ^2.13.0
+    path-parse: ^1.0.7
+    supports-preserve-symlinks-flag: ^1.0.0
+  bin:
+    resolve: bin/resolve
+  checksum: d13bf66d4e2ee30d291491f16f2fa44edd4e0cefb85d53249dd6f93e70b2b8c20ec62f01b18662e3cd40e50a7528f18c4087a99490048992a3bb954cf3201a5b
+  languageName: node
+  linkType: hard
+
+"resolve@npm:^1.10.0, resolve@npm:^1.20.0, resolve@npm:^1.22.1, resolve@npm:^1.22.4":
   version: 1.22.4
   resolution: "resolve@npm:1.22.4"
   dependencies:
@@ -6738,7 +6788,20 @@ __metadata:
   languageName: node
   linkType: hard
 
-"resolve@patch:resolve@^1.1.7#~builtin<compat/resolve>, resolve@patch:resolve@^1.10.0#~builtin<compat/resolve>, resolve@patch:resolve@^1.20.0#~builtin<compat/resolve>, resolve@patch:resolve@^1.22.1#~builtin<compat/resolve>, resolve@patch:resolve@^1.22.2#~builtin<compat/resolve>, resolve@patch:resolve@^1.22.4#~builtin<compat/resolve>":
+"resolve@patch:resolve@^1.1.7#~builtin<compat/resolve>, resolve@patch:resolve@^1.22.2#~builtin<compat/resolve>":
+  version: 1.22.6
+  resolution: "resolve@patch:resolve@npm%3A1.22.6#~builtin<compat/resolve>::version=1.22.6&hash=07638b"
+  dependencies:
+    is-core-module: ^2.13.0
+    path-parse: ^1.0.7
+    supports-preserve-symlinks-flag: ^1.0.0
+  bin:
+    resolve: bin/resolve
+  checksum: 9d3b3c67aefd12cecbe5f10ca4d1f51ea190891096497c43f301b086883b426466918c3a64f1bbf1788fabb52b579d58809614006c5d0b49186702b3b8fb746a
+  languageName: node
+  linkType: hard
+
+"resolve@patch:resolve@^1.10.0#~builtin<compat/resolve>, resolve@patch:resolve@^1.20.0#~builtin<compat/resolve>, resolve@patch:resolve@^1.22.1#~builtin<compat/resolve>, resolve@patch:resolve@^1.22.4#~builtin<compat/resolve>":
   version: 1.22.4
   resolution: "resolve@patch:resolve@npm%3A1.22.4#~builtin<compat/resolve>::version=1.22.4&hash=07638b"
   dependencies:
@@ -8053,6 +8116,22 @@ __metadata:
   version: 0.0.42
   resolution: "web-ifc@npm:0.0.42"
   checksum: e9cab52eeee358e28e836e75201acdf6db0e78b9225640a36694ddc8be0a89e89a21162053ae1afacde4cd4ea98c3fd1e6b900e38b1e4e7ebe62adb6cbbe39af
+  languageName: node
+  linkType: hard
+
+"web-ifc@npm:0.0.44":
+  version: 0.0.44
+  resolution: "web-ifc@npm:0.0.44"
+  dependencies:
+    web-ifc: ^0.0.43
+  checksum: 2f9ac32f1015c858698183c74bf39b8c01e93bd794ec90a4800086d8fffd2ae9297fc8b9dbd943357a56b26dbbaefdee88d303f3fe51e528d0841cc48e03006c
+  languageName: node
+  linkType: hard
+
+"web-ifc@npm:^0.0.43":
+  version: 0.0.43
+  resolution: "web-ifc@npm:0.0.43"
+  checksum: 6464767bf63b987d3f997d34f9d40c11579cfe1702b4966255888598b0629918bcbd132adaee049c62a3ad46334b213650b08531128ac17accc173d53cee9fb6
   languageName: node
   linkType: hard
 

@@ -389,10 +389,11 @@ export class OffsetFaces extends Primitive {
           const x = (b2 * d1 - b1 * d2) / (a1 * b2 - a2 * b1);
           const z = (a1 * d2 - a2 * d1) / (a1 * b2 - a2 * b1);
 
+          const y = coords[1];
           // Update the vertices of both OffsetFaces
-          this.faces.setPoint(currentPoint, [x, 0, z]);
-          this.faces.setPoint(nextPoint, [x, 0, z]);
-          intersectionPoints.push([x, 0, z]);
+          this.faces.setPoint(currentPoint, [x, y, z]);
+          this.faces.setPoint(nextPoint, [x, y, z]);
+          intersectionPoints.push([x, y, z]);
         }
       }
 
