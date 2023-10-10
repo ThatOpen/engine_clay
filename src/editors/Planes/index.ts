@@ -1,6 +1,6 @@
 import * as THREE from "three";
-import * as OBC from "openbim-components";
 import { Faces, Lines } from "../../primitives";
+import { Raycaster } from "../../utils";
 
 export type PlaneTransformMode = "TRANSLATE" | "ROTATE" | "SCALE";
 
@@ -13,10 +13,10 @@ type TransformState =
 export class Planes {
   faces = new Faces();
 
+  private _cameraGetter: () => THREE.Camera;
+  private _caster = new Raycaster();
   private _enabled = false;
   private transformMode: PlaneTransformMode = "TRANSLATE";
-
-  private _components: OBC.Components;
 
   private _lines = new Lines();
   private readonly _helperLine1: { id: number; start: number; end: number };
@@ -33,6 +33,7 @@ export class Planes {
 
   private _q = new THREE.Quaternion();
 
+  private _scene: THREE.Scene;
   private _transformActive = false;
   private _previousTransform = new THREE.Matrix4();
   private _newTransform = new THREE.Matrix4();
@@ -53,8 +54,9 @@ export class Planes {
     }
   }
 
-  constructor(components: OBC.Components) {
-    this._components = components;
+  constructor(scene: THREE.Scene, cameraGetter: () => THREE.Camera) {
+    this._cameraGetter = cameraGetter;
+    this._scene = scene;
     const material = this.faces.mesh.material as THREE.Material;
     material.transparent = true;
     material.opacity = 0.2;
@@ -83,7 +85,6 @@ export class Planes {
     const [helperAngleLineID] = this._lines.add([c, d]);
     this._helperLine2 = this._lines.list[helperAngleLineID];
 
-    const scene = components.scene.get();
     scene.add(this.faces.mesh);
     scene.add(this._helperPlane);
   }
@@ -127,13 +128,13 @@ export class Planes {
     const [cx, cy, cz] = center;
     this._helperPlane.position.set(cx, cy, cz);
 
-    const camera = this._components.camera.get();
+    const camera = this._cameraGetter();
     this._helperPlane.rotation.copy(camera.rotation);
     this._helperPlane.updateMatrix();
     this._helperPlane.updateMatrixWorld();
 
-    const result = this._components.raycaster.castRay([this._helperPlane]);
-    if (result === null) {
+    const result = this._caster.cast([this._helperPlane])[0];
+    if (!result) {
       this.transform(false);
       return;
     }
@@ -159,7 +160,7 @@ export class Planes {
   }
 
   private updateTransform = () => {
-    const result = this._components.raycaster.castRay([this._helperPlane]);
+    const result = this._caster.cast([this._helperPlane])[0];
     if (result === null) return;
     this.updateAxis(result);
     this.getTransformData();
@@ -232,7 +233,7 @@ export class Planes {
 
     const axis = new THREE.Vector3();
     axis.set(0, 0, 1);
-    const camera = this._components.camera.get();
+    const camera = this._cameraGetter();
     axis.applyEuler(camera.rotation);
     this._q.setFromAxisAngle(axis, angle);
 
@@ -301,8 +302,8 @@ export class Planes {
     if (this._transformActive) return;
     this.faces.select(false);
     this._selected = null;
-    const result = this._components.raycaster.castRay([this.faces.mesh]);
-    if (result === null || result.faceIndex === undefined) return;
+    const result = this._caster.cast([this.faces.mesh])[0];
+    if (!result || result.faceIndex === undefined) return;
     const faceID = this.faces.getFromIndex(result.faceIndex);
     if (faceID !== undefined) {
       this._selected = faceID;
@@ -311,11 +312,10 @@ export class Planes {
   };
 
   private setHelperLineVisible(active: boolean) {
-    const scene = this._components.scene.get();
     if (active) {
-      scene.add(this._lines.mesh, this._lines.vertices.mesh);
+      this._scene.add(this._lines.mesh, this._lines.vertices.mesh);
     } else {
-      scene.remove(this._lines.mesh, this._lines.vertices.mesh);
+      this._scene.remove(this._lines.mesh, this._lines.vertices.mesh);
     }
   }
 }

@@ -1,7 +1,8 @@
 import * as THREE from "three";
-import * as OBC from "openbim-components";
 import { CSS2DObject } from "three/examples/jsm/renderers/CSS2DRenderer";
 import { Lines, Vertices } from "../../primitives";
+import { Event } from "../../utils/event";
+import { Raycaster } from "../../utils";
 
 export type FoundItem = {
   id: number;
@@ -13,10 +14,11 @@ export class Snapper {
   vertices: Vertices[] = [];
   lines: Lines[] = [];
 
-  snap = new OBC.Event<FoundItem>();
+  snap = new Event<FoundItem>();
 
   mode: "LINE" | "VERTEX" | "ALL" = "ALL";
 
+  private _caster = new Raycaster();
   private _helper = new Lines();
   private _helperLinesIDs = new Set<number>();
   private _helperPointsIDs = new Set<number>();
@@ -26,22 +28,21 @@ export class Snapper {
 
   private _lastSelectedLine: FoundItem | null = null;
 
-  private readonly _components: OBC.Components;
   private readonly _vertexIcon: CSS2DObject;
+  private _scene: THREE.Scene;
 
   set vertexThreshold(threshold: number) {
     // TODO: Add the get() method to the raycaster definition in components
-    const rayCaster = this.getRaycaster();
-    rayCaster.params.Points = { threshold };
+    this._caster.core.params.Points = { threshold };
   }
 
   set lineThreshold(threshold: number) {
-    const rayCaster = this.getRaycaster();
-    rayCaster.params.Line = { threshold };
+    this._caster.core.params.Line = { threshold };
   }
 
-  constructor(components: OBC.Components) {
-    this._components = components;
+  constructor(scene: THREE.Scene) {
+    this._scene = scene;
+
     this.vertexThreshold = 0.5;
     this.lineThreshold = 0.2;
 
@@ -49,8 +50,7 @@ export class Snapper {
     element.className = "clay-snap-vertex";
     this._vertexIcon = new CSS2DObject(element);
 
-    const scene = components.scene.get();
-    scene.add(this._helper.mesh);
+    this._scene.add(this._helper.mesh);
     const helperMat = this._helper.mesh.material as THREE.Material;
     helperMat.transparent = true;
     helperMat.opacity = 0.2;
@@ -68,7 +68,7 @@ export class Snapper {
 
   find() {
     const result = this.raycastMeshes();
-    if (result !== null && result.index !== undefined) {
+    if (result && result.index !== undefined) {
       const item = this.getFoundItem(result.object);
       if (!item) return;
       if (item instanceof Lines) result.index /= 2;
@@ -100,16 +100,15 @@ export class Snapper {
   }
 
   private previewSnap = (found?: FoundItem) => {
-    const scene = this._components.scene.get();
     if (!found) {
-      scene.remove(this._vertexIcon);
+      this._scene.remove(this._vertexIcon);
       return;
     }
 
     const { coordinates } = found;
     const [x, y, z] = coordinates;
     this._vertexIcon.position.set(x, y, z);
-    scene.add(this._vertexIcon);
+    this._scene.add(this._vertexIcon);
   };
 
   private updateLastSelection = (found?: FoundItem) => {
@@ -298,7 +297,7 @@ export class Snapper {
       }
     }
 
-    return this._components.raycaster.castRay(meshes);
+    return this._caster.cast(meshes)[0];
   }
 
   private getSnapCoordinates(
@@ -311,10 +310,5 @@ export class Snapper {
     }
     const { x, y, z } = result.point;
     return [x, y, z];
-  }
-
-  private getRaycaster() {
-    const casterComponent = this._components.raycaster as OBC.SimpleRaycaster;
-    return casterComponent.get();
   }
 }

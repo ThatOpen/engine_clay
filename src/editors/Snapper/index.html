@@ -38,7 +38,8 @@
 
     const scene = components.scene.get();
 
-    const snapper = new OBC.Snapper(components);
+    // TODO: Check if works, raycaster might be missing camera
+    const snapper = new OBC.Snapper(scene);
 
     const lines = new OBC.Lines();
     scene.add(lines.mesh);

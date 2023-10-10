@@ -1,12 +1,12 @@
 import * as THREE from "three";
-import * as OBC from "openbim-components";
 import { TransformControls } from "three/examples/jsm/controls/TransformControls";
+import { Event } from "./event";
 
 export class Control {
   core: TransformControls;
   helper: THREE.Object3D;
-  transformed = new OBC.Event<THREE.Matrix4>();
-  controlsActivated = new OBC.Event();
+  transformed = new Event<THREE.Matrix4>();
+  controlsActivated = new Event();
 
   get items() {
     return [this.helper, this.core];

@@ -1,7 +1,7 @@
 import * as THREE from "three";
 
 export class Raycaster {
-  private _caster: THREE.Raycaster;
+  core: THREE.Raycaster;
   private _mouse = new THREE.Vector2();
 
   domElement?: HTMLCanvasElement;
@@ -24,12 +24,12 @@ export class Raycaster {
   }
 
   constructor() {
-    this._caster = new THREE.Raycaster();
-    if (!this._caster.params.Points) {
+    this.core = new THREE.Raycaster();
+    if (!this.core.params.Points) {
       throw new Error("Raycaster has undefined Points");
     }
 
-    this._caster.params.Points.threshold = 0.2;
+    this.core.params.Points.threshold = 0.2;
   }
 
   cast(items: THREE.Object3D[]) {
@@ -43,8 +43,8 @@ export class Raycaster {
     this._mouse.x = ((x - b.left) / (b.right - b.left)) * 2 - 1;
     this._mouse.y = -((y - b.top) / (b.bottom - b.top)) * 2 + 1;
 
-    this._caster.setFromCamera(this._mouse, this.camera);
-    return this._caster.intersectObjects(items);
+    this.core.setFromCamera(this._mouse, this.camera);
+    return this.core.intersectObjects(items);
   }
 
   private getMousePosition = (event: MouseEvent) => {
