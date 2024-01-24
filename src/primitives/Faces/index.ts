@@ -225,7 +225,7 @@ export class Faces extends Primitive {
     }
 
     const idsArray: number[] = [];
-    const oldIndex = this._index.array as number[];
+    const oldIndex = Array.from(this._index.array);
     for (const index of oldIndex) {
       const id = this.vertices.idMap.getId(index);
       idsArray.push(id);
