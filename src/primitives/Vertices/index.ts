@@ -35,7 +35,6 @@ export class Vertices extends Primitive {
    */
   constructor(size: number = 0.1) {
     super();
-
     const geometry = new THREE.BufferGeometry();
     const material = new THREE.PointsMaterial({
       size,
@@ -57,11 +56,10 @@ export class Vertices extends Primitive {
   get(id: number) {
     const index = this.idMap.getIndex(id);
     if (index === null) return null;
-    const positionBuffer = this._positionBufferObject.buffer;
     return [
-      positionBuffer.getX(index),
-      positionBuffer.getY(index),
-      positionBuffer.getZ(index),
+      this._positionBuffer.getX(index),
+      this._positionBuffer.getY(index),
+      this._positionBuffer.getZ(index),
     ] as [number, number, number];
   }
 
@@ -72,13 +70,12 @@ export class Vertices extends Primitive {
    */
   set(ids: Iterable<number>, coordinates: number[]) {
     const [x, y, z] = coordinates;
-    const positionBuffer = this._positionBufferObject.buffer;
     for (const id of ids) {
       const index = this.idMap.getIndex(id);
       if (index === null) return;
-      positionBuffer.setXYZ(index, x, y, z);
+      this._positionBuffer.setXYZ(index, x, y, z);
     }
-    positionBuffer.needsUpdate = true;
+    this._positionBuffer.needsUpdate = true;
   }
 
   /**
@@ -95,11 +92,8 @@ export class Vertices extends Primitive {
       const id = this.idMap.getId(index);
       ids.push(id);
       const [x, y, z] = coordinates[i];
-      const positionBuffer = this._positionBufferObject.buffer;
-      const colorBuffer = this._colorBufferObject.buffer;
-
-      positionBuffer.setXYZ(index, x, y, z);
-      colorBuffer.setXYZ(index, r, g, b);
+      this._positionBuffer.setXYZ(index, x, y, z);
+      this._colorBuffer.setXYZ(index, r, g, b);
     }
     this._buffers.updateCount(this.idMap.size);
     this.mesh.geometry.computeBoundingSphere();
@@ -125,18 +119,17 @@ export class Vertices extends Primitive {
    */
   transform(matrix: THREE.Matrix4, ids = this.selected.data) {
     const vector = new THREE.Vector3();
-    const positionBuffer = this._positionBufferObject.buffer;
     for (const id of ids) {
       const index = this.idMap.getIndex(id);
       if (index === null) continue;
-      const x = positionBuffer.getX(index);
-      const y = positionBuffer.getY(index);
-      const z = positionBuffer.getZ(index);
+      const x = this._positionBuffer.getX(index);
+      const y = this._positionBuffer.getY(index);
+      const z = this._positionBuffer.getZ(index);
       vector.set(x, y, z);
       vector.applyMatrix4(matrix);
-      positionBuffer.setXYZ(index, vector.x, vector.y, vector.z);
+      this._positionBuffer.setXYZ(index, vector.x, vector.y, vector.z);
     }
-    positionBuffer.needsUpdate = true;
+    this._positionBuffer.needsUpdate = true;
   }
 
   /**
@@ -180,7 +173,7 @@ export class Vertices extends Primitive {
   }
 
   private updateColor(ids = this.idMap.ids as Iterable<number>) {
-    const colorBuffer = this._colorBufferObject.buffer;
+    const colorBuffer = this._colorBuffer;
     for (const id of ids) {
       const isSelected = this.selected.data.has(id);
       const index = this.idMap.getIndex(id);

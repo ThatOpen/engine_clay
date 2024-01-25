@@ -39,10 +39,8 @@ class BufferManager {
     }
     updateCount(size) {
         for (const attribute of this.attributes) {
-            const newArray = new Float32Array(size * attribute.itemSize);
-            const newAttribute = new THREE.BufferAttribute(newArray, attribute.itemSize);
-            newAttribute.needsUpdate = true;
-            this.geometry.setAttribute(attribute.name, newAttribute);
+            attribute.count = size;
+            attribute.needsUpdate = true;
         }
     }
     resizeIfNeeded(increase) {
@@ -62,7 +60,7 @@ class BufferManager {
         const array = new Float32Array(this.capacity);
         const newAttribute = new THREE.BufferAttribute(array, 3);
         newAttribute.name = attribute.name;
-        // newAttribute.count = attribute.count;
+        newAttribute.count = attribute.count;
         this.geometry.setAttribute(attribute.name, newAttribute);
         for (let i = 0; i < oldCapacity; i++) {
             const x = attribute.getX(i);
@@ -775,9 +773,17 @@ class TransformControls extends Object3D {
 
 			const ROTATION_SPEED = 20 / this.worldPosition.distanceTo( _tempVector.setFromMatrixPosition( this.camera.matrixWorld ) );
 
-			let _inPlaneRotation = false;
+			if ( axis === 'E' ) {
 
-			if ( axis === 'XYZE' ) {
+				this.rotationAxis.copy( this.eye );
+				this.rotationAngle = this.pointEnd.angleTo( this.pointStart );
+
+				this._startNorm.copy( this.pointStart ).normalize();
+				this._endNorm.copy( this.pointEnd ).normalize();
+
+				this.rotationAngle *= ( this._endNorm.cross( this._startNorm ).dot( this.eye ) < 0 ? 1 : - 1 );
+
+			} else if ( axis === 'XYZE' ) {
 
 				this.rotationAxis.copy( this._offset ).cross( this.eye ).normalize();
 				this.rotationAngle = this._offset.dot( _tempVector.copy( this.rotationAxis ).cross( this.eye ) ) * ROTATION_SPEED;
@@ -794,31 +800,7 @@ class TransformControls extends Object3D {
 
 				}
 
-				_tempVector.cross( this.eye );
-
-				// When _tempVector is 0 after cross with this.eye the vectors are parallel and should use in-plane rotation logic.
-				if ( _tempVector.length() === 0 ) {
-
-					_inPlaneRotation = true;
-
-				} else {
-
-					this.rotationAngle = this._offset.dot( _tempVector.normalize() ) * ROTATION_SPEED;
-
-				}
-
-
-			}
-
-			if ( axis === 'E' || _inPlaneRotation ) {
-
-				this.rotationAxis.copy( this.eye );
-				this.rotationAngle = this.pointEnd.angleTo( this.pointStart );
-
-				this._startNorm.copy( this.pointStart ).normalize();
-				this._endNorm.copy( this.pointEnd ).normalize();
-
-				this.rotationAngle *= ( this._endNorm.cross( this._startNorm ).dot( this.eye ) < 0 ? 1 : - 1 );
+				this.rotationAngle = this._offset.dot( _tempVector.cross( this.eye ).normalize() ) * ROTATION_SPEED;
 
 			}
 
@@ -1988,23 +1970,14 @@ class Primitive {
     set selectColor(color) {
         this._selectColor.copy(color);
     }
-    _getObjectWithBufferAndBufferAttributeType(bufferAttributeType) {
-        return {
-            buffer: this.mesh.geometry.attributes[bufferAttributeType],
-            bufferAttributeType,
-        };
+    get _positionBuffer() {
+        return this.mesh.geometry.attributes.position;
     }
-    get _positionBufferObject() {
-        return this._getObjectWithBufferAndBufferAttributeType("position");
+    get _colorBuffer() {
+        return this.mesh.geometry.attributes.color;
     }
-    get _colorBufferObject() {
-        return this._getObjectWithBufferAndBufferAttributeType("color");
-    }
-    get _normalBufferObject() {
-        return this._getObjectWithBufferAndBufferAttributeType("normal");
-    }
-    get _uvBufferObject() {
-        return this._getObjectWithBufferAndBufferAttributeType("uv");
+    get _normalBuffer() {
+        return this.mesh.geometry.attributes.normal;
     }
     get _attributes() {
         return Object.values(this.mesh.geometry.attributes);
@@ -2055,11 +2028,10 @@ class Vertices extends Primitive {
         const index = this.idMap.getIndex(id);
         if (index === null)
             return null;
-        const positionBuffer = this._positionBufferObject.buffer;
         return [
-            positionBuffer.getX(index),
-            positionBuffer.getY(index),
-            positionBuffer.getZ(index),
+            this._positionBuffer.getX(index),
+            this._positionBuffer.getY(index),
+            this._positionBuffer.getZ(index),
         ];
     }
     /**
@@ -2069,14 +2041,13 @@ class Vertices extends Primitive {
      */
     set(ids, coordinates) {
         const [x, y, z] = coordinates;
-        const positionBuffer = this._positionBufferObject.buffer;
         for (const id of ids) {
             const index = this.idMap.getIndex(id);
             if (index === null)
                 return;
-            positionBuffer.setXYZ(index, x, y, z);
+            this._positionBuffer.setXYZ(index, x, y, z);
         }
-        positionBuffer.needsUpdate = true;
+        this._positionBuffer.needsUpdate = true;
     }
     /**
      * Add new points
@@ -2092,10 +2063,8 @@ class Vertices extends Primitive {
             const id = this.idMap.getId(index);
             ids.push(id);
             const [x, y, z] = coordinates[i];
-            const positionBuffer = this._positionBufferObject.buffer;
-            const colorBuffer = this._colorBufferObject.buffer;
-            positionBuffer.setXYZ(index, x, y, z);
-            colorBuffer.setXYZ(index, r, g, b);
+            this._positionBuffer.setXYZ(index, x, y, z);
+            this._colorBuffer.setXYZ(index, r, g, b);
         }
         this._buffers.updateCount(this.idMap.size);
         this.mesh.geometry.computeBoundingSphere();
@@ -2119,19 +2088,18 @@ class Vertices extends Primitive {
      */
     transform(matrix, ids = this.selected.data) {
         const vector = new THREE.Vector3();
-        const positionBuffer = this._positionBufferObject.buffer;
         for (const id of ids) {
             const index = this.idMap.getIndex(id);
             if (index === null)
                 continue;
-            const x = positionBuffer.getX(index);
-            const y = positionBuffer.getY(index);
-            const z = positionBuffer.getZ(index);
+            const x = this._positionBuffer.getX(index);
+            const y = this._positionBuffer.getY(index);
+            const z = this._positionBuffer.getZ(index);
             vector.set(x, y, z);
             vector.applyMatrix4(matrix);
-            positionBuffer.setXYZ(index, vector.x, vector.y, vector.z);
+            this._positionBuffer.setXYZ(index, vector.x, vector.y, vector.z);
         }
-        positionBuffer.needsUpdate = true;
+        this._positionBuffer.needsUpdate = true;
     }
     /**
      * Quickly removes all the points and releases all the memory used.
@@ -2165,7 +2133,7 @@ class Vertices extends Primitive {
         }
     }
     updateColor(ids = this.idMap.ids) {
-        const colorBuffer = this._colorBufferObject.buffer;
+        const colorBuffer = this._colorBuffer;
         for (const id of ids) {
             const isSelected = this.selected.data.has(id);
             const index = this.idMap.getIndex(id);
@@ -2217,7 +2185,6 @@ class Lines extends Primitive {
          * The list of points that define each line.
          */
         this.points = {};
-        console.log("oi", "lines");
         const material = new THREE.LineBasicMaterial({ vertexColors: true });
         const geometry = new THREE.BufferGeometry();
         this.mesh = new THREE.LineSegments(geometry, material);
@@ -2260,12 +2227,10 @@ class Lines extends Primitive {
             const endPoint = this.points[endID];
             startPoint.start.add(id);
             endPoint.end.add(id);
-            const positionBuffer = this._positionBufferObject.buffer;
-            const colorBuffer = this._colorBufferObject.buffer;
-            positionBuffer.setXYZ(index * 2, start[0], start[1], start[2]);
-            positionBuffer.setXYZ(index * 2 + 1, end[0], end[1], end[2]);
-            colorBuffer.setXYZ(index * 2, r, g, b);
-            colorBuffer.setXYZ(index * 2 + 1, r, g, b);
+            this._positionBuffer.setXYZ(index * 2, start[0], start[1], start[2]);
+            this._positionBuffer.setXYZ(index * 2 + 1, end[0], end[1], end[2]);
+            this._colorBuffer.setXYZ(index * 2, r, g, b);
+            this._colorBuffer.setXYZ(index * 2 + 1, r, g, b);
             this.list[id] = { id, start: startID, end: endID };
         }
         const allVerticesCount = this.idMap.size * 2;
@@ -2321,13 +2286,15 @@ class Lines extends Primitive {
      * removes all the selected lines.
      */
     remove(ids = this.selected.data) {
+        const position = this._positionBuffer;
+        const color = this._colorBuffer;
         const points = [];
         for (const id of ids) {
             const line = this.list[id];
             if (line === undefined)
                 continue;
-            this.removeFromBuffer(id, this._positionBufferObject);
-            this.removeFromBuffer(id, this._colorBufferObject);
+            this.removeFromBuffer(id, position);
+            this.removeFromBuffer(id, color);
             this.idMap.remove(id);
             const startPoint = this.points[line.start];
             points.push(line.start, line.end);
@@ -2337,8 +2304,8 @@ class Lines extends Primitive {
             delete this.list[id];
             this.selected.data.delete(id);
         }
-        this._positionBufferObject.buffer.needsUpdate = true;
-        this._colorBufferObject.buffer.needsUpdate = true;
+        position.needsUpdate = true;
+        color.needsUpdate = true;
         this.selectPoints(false, points);
     }
     /**
@@ -2404,8 +2371,7 @@ class Lines extends Primitive {
         this._buffers.createAttribute("position");
         this._buffers.createAttribute("color");
     }
-    removeFromBuffer(id, objectWithBufferAndBufferAttributeType) {
-        const buffer = objectWithBufferAndBufferAttributeType.buffer;
+    removeFromBuffer(id, buffer) {
         const index = this.idMap.getIndex(id);
         if (index === null)
             return;
@@ -2418,41 +2384,29 @@ class Lines extends Primitive {
             const z = buffer.getZ(lastIndices[i]);
             buffer.setXYZ(indices[i], x, y, z);
         }
-        const newArray = new Float32Array(buffer.array.length - 2 * buffer.itemSize);
-        for (let i = 0, j = 0; i < buffer.array.length; i += buffer.itemSize) {
-            if (indices.indexOf(i / buffer.itemSize) === -1) {
-                newArray[j] = buffer.getX(i / buffer.itemSize);
-                newArray[j + 1] = buffer.getY(i / buffer.itemSize);
-                newArray[j + 2] = buffer.getZ(i / buffer.itemSize);
-                j += buffer.itemSize;
-            }
-        }
-        const newBuffer = new THREE.BufferAttribute(newArray, buffer.itemSize);
-        this.mesh.geometry.setAttribute(objectWithBufferAndBufferAttributeType.bufferAttributeType, newBuffer);
+        buffer.count -= 2;
     }
     transformLines(matrix, indices) {
         const vector = new THREE.Vector3();
-        const positionBuffer = this._positionBufferObject.buffer;
         for (const index of indices) {
-            const x = positionBuffer.getX(index);
-            const y = positionBuffer.getY(index);
-            const z = positionBuffer.getZ(index);
+            const x = this._positionBuffer.getX(index);
+            const y = this._positionBuffer.getY(index);
+            const z = this._positionBuffer.getZ(index);
             vector.set(x, y, z);
             vector.applyMatrix4(matrix);
-            positionBuffer.setXYZ(index, vector.x, vector.y, vector.z);
+            this._positionBuffer.setXYZ(index, vector.x, vector.y, vector.z);
         }
-        positionBuffer.needsUpdate = true;
+        this._positionBuffer.needsUpdate = true;
     }
     setLines(coords, indices) {
         const [x, y, z] = coords;
-        const positionBuffer = this._positionBufferObject.buffer;
         for (const index of indices) {
-            positionBuffer.setXYZ(index, x, y, z);
+            this._positionBuffer.setXYZ(index, x, y, z);
         }
-        positionBuffer.needsUpdate = true;
+        this._positionBuffer.needsUpdate = true;
     }
     updateColor(ids = this.ids) {
-        const colorBuffer = this._colorBufferObject.buffer;
+        const colorAttribute = this._colorBuffer;
         for (const id of ids) {
             const line = this.list[id];
             const isSelected = this.selected.data.has(line.id);
@@ -2460,10 +2414,10 @@ class Lines extends Primitive {
             const index = this.idMap.getIndex(id);
             if (index === null)
                 continue;
-            colorBuffer.setXYZ(index * 2, r, g, b);
-            colorBuffer.setXYZ(index * 2 + 1, r, g, b);
+            colorAttribute.setXYZ(index * 2, r, g, b);
+            colorAttribute.setXYZ(index * 2 + 1, r, g, b);
         }
-        colorBuffer.needsUpdate = true;
+        colorAttribute.needsUpdate = true;
     }
 }
 
@@ -3325,7 +3279,7 @@ class Faces extends Primitive {
             this.selected.data.delete(id);
         }
         const idsArray = [];
-        const oldIndex = Array.from(this._index.array);
+        const oldIndex = this._index.array;
         for (const index of oldIndex) {
             const id = this.vertices.idMap.getId(index);
             idsArray.push(id);
@@ -3509,7 +3463,7 @@ class Faces extends Primitive {
     updateBuffers() {
         const positionBuffer = this.vertices.mesh.geometry.attributes.position;
         const normalBuffer = this.vertices.mesh.geometry.attributes.normal;
-        if (this._positionBufferObject.buffer !== positionBuffer) {
+        if (this._positionBuffer !== positionBuffer) {
             this.mesh.geometry.deleteAttribute("position");
             this.mesh.geometry.deleteAttribute("normal");
             this.mesh.geometry.deleteAttribute("color");
@@ -3520,12 +3474,10 @@ class Faces extends Primitive {
             this.mesh.geometry.setAttribute("color", colorAttribute);
             this.updateColor();
         }
-        const colorBuffer = new Float32Array(positionBuffer.count * 3);
-        const colorAttribute = new THREE.BufferAttribute(colorBuffer, 3);
-        this.mesh.geometry.setAttribute("color", colorAttribute);
+        this._colorBuffer.count = positionBuffer.count;
     }
     updateColor(ids = this.ids) {
-        const colorAttribute = this._colorBufferObject.buffer;
+        const colorAttribute = this._colorBuffer;
         for (const id of ids) {
             const face = this.list[id];
             const isSelected = this.selected.data.has(face.id);
@@ -3570,6 +3522,1438 @@ class Faces extends Primitive {
         const y = coordinates[index * 3 + 1];
         const z = coordinates[index * 3 + 2];
         return [x, y, z];
+    }
+}
+
+// import { Vector3 } from "three";
+class OffsetFaces extends Primitive {
+    get knotsIDs() {
+        const ids = [];
+        for (const id in this.knots) {
+            const idNumber = parseInt(id, 10);
+            ids.push(idNumber);
+        }
+        return ids;
+    }
+    constructor() {
+        super();
+        this.faces = new Faces();
+        this.lines = new Lines();
+        // An axis that goes from A to B will define an OffsetFace like this. The
+        // positive offset direction goes up.
+        //       p2  +-------------------------------------------+ p3
+        //          |                                           |
+        //       A +-------------------------------------------+ B
+        //        |                                           |
+        //    p1 +-------------------------------------------+ p4
+        /**
+         * The list of axis. Points are p1, p2, p3, p4
+         */
+        this.list = {};
+        /**
+         * A knot is the encounter of multiple OffsetFaces at a point. It's made of
+         * a point and, optionally, an extra face to fill the gap (if there are more
+         * than 3 OffsetFaces).
+         */
+        this.knots = {};
+        this.mesh = this.faces.mesh;
+    }
+    /**
+     * Adds a new set of axes to this instance of OffsetFaces.
+     * @param ids the ids of the points that define the axes ({@link Lines}).
+     * @param width the width of the faces.
+     * @param offset the offset of the faces to their respective axis.
+     *
+     */
+    add(ids, width, offset = 0) {
+        const linesIDs = this.lines.add(ids);
+        const knotsToUpdate = new Set();
+        for (const id of linesIDs) {
+            this.list[id] = { id, width, offset, face: 0, points: [] };
+            const result = this.getFacePoints(id, knotsToUpdate);
+            if (result === null)
+                continue;
+            const points = this.faces.addPoints(result);
+            this.list[id].points = points;
+            this.list[id].face = this.faces.add(points);
+        }
+        this.updateKnots(knotsToUpdate);
+        return linesIDs;
+    }
+    /**
+     * Select or unselects the given OffsetFaces.
+     * @param active Whether to select or unselect.
+     * @param ids List of OffsetFaces IDs to select or unselect. If not
+     * defined, all lines will be selected or deselected.
+     */
+    select(active, ids = this.ids) {
+        const faces = [];
+        for (const id of ids) {
+            const item = this.list[id];
+            if (item) {
+                faces.push(item.face);
+            }
+        }
+        this.faces.select(active, faces);
+        this.lines.select(active, ids);
+    }
+    /**
+     * Select or unselects the given knots.
+     * @param active Whether to select or unselect.
+     * @param ids List of knot IDs to select or unselect. If not
+     * defined, all knots will be selected or deselected.
+     */
+    selectKnots(active, ids = this.knotsIDs) {
+        const points = [];
+        const faces = [];
+        for (const id of ids) {
+            const face = this.knots[id];
+            if (face === undefined)
+                continue;
+            points.push(id);
+            if (face !== null) {
+                faces.push(face);
+            }
+        }
+        this.lines.selectPoints(active, points);
+        this.faces.select(active, faces);
+    }
+    /**
+     * Removes OffsetFaces.
+     * @param ids List of OffsetFaces to remove. If no face is specified,
+     * removes all the selected OffsetFaces.
+     */
+    remove(ids = this.lines.selected.data) {
+        const relatedKnots = this.getRelatedKnots(ids);
+        const facePoints = [];
+        for (const id of ids) {
+            facePoints.push(...this.list[id].points);
+            delete this.list[id];
+        }
+        this.faces.removePoints(facePoints);
+        const linesToUpdate = this.getRelatedLines(relatedKnots);
+        this.lines.remove(ids);
+        this.updateOffsetFaces(linesToUpdate);
+    }
+    /**
+     * Removes Knots and all the related OffsetFaces.
+     * @param ids List of knots to remove. If no knot is specified,
+     * removes all the selected knots.
+     */
+    removePoints(ids = this.lines.vertices.selected.data) {
+        const pointsToRemove = new Set();
+        const knotFacesToRemove = new Set();
+        for (const id of ids) {
+            pointsToRemove.add(id);
+            const face = this.knots[id];
+            if (face !== null && face !== undefined) {
+                knotFacesToRemove.add(face);
+            }
+            delete this.knots[id];
+        }
+        this.faces.remove(knotFacesToRemove);
+        const offsetFacesToRemove = this.getRelatedLines(ids);
+        this.remove(offsetFacesToRemove);
+        this.lines.removePoints(pointsToRemove);
+    }
+    /**
+     * Sets the offset of the specified OffsetFaces.
+     * @param offset The offset to set.
+     * @param ids List of knot IDs whose offset to change. If not specified,
+     * it will change the offset of the selected OffsetFaces.
+     */
+    setOffset(offset, ids = this.lines.selected.data) {
+        for (const id of ids) {
+            const offsetFace = this.list[id];
+            offsetFace.offset = offset;
+        }
+        this.updateOffsetFaces(ids);
+    }
+    /**
+     * Sets the width of the specified OffsetFaces.
+     * @param width The width to set.
+     * @param ids List of knot IDs whose width to change. If not specified,
+     * it will change the width of the selected OffsetFaces.
+     */
+    setWidth(width, ids = this.lines.selected.data) {
+        for (const id of ids) {
+            const offsetFace = this.list[id];
+            offsetFace.width = width;
+        }
+        this.updateOffsetFaces(ids);
+    }
+    /**
+     * Applies a transformation to the selected vertices.
+     * @param matrix Transformation matrix to apply.
+     */
+    transform(matrix) {
+        this.lines.transform(matrix);
+        const selectedPoints = this.lines.vertices.selected.data;
+        const linesToUpdate = this.getRelatedLines(selectedPoints);
+        this.updateOffsetFaces(linesToUpdate);
+    }
+    getRelatedKnots(lineIDs) {
+        const relatedKnots = new Set();
+        for (const id of lineIDs) {
+            const line = this.lines.list[id];
+            relatedKnots.add(line.start);
+            relatedKnots.add(line.end);
+        }
+        return relatedKnots;
+    }
+    getRelatedLines(pointIDs, neighbors = false) {
+        const linesToUpdate = new Set();
+        this.getLinesOfPoints(pointIDs, linesToUpdate);
+        if (neighbors) {
+            const neighborPoints = new Set();
+            for (const lineID of linesToUpdate) {
+                const line = this.lines.list[lineID];
+                neighborPoints.add(line.start);
+                neighborPoints.add(line.end);
+            }
+            this.getLinesOfPoints(neighborPoints, linesToUpdate);
+        }
+        return linesToUpdate;
+    }
+    getLinesOfPoints(pointIDs, lines) {
+        for (const id of pointIDs) {
+            const point = this.lines.points[id];
+            for (const lineID of point.start) {
+                lines.add(lineID);
+            }
+            for (const lineID of point.end) {
+                lines.add(lineID);
+            }
+        }
+    }
+    getFacePoints(id, knots) {
+        const offsetFace = this.list[id];
+        if (!offsetFace)
+            return null;
+        const line = this.lines.list[id];
+        const start = this.lines.vertices.get(line.start);
+        const end = this.lines.vertices.get(line.end);
+        if (!start || !end)
+            return null;
+        knots.add(line.start);
+        knots.add(line.end);
+        const rawDirection = Vector.subtract(end, start);
+        const direction = Vector.normalize(rawDirection);
+        const { width, offset } = offsetFace;
+        const normal = Vector.multiply(Vector.up, direction);
+        const scaledNormal = Vector.multiplyScalar(normal, width / 2);
+        const invScaledNormal = Vector.multiplyScalar(scaledNormal, -1);
+        const offsetDirection = Vector.multiplyScalar(normal, offset);
+        const p1 = Vector.add(start, scaledNormal, offsetDirection);
+        const p2 = Vector.add(start, invScaledNormal, offsetDirection);
+        const p3 = Vector.add(end, invScaledNormal, offsetDirection);
+        const p4 = Vector.add(end, scaledNormal, offsetDirection);
+        return [p1, p2, p3, p4];
+    }
+    updateOffsetFaces(ids) {
+        const knotsToUpdate = new Set();
+        for (const id of ids) {
+            const offsetFace = this.list[id];
+            if (offsetFace === undefined)
+                continue;
+            const result = this.getFacePoints(id, knotsToUpdate);
+            if (result === null)
+                continue;
+            for (let i = 0; i < 4; i++) {
+                const pointID = offsetFace.points[i];
+                const coordinates = result[i];
+                this.faces.setPoint(pointID, coordinates);
+            }
+        }
+        this.updateKnots(knotsToUpdate);
+    }
+    updateKnots(ids) {
+        for (const id of ids) {
+            const point = this.lines.points[id];
+            const coords = this.lines.vertices.get(id);
+            if (coords === null)
+                continue;
+            const knotFace = this.knots[id];
+            if (knotFace !== undefined && knotFace !== null) {
+                const points = this.faces.list[knotFace].points;
+                this.faces.removePoints(points);
+                this.knots[id] = null;
+            }
+            if (point.start.size + point.end.size === 1) {
+                continue;
+            }
+            // Strategy: traverse all points, sort lines by angle and find the intersection
+            // of each outer line with the next one
+            const vectors = this.getNormalVectorsSortedClockwise(id);
+            if (vectors.length === 1) {
+                continue;
+            }
+            const intersectionPoints = [];
+            for (let i = 0; i < vectors.length; i++) {
+                const currentLine = vectors[i];
+                const currentVector = currentLine.vector;
+                const currentOffsetFace = this.list[currentLine.lineID];
+                const isCurrentStart = point.start.has(currentLine.lineID);
+                const { width, offset } = currentOffsetFace;
+                // If it's the last vector, the next one is the first one
+                const isLastVector = i === vectors.length - 1;
+                const j = isLastVector ? 0 : i + 1;
+                const nextLine = vectors[j];
+                const nextVector = nextLine.vector;
+                const nextOffsetFace = this.list[nextLine.lineID];
+                const isNextStart = point.start.has(nextLine.lineID);
+                const nextWidth = nextOffsetFace.width;
+                const nextOffset = nextOffsetFace.offset;
+                // Express the outlines as a point and a direction
+                // Beware the right-handed system for the direction
+                const n1 = Vector.multiply(Vector.up, currentVector);
+                const o1 = isCurrentStart ? -offset : offset;
+                const v1 = Vector.multiplyScalar(n1, width / 2 + o1);
+                const p1 = Vector.add(coords, v1);
+                const n2 = Vector.multiply(nextVector, Vector.up);
+                const o2 = isNextStart ? nextOffset : -nextOffset;
+                const v2 = Vector.multiplyScalar(n2, nextWidth / 2 + o2);
+                const p2 = Vector.add(coords, v2);
+                const r1 = Vector.round(n1);
+                const r2 = Vector.round(n2);
+                const areLinesParallel = r1[0] === r2[0] && r1[2] === r2[2];
+                const currentIndex = isCurrentStart ? 1 : 3;
+                const currentPoint = currentOffsetFace.points[currentIndex];
+                const nextIndex = isNextStart ? 0 : 2;
+                const nextPoint = nextOffsetFace.points[nextIndex];
+                if (areLinesParallel) {
+                    this.faces.setPoint(currentPoint, p1);
+                    this.faces.setPoint(nextPoint, p2);
+                    const pr1 = Vector.round(p1);
+                    const pr2 = Vector.round(p2);
+                    const areSamePoint = pr1[0] === pr2[0] && pr1[2] === pr2[2];
+                    intersectionPoints.push(p1);
+                    if (!areSamePoint) {
+                        intersectionPoints.push(p2);
+                    }
+                }
+                else {
+                    // Convert point-direction to implicit 2D line ax + by = d
+                    // Although in our case we use z instead of y
+                    // p . n = d
+                    const a1 = n1[0];
+                    const b1 = n1[2];
+                    const d1 = p1[0] * n1[0] + p1[2] * n1[2];
+                    const a2 = n2[0];
+                    const b2 = n2[2];
+                    const d2 = p2[0] * n2[0] + p2[2] * n2[2];
+                    const x = (b2 * d1 - b1 * d2) / (a1 * b2 - a2 * b1);
+                    const z = (a1 * d2 - a2 * d1) / (a1 * b2 - a2 * b1);
+                    const y = coords[1];
+                    // Update the vertices of both OffsetFaces
+                    this.faces.setPoint(currentPoint, [x, y, z]);
+                    this.faces.setPoint(nextPoint, [x, y, z]);
+                    intersectionPoints.push([x, y, z]);
+                }
+            }
+            if (intersectionPoints.length > 2) {
+                // if (Polygon.isConvex(intersectionPoints)) {
+                intersectionPoints.reverse();
+                // }
+                const pointsIDs = this.faces.addPoints(intersectionPoints);
+                this.knots[id] = this.faces.add(pointsIDs);
+            }
+        }
+    }
+    getNormalVectorsSortedClockwise(id) {
+        const vectors = [];
+        const point = this.lines.points[id];
+        this.getAllNormalizedVectors(vectors, point.start, false);
+        this.getAllNormalizedVectors(vectors, point.end, true);
+        return this.order2DVectorsClockwise(vectors);
+    }
+    order2DVectorsClockwise(vectors) {
+        const vectorsWithAngles = [];
+        for (const line of vectors) {
+            const { vector } = line;
+            let angle = Math.atan2(vector[0], vector[2]);
+            if (angle < 0)
+                angle += 2 * Math.PI;
+            vectorsWithAngles.push({ angle, line });
+        }
+        vectorsWithAngles.sort((v1, v2) => (v1.angle > v2.angle ? 1 : -1));
+        return vectorsWithAngles.map((item) => item.line);
+    }
+    getAllNormalizedVectors(vectors, ids, flip) {
+        for (const lineID of ids) {
+            const line = this.lines.list[lineID];
+            const start = this.lines.vertices.get(line.start);
+            const end = this.lines.vertices.get(line.end);
+            if (start === null || end === null) {
+                throw new Error(`Error with line ${lineID}`);
+            }
+            let vector = Vector.subtract(start, end);
+            if (flip) {
+                vector = Vector.multiplyScalar(vector, -1);
+            }
+            vector = Vector.normalize(vector);
+            vectors.push({ lineID, vector });
+        }
+    }
+}
+
+class Extrusions extends Primitive {
+    constructor() {
+        super();
+        /** {@link Primitive.mesh } */
+        this.mesh = new THREE.Mesh();
+        /**
+         * The list of outer points that define the faces. Each point corresponds to a set of {@link Vertices}. This way,
+         * we can provide an API of faces that share vertices, but under the hood the vertices are duplicated per face
+         * (and thus being able to contain the normals as a vertex attribute).
+         */
+        this.list = {};
+        /**
+         * The geometric representation of the faces of all the extrusions.
+         */
+        this.faces = new Faces();
+        /**
+         * The geometric representation of the lines that represent the axis.
+         */
+        this.lines = new Lines();
+        this._faceExtrusionMap = new Map();
+        this._idGenerator = 0;
+        this._holeIdGenerator = 0;
+        const material = new THREE.MeshLambertMaterial({
+            side: THREE.DoubleSide,
+            vertexColors: true,
+        });
+        const geometry = new THREE.BufferGeometry();
+        this.mesh = new THREE.Mesh(geometry, material);
+        geometry.setIndex([]);
+    }
+    clear() {
+        this.selected.data.clear();
+        this.faces.clear();
+        this.lines.clear();
+        this._idGenerator = 0;
+        this._holeIdGenerator = 0;
+        this.faces = new Faces();
+        this.lines = new Lines();
+        this.list = {};
+    }
+    add(faceID, pathID) {
+        const id = this._idGenerator++;
+        const newFaces = this.createExtrusion(faceID, pathID);
+        if (newFaces) {
+            const { topFaceID, sideFacesIDs, holes } = newFaces;
+            this._faceExtrusionMap.set(topFaceID, id);
+            this._faceExtrusionMap.set(faceID, id);
+            for (const sideFaceID of sideFacesIDs) {
+                this._faceExtrusionMap.set(sideFaceID, id);
+            }
+            this.list[id] = {
+                id,
+                holes,
+                baseFace: faceID,
+                path: pathID,
+                topFace: topFaceID,
+                sideFaces: sideFacesIDs,
+            };
+        }
+        return id;
+    }
+    /**
+     * Removes Extrusions.
+     * @param ids List of extrusions to remove. If no face is specified,
+     * removes all the selected extrusions.
+     */
+    remove(ids = this.selected.data) {
+        const faces = [];
+        for (const id of ids) {
+            const { topFace, baseFace, sideFaces, holes } = this.list[id];
+            faces.push(topFace);
+            faces.push(baseFace);
+            faces.push(...sideFaces);
+            for (const holeID in holes) {
+                const hole = holes[holeID];
+                faces.push(...hole.faces);
+            }
+            this._faceExtrusionMap.delete(topFace);
+            this._faceExtrusionMap.delete(baseFace);
+            for (const sideFace of sideFaces) {
+                this._faceExtrusionMap.delete(sideFace);
+            }
+            delete this.list[id];
+        }
+        const points = new Set();
+        for (const faceID of faces) {
+            const face = this.faces.list[faceID];
+            for (const point of face.points) {
+                points.add(point);
+            }
+        }
+        this.faces.removePoints(points);
+    }
+    /**
+     * Given a face, returns the extrusion that contains it.
+     * @param faceID The ID of the face whose extrusion to get.
+     */
+    getFromFace(faceID) {
+        return this._faceExtrusionMap.get(faceID);
+    }
+    /**
+     * Select or unselects the given Extrusions.
+     * @param active Whether to select or unselect.
+     * @param ids List of extrusion IDs to select or unselect. If not
+     * defined, all extrusions will be selected or deselected.
+     */
+    select(active, ids) {
+        const idsUndefined = ids === undefined;
+        const items = idsUndefined ? this.ids : ids;
+        this.selected.select(active, items, this.ids);
+        const faces = [];
+        for (const id of this.selected.data) {
+            const extrusion = this.list[id];
+            if (extrusion) {
+                faces.push(extrusion.topFace);
+                faces.push(extrusion.baseFace);
+                faces.push(...extrusion.sideFaces);
+                for (const holeID in extrusion.holes) {
+                    const hole = extrusion.holes[holeID];
+                    faces.push(...hole.faces);
+                }
+            }
+        }
+        const selected = idsUndefined ? undefined : faces;
+        this.faces.select(active, selected);
+    }
+    createExtrusion(faceID, pathID) {
+        const linePoints = this.lines.get(pathID);
+        if (!linePoints)
+            return null;
+        const [start, end] = linePoints;
+        const vector = Vector.subtract(start, end);
+        const baseFace = this.faces.list[faceID];
+        // Create top face
+        const topFacePoints = [];
+        const holesCoordinates = [];
+        for (const pointID of baseFace.points) {
+            const coords = this.faces.points[pointID].coordinates;
+            const transformed = Vector.add(coords, vector);
+            topFacePoints.push(transformed);
+        }
+        for (const holeID in baseFace.holes) {
+            const hole = baseFace.holes[holeID];
+            const holeCoords = [];
+            holesCoordinates.push(holeCoords);
+            for (const pointID of hole.points) {
+                const coords = this.faces.points[pointID].coordinates;
+                const transformed = Vector.add(coords, vector);
+                holeCoords.push(transformed);
+            }
+        }
+        const topFacePointsIDs = this.faces.addPoints(topFacePoints);
+        const topHolesPoints = [];
+        for (const hole of holesCoordinates) {
+            const ids = this.faces.addPoints(hole);
+            topHolesPoints.push(ids);
+        }
+        const topFaceID = this.faces.add(topFacePointsIDs, topHolesPoints);
+        // Create side faces
+        const sideFacesIDs = new Set();
+        const baseFaceArray = Array.from(baseFace.points);
+        this.createSideFaces(baseFaceArray, topFacePointsIDs, sideFacesIDs);
+        // Define holes
+        const holes = {};
+        const topFace = this.faces.list[topFaceID];
+        const baseHolesIDs = Object.keys(baseFace.holes);
+        const topHolesIDs = Object.keys(topFace.holes);
+        for (let i = 0; i < baseHolesIDs.length; i++) {
+            const faces = new Set();
+            const baseHole = baseFace.holes[baseHolesIDs[i]];
+            const topHole = topFace.holes[topHolesIDs[i]];
+            const holeID = this._holeIdGenerator++;
+            holes[holeID] = { base: baseHole.id, top: topHole.id, faces };
+            const holePointsIdsArray = Array.from(baseHole.points);
+            const topHoleCoordsArray = Array.from(topHolesPoints[i]);
+            this.createSideFaces(holePointsIdsArray, topHoleCoordsArray, faces);
+        }
+        return { topFaceID, sideFacesIDs, holes };
+    }
+    createSideFaces(base, top, faces) {
+        for (let i = 0; i < base.length; i++) {
+            const isLastFace = i === base.length - 1;
+            const nextIndex = isLastFace ? 0 : i + 1;
+            const p1 = base[i];
+            const p2 = base[nextIndex];
+            const p3 = top[nextIndex];
+            const p4 = top[i];
+            const id = this.faces.add([p1, p2, p3, p4]);
+            faces.add(id);
+        }
+    }
+}
+
+// import { Vector3 } from "three";
+// TODO: Clean up all, especially holes management
+class Walls extends Primitive {
+    constructor() {
+        super();
+        this.offsetFaces = new OffsetFaces();
+        this.extrusions = new Extrusions();
+        this.list = {};
+        this.knots = {};
+        this.holes = {};
+        this._holeIdGenerator = 0;
+        // TODO: Probably better to keep offsetfaces and extrusion faces separated
+        this.extrusions.faces = this.offsetFaces.faces;
+        this.mesh = this.extrusions.mesh;
+        const heightPointsID = this.extrusions.lines.addPoints([
+            [0, 0, 0],
+            [0, 3, 0],
+        ]);
+        const [axisID] = this.extrusions.lines.add(heightPointsID);
+        this.defaultAxis = axisID;
+    }
+    regenerate(ids = this.offsetFaces.ids) {
+        this.deletePreviousExtrusions(ids);
+        for (const id of ids) {
+            const extrusion = this.createGeometry(id);
+            if (extrusion === null)
+                continue;
+            const previous = this.list[id];
+            const holes = previous ? previous.holes : new Set();
+            this.list[id] = {
+                id,
+                extrusion,
+                holes,
+            };
+        }
+        const relatedKnots = this.offsetFaces.getRelatedKnots(ids);
+        this.regenerateKnots(relatedKnots);
+    }
+    /**
+     * Select or unselects the given Walls.
+     * @param active Whether to select or unselect.
+     * @param ids List of walls IDs to select or unselect. If not
+     * defined, all lines walls be selected or deselected.
+     */
+    select(active, ids) {
+        const idsUndefined = ids === undefined;
+        const items = idsUndefined ? this.ids : ids;
+        this.selected.select(active, items, this.ids);
+        const extrusions = [];
+        for (const id of this.selected.data) {
+            const wall = this.list[id];
+            if (!wall)
+                continue;
+            extrusions.push(wall.extrusion);
+        }
+        const selected = idsUndefined ? undefined : extrusions;
+        this.extrusions.select(active, selected);
+        this.offsetFaces.select(active, items);
+    }
+    /**
+     * Applies a transformation to the selected geometries.
+     * @param matrix Transformation matrix to apply.
+     */
+    transform(matrix) {
+        this.offsetFaces.transform(matrix);
+        this.update();
+    }
+    setWidth(width, ids = this.selected.data) {
+        this.offsetFaces.setWidth(width, ids);
+        this.update();
+    }
+    setOffset(offset, ids = this.selected.data) {
+        this.offsetFaces.setOffset(offset, ids);
+        this.update();
+    }
+    update() {
+        const relatedPoints = new Set();
+        for (const id of this.offsetFaces.lines.vertices.selected.data) {
+            relatedPoints.add(id);
+        }
+        const updatedLines = this.offsetFaces.getRelatedLines(relatedPoints, true);
+        const updatedKnots = this.offsetFaces.getRelatedKnots(updatedLines);
+        for (const id of updatedKnots) {
+            this.updateKnotGeometry(id);
+        }
+        this.updateWalls(updatedLines);
+    }
+    updateWalls(walls) {
+        for (const id of walls) {
+            const offsetFace = this.offsetFaces.list[id];
+            const extrusionID = this.list[id].extrusion;
+            const { baseFace, topFace } = this.extrusions.list[extrusionID];
+            const faces = this.extrusions.faces;
+            const offsetFaces = this.offsetFaces.faces;
+            // Get new point coordinates
+            const [p1, p1Top, p4Top, p4] = faces.list[baseFace].points;
+            const [p2, p2Top, p3Top, p3] = faces.list[topFace].points;
+            const [bp1, bp2, bp3, bp4] = offsetFace.points;
+            const p1Coords = offsetFaces.points[bp1].coordinates;
+            const p2Coords = offsetFaces.points[bp2].coordinates;
+            const p3Coords = offsetFaces.points[bp3].coordinates;
+            const p4Coords = offsetFaces.points[bp4].coordinates;
+            const axis = this.getVerticalAxis();
+            const p1TopCoords = Vector.add(p1Coords, axis);
+            const p2TopCoords = Vector.add(p2Coords, axis);
+            const p3TopCoords = Vector.add(p3Coords, axis);
+            const p4TopCoords = Vector.add(p4Coords, axis);
+            // Save distance from holes to p1 to keep it after transform
+            const prevP1Coordinates = faces.points[p1].coordinates;
+            const holes = this.holes[id];
+            const distances = {};
+            if (holes) {
+                for (const holeID in holes) {
+                    distances[holeID] = [];
+                    for (const pointID of holes[holeID].basePoints) {
+                        const point = faces.points[pointID].coordinates;
+                        const [x, y, z] = Vector.subtract(prevP1Coordinates, point);
+                        const horizontalDist = Vector.magnitude([x, 0, z]);
+                        distances[holeID].push([pointID, horizontalDist, y]);
+                    }
+                }
+            }
+            // Set coordinates of base
+            faces.setPoint(p1, p1Coords);
+            faces.setPoint(p2, p2Coords);
+            faces.setPoint(p3, p3Coords);
+            faces.setPoint(p4, p4Coords);
+            // Set coordinates of top
+            faces.setPoint(p1Top, p1TopCoords);
+            faces.setPoint(p2Top, p2TopCoords);
+            faces.setPoint(p3Top, p3TopCoords);
+            faces.setPoint(p4Top, p4TopCoords);
+            // Set coordinates of holes in wall, maintaining distance to p1
+            const direction = Vector.subtract(p1Coords, p4Coords);
+            const normalDir = Vector.normalize(direction);
+            const normalPerp = Vector.multiply(Vector.up, normalDir);
+            const perpendicular = Vector.multiplyScalar(normalPerp, offsetFace.width);
+            if (holes) {
+                for (const holeID in distances) {
+                    const hole = distances[holeID];
+                    const topPoints = Array.from(holes[holeID].topPoints);
+                    let counter = 0;
+                    for (const point of hole) {
+                        const [pointID, x, y] = point;
+                        const horizontalVector = Vector.multiplyScalar(normalDir, x);
+                        const vector = Vector.add(horizontalVector, [0, y, 0]);
+                        const newPosition = Vector.add(p1Coords, vector);
+                        faces.setPoint(pointID, newPosition);
+                        const topPoint = topPoints[counter++];
+                        const newTopPosition = Vector.add(newPosition, perpendicular);
+                        faces.setPoint(topPoint, newTopPosition);
+                    }
+                }
+            }
+        }
+    }
+    addHole(id, holePointsIDs) {
+        if (!this.holes[id]) {
+            this.holes[id] = {};
+        }
+        for (const points of holePointsIDs) {
+            const holeID = this._holeIdGenerator++;
+            this.holes[id][holeID] = {
+                basePoints: new Set(points),
+                topPoints: new Set(),
+            };
+        }
+    }
+    deletePreviousExtrusions(ids) {
+        const previousExtrusions = [];
+        for (const id of ids) {
+            const previous = this.list[id];
+            if (previous) {
+                previousExtrusions.push(previous.extrusion);
+            }
+        }
+        this.extrusions.remove(previousExtrusions);
+    }
+    regenerateKnots(ids = this.offsetFaces.knotsIDs) {
+        for (const knotID of ids) {
+            const knot = this.offsetFaces.knots[knotID];
+            if (knot === null || knot === undefined)
+                continue;
+            this.createKnotGeometry(knotID);
+        }
+    }
+    createGeometry(id) {
+        const offsetFace = this.offsetFaces.list[id];
+        const [p1ID, p2ID, p3ID, p4ID] = offsetFace.points;
+        const points = this.offsetFaces.faces.points;
+        const p1 = points[p1ID].coordinates;
+        const p4 = points[p4ID].coordinates;
+        const vector = this.getVerticalAxis();
+        const p1Top = Vector.add(p1, vector);
+        const p4Top = Vector.add(p4, vector);
+        const direction = Vector.subtract(p1, p4);
+        const normalDirection = Vector.normalize(direction);
+        const normal = Vector.multiply(Vector.up, normalDirection);
+        const scaledNormal = Vector.multiplyScalar(normal, offsetFace.width);
+        const p1Normal = Vector.add(p1, scaledNormal);
+        const normalAxisPointsIDs = this.extrusions.lines.addPoints([p1, p1Normal]);
+        const [normalAxis] = this.extrusions.lines.add(normalAxisPointsIDs);
+        const pointsIDs = this.extrusions.faces.addPoints([p1, p1Top, p4Top, p4]);
+        const faceHoles = this.holes[id];
+        const holes = [];
+        if (faceHoles) {
+            for (const holeID in faceHoles) {
+                const hole = faceHoles[holeID];
+                const holePoints = Array.from(hole.basePoints);
+                holes.push(holePoints);
+            }
+        }
+        const faceID = this.extrusions.faces.add(pointsIDs, holes);
+        const extrusionID = this.extrusions.add(faceID, normalAxis);
+        const extrusion = this.extrusions.list[extrusionID];
+        // Save top holes
+        if (faceHoles) {
+            let counter = 0;
+            const topHoles = Object.values(this.extrusions.faces.list[extrusion.topFace].holes);
+            for (const holeID in faceHoles) {
+                const hole = topHoles[counter++];
+                faceHoles[holeID].topPoints = hole.points;
+            }
+        }
+        // Correct extrusion top to fit the OffsetFace knots
+        const otherSide = this.extrusions.faces.list[extrusion.topFace];
+        const otherSidePoints = Array.from(otherSide.points);
+        const [extrP2, extrP2Top, extrP3Top, extrP3] = otherSidePoints;
+        const p2 = points[p2ID].coordinates;
+        const p3 = points[p3ID].coordinates;
+        const p2Top = Vector.add(p2, vector);
+        const p3Top = Vector.add(p3, vector);
+        this.extrusions.faces.setPoint(extrP2, p2);
+        this.extrusions.faces.setPoint(extrP3, p3);
+        this.extrusions.faces.setPoint(extrP2Top, p2Top);
+        this.extrusions.faces.setPoint(extrP3Top, p3Top);
+        return extrusionID;
+    }
+    // TODO: Allow each wall to have a different vertical axis
+    //  (e.g. for different heights or tilted walls)
+    getVerticalAxis() {
+        const line = this.extrusions.lines.get(this.defaultAxis);
+        if (!line) {
+            throw new Error("Wall axis not found!");
+        }
+        const [start, end] = line;
+        return Vector.subtract(start, end);
+    }
+    updateKnotGeometry(knotID) {
+        const baseKnot = this.offsetFaces.knots[knotID];
+        if (baseKnot === null || baseKnot === undefined) {
+            return;
+        }
+        const baseFace = this.offsetFaces.faces.list[baseKnot];
+        const knot = this.knots[knotID];
+        if (!knot || !knot.extrusion) {
+            this.createKnotGeometry(knotID);
+            console.log("knot didnt exist");
+            return;
+        }
+        const extrudedKnot = this.extrusions.list[knot.extrusion];
+        const extrudedBaseFace = this.extrusions.faces.list[extrudedKnot.baseFace];
+        const extrudedTopFace = this.extrusions.faces.list[extrudedKnot.topFace];
+        if (baseFace.points.size !== extrudedBaseFace.points.size) {
+            this.createKnotGeometry(knotID);
+            console.log("knot changed size");
+            return;
+        }
+        const verticalAxis = this.getVerticalAxis();
+        const basePointsArray = Array.from(extrudedBaseFace.points);
+        const topPointsArray = Array.from(extrudedTopFace.points);
+        let counter = 0;
+        for (const pointID of baseFace.points) {
+            const coords = this.offsetFaces.faces.points[pointID].coordinates;
+            const basePointID = basePointsArray[counter];
+            this.extrusions.faces.setPoint(basePointID, coords);
+            const topCoords = Vector.add(coords, verticalAxis);
+            const topPointID = topPointsArray[counter];
+            this.extrusions.faces.setPoint(topPointID, topCoords);
+            counter++;
+        }
+    }
+    createKnotGeometry(knotID) {
+        if (this.knots[knotID]) {
+            const knot = this.knots[knotID];
+            this.extrusions.remove([knot.extrusion]);
+        }
+        const knotFaceID = this.offsetFaces.knots[knotID];
+        if (knotFaceID === null || knotFaceID === undefined)
+            return;
+        const face = this.offsetFaces.faces.list[knotFaceID];
+        const points = [];
+        for (const pointID of face.points) {
+            const point = this.offsetFaces.faces.points[pointID];
+            points.push(point.coordinates);
+        }
+        const pointsIDs = this.extrusions.faces.addPoints(points);
+        const faceID = this.extrusions.faces.add(pointsIDs);
+        const extrusion = this.extrusions.add(faceID, this.defaultAxis);
+        this.knots[knotID] = {
+            id: knotID,
+            extrusion,
+        };
+    }
+}
+
+// import { Vector3 } from "three";
+class Slabs extends Primitive {
+    constructor() {
+        super();
+        this.extrusions = new Extrusions();
+        this.lines = new Lines();
+        this._nextIndex = 0;
+        this._nextPolylineIndex = 0;
+        this._extrusionSlabMap = new Map();
+        this.list = {};
+        this.polylines = {};
+        this.mesh = this.extrusions.mesh;
+    }
+    /**
+     * Given a face index, returns the slab ID that contains it.
+     * @param faceIndex The index of the face whose slab ID to get.
+     */
+    getFromIndex(faceIndex) {
+        const faceID = this.extrusions.faces.getFromIndex(faceIndex);
+        if (faceID === undefined)
+            return undefined;
+        const extrusionID = this.extrusions.getFromFace(faceID);
+        if (extrusionID === undefined)
+            return undefined;
+        return this._extrusionSlabMap.get(extrusionID);
+    }
+    addPolyline(lines) {
+        const id = this._nextPolylineIndex++;
+        this.polylines[id] = {
+            id,
+            lines: new Set(lines),
+        };
+        return id;
+    }
+    setPolylines(id, lines) {
+        this.list[id].polylines = new Set(lines);
+    }
+    add(polylines, height) {
+        const id = this._nextIndex++;
+        const directionID = this.getDirection(height);
+        this.list[id] = {
+            id,
+            direction: directionID,
+            polylines: new Set(polylines),
+            extrusion: null,
+        };
+        this.regenerate([id]);
+    }
+    remove(ids) {
+        const pointsToDelete = new Set();
+        for (const id of ids) {
+            const slab = this.list[id];
+            this.removeExtrusion(id);
+            for (const line of slab.polylines) {
+                const { start, end } = this.lines.list[line];
+                pointsToDelete.add(start);
+                pointsToDelete.add(end);
+            }
+        }
+        this.lines.removePoints(pointsToDelete);
+    }
+    regenerate(ids) {
+        for (const id of ids) {
+            this.removeExtrusion(id);
+            const slab = this.list[id];
+            let outline = [];
+            const holes = [];
+            const outlineID = this.getOutline(id);
+            for (const polyID of slab.polylines) {
+                const pointIDs = this.createPoints(polyID);
+                if (polyID === outlineID) {
+                    outline = pointIDs;
+                }
+                else {
+                    holes.push(pointIDs);
+                }
+            }
+            const face = this.extrusions.faces.add(outline, holes);
+            const extrusion = this.extrusions.add(face, slab.direction);
+            slab.extrusion = extrusion;
+            this._extrusionSlabMap.set(extrusion, id);
+        }
+    }
+    removeExtrusion(id) {
+        const slab = this.list[id];
+        const extrusion = slab.extrusion;
+        if (extrusion === null)
+            return;
+        this.extrusions.remove([extrusion]);
+        this.list[id].extrusion = null;
+    }
+    getOutline(id) {
+        const slab = this.list[id];
+        let biggestSize = 0;
+        let biggestPolyline = 0;
+        for (const polyID of slab.polylines) {
+            const size = this.getPolylineSize(polyID);
+            if (size > biggestSize) {
+                biggestSize = size;
+                biggestPolyline = polyID;
+            }
+        }
+        return biggestPolyline;
+    }
+    getPolylineSize(id) {
+        const polyline = this.polylines[id];
+        const max = Number.MAX_VALUE;
+        const biggest = [-max, -max, -max];
+        const smallest = [max, max, max];
+        for (const lineID of polyline.lines) {
+            const line = this.lines.list[lineID];
+            const end = this.lines.vertices.get(line.end);
+            if (!end)
+                continue;
+            if (end[0] > biggest[0])
+                biggest[0] = end[0];
+            if (end[1] > biggest[1])
+                biggest[1] = end[1];
+            if (end[2] > biggest[2])
+                biggest[2] = end[2];
+            if (end[0] < smallest[0])
+                smallest[0] = end[0];
+            if (end[1] < smallest[1])
+                smallest[1] = end[1];
+            if (end[2] < smallest[2])
+                smallest[2] = end[2];
+        }
+        const x = Math.abs(biggest[0] - smallest[0]);
+        const y = Math.abs(biggest[1] - smallest[1]);
+        const z = Math.abs(biggest[2] - smallest[2]);
+        return x + y + z;
+    }
+    createPoints(id) {
+        const polyline = this.polylines[id];
+        const points = [];
+        for (const lineID of polyline.lines) {
+            const line = this.lines.list[lineID];
+            const end = this.lines.vertices.get(line.end);
+            if (!end)
+                continue;
+            points.push(end);
+        }
+        return this.extrusions.faces.addPoints(points);
+    }
+    getDirection(height) {
+        // TODO: Make direction normal to face
+        const directionPointsIDs = this.extrusions.lines.addPoints([
+            [0, 0, 0],
+            [0, height, 0],
+        ]);
+        const [directionID] = this.extrusions.lines.add(directionPointsIDs);
+        return directionID;
+    }
+}
+
+class Polygons {
+    get items() {
+        return [this.lines.mesh, this.lines.vertices.mesh, this.workPlane];
+    }
+    get editMode() {
+        return this._editMode;
+    }
+    set editMode(active) {
+        this.workPlane.visible = active;
+        this._caster.trackMouse = active;
+        this._editMode = active;
+        if (active) {
+            window.addEventListener("mousemove", this.update);
+        }
+        else {
+            window.removeEventListener("mousemove", this.update);
+        }
+        const wasPolygonInProcess = Boolean(this._newPoints.length);
+        const wasDrawingCancelled = wasPolygonInProcess && !active;
+        if (wasDrawingCancelled) {
+            this.cancel();
+        }
+    }
+    set camera(camera) {
+        this._caster.camera = camera;
+    }
+    set domElement(element) {
+        this._caster.domElement = element;
+    }
+    constructor() {
+        this.lines = new Lines();
+        this.list = {};
+        this._editMode = false;
+        this._caster = new Raycaster();
+        this._foundItems = [];
+        this._isClosingPolygon = false;
+        this._newPoints = [];
+        this._newLines = [];
+        this._firstPointID = null;
+        this._nextIndex = 0;
+        this.update = () => {
+            this._foundItems = this._caster.cast([
+                this.workPlane,
+                this.lines.vertices.mesh,
+            ]);
+            if (this.editMode) {
+                this.updateCurrentPoint();
+            }
+        };
+        this.workPlane = this.newWorkPlane();
+    }
+    add() {
+        if (!this._editMode)
+            return;
+        if (!this._foundItems.length)
+            return;
+        if (this._isClosingPolygon) {
+            this.finishPolygon();
+            return;
+        }
+        const { x, y, z } = this._foundItems[0].point;
+        if (!this._newPoints.length) {
+            const [firstPoint] = this.lines.addPoints([[x, y, z]]);
+            this._firstPointID = firstPoint;
+            this._newPoints.push(firstPoint);
+        }
+        const previousPoint = this._newPoints[this._newPoints.length - 1];
+        const [newPoint] = this.lines.addPoints([[x, y, z]]);
+        this._newPoints.push(newPoint);
+        const [newLine] = this.lines.add([previousPoint, newPoint]);
+        this._newLines.push(newLine);
+        this.lines.vertices.mesh.geometry.computeBoundingSphere();
+    }
+    cancel() {
+        this.lines.removePoints(this._newPoints);
+        this._newPoints.length = 0;
+        this._newLines.length = 0;
+        this._firstPointID = null;
+    }
+    addPolygon(lines) {
+        const id = this._nextIndex++;
+        this.list[id] = {
+            id,
+            lines: new Set(lines),
+        };
+        return id;
+    }
+    finishPolygon() {
+        const last = this._newPoints.pop();
+        if (last !== undefined) {
+            this.lines.removePoints([last]);
+        }
+        this._newLines.pop();
+        const lastPoint = this._newPoints[this._newPoints.length - 1];
+        const firstPoint = this._newPoints[0];
+        const [newLine] = this.lines.add([lastPoint, firstPoint]);
+        this._newLines.push(newLine);
+        this.addPolygon(this._newLines);
+        this._newLines.length = 0;
+        this._newPoints.length = 0;
+        this._isClosingPolygon = false;
+        this._firstPointID = null;
+    }
+    updateCurrentPoint() {
+        if (!this._foundItems.length || this._firstPointID === null) {
+            this._isClosingPolygon = false;
+            return;
+        }
+        const lastIndex = this._newPoints.length - 1;
+        const lastPoint = this._newPoints[lastIndex];
+        let foundFirstPoint = false;
+        let basePlane = null;
+        const index = this.lines.vertices.idMap.getIndex(this._firstPointID);
+        for (const item of this._foundItems) {
+            if (item.object === this.workPlane) {
+                basePlane = item;
+            }
+            if (item.object === this.lines.vertices.mesh && item.index === index) {
+                foundFirstPoint = true;
+            }
+        }
+        if (foundFirstPoint) {
+            const coords = this.lines.vertices.get(this._firstPointID);
+            if (coords) {
+                const [x, y, z] = coords;
+                this.lines.setPoint(lastPoint, [x, y, z]);
+                this._isClosingPolygon = true;
+                return;
+            }
+        }
+        else if (basePlane) {
+            const { x, y, z } = basePlane.point;
+            this.lines.setPoint(lastPoint, [x, y, z]);
+        }
+        this._isClosingPolygon = false;
+    }
+    newWorkPlane() {
+        const floorPlaneGeom = new THREE.PlaneGeometry(10, 10);
+        const floorPlaneMaterial = new THREE.MeshBasicMaterial({
+            transparent: true,
+            opacity: 0.7,
+            color: 0xc4adef,
+        });
+        const plane = new THREE.Mesh(floorPlaneGeom, floorPlaneMaterial);
+        plane.rotation.x = -Math.PI / 2;
+        plane.visible = false;
+        return plane;
+    }
+}
+
+class Planes {
+    get enabled() {
+        return this._enabled;
+    }
+    set enabled(active) {
+        this._enabled = active;
+        if (active) {
+            window.addEventListener("click", this.pick);
+        }
+        else {
+            window.removeEventListener("click", this.pick);
+        }
+    }
+    constructor(scene, cameraGetter) {
+        this.faces = new Faces();
+        this._caster = new Raycaster();
+        this._enabled = false;
+        this.transformMode = "TRANSLATE";
+        this._lines = new Lines();
+        this._selected = null;
+        this._v1 = new THREE.Vector3();
+        this._v2 = new THREE.Vector3();
+        this._v3 = new THREE.Vector3();
+        this._v4 = new THREE.Vector3();
+        this._q = new THREE.Quaternion();
+        this._transformActive = false;
+        this._previousTransform = new THREE.Matrix4();
+        this._newTransform = new THREE.Matrix4();
+        this._tempTransform = new THREE.Matrix4();
+        this._state = "IDLE";
+        this.updateTransform = () => {
+            const result = this._caster.cast([this._helperPlane])[0];
+            if (result === null)
+                return;
+            this.updateAxis(result);
+            this.getTransformData();
+            this.applyTransform();
+        };
+        this.startDrawing = () => {
+            this._state = "START_DRAWING_AXIS_2";
+            window.removeEventListener("click", this.startDrawing);
+            window.addEventListener("click", this.finishDrawing);
+        };
+        this.finishDrawing = () => {
+            this._state = "IDLE";
+            window.removeEventListener("click", this.finishDrawing);
+            this.transform(false);
+        };
+        this.pick = () => {
+            if (this._transformActive)
+                return;
+            this.faces.select(false);
+            this._selected = null;
+            const result = this._caster.cast([this.faces.mesh])[0];
+            if (!result || result.faceIndex === undefined)
+                return;
+            const faceID = this.faces.getFromIndex(result.faceIndex);
+            if (faceID !== undefined) {
+                this._selected = faceID;
+                this.faces.select(true, [faceID]);
+            }
+        };
+        this._cameraGetter = cameraGetter;
+        this._scene = scene;
+        const material = this.faces.mesh.material;
+        material.transparent = true;
+        material.opacity = 0.2;
+        const helperMaterial = new THREE.MeshBasicMaterial({
+            color: 0xeeeeee,
+            transparent: true,
+            opacity: 0.3,
+            side: 2,
+        });
+        const helperGeometry = new THREE.PlaneGeometry(10, 10, 10);
+        this._helperPlane = new THREE.Mesh(helperGeometry, helperMaterial);
+        // this._helperPlane.visible = false;
+        const [a, b, c, d] = this._lines.addPoints([
+            [0, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0],
+        ]);
+        const [helperLineID] = this._lines.add([a, b]);
+        this._helperLine1 = this._lines.list[helperLineID];
+        const [helperAngleLineID] = this._lines.add([c, d]);
+        this._helperLine2 = this._lines.list[helperAngleLineID];
+        scene.add(this.faces.mesh);
+        scene.add(this._helperPlane);
+    }
+    add() {
+        const pointIDs = this.faces.addPoints([
+            [1, 0, 1],
+            [-1, 0, 1],
+            [-1, 0, -1],
+            [1, 0, -1],
+        ]);
+        return this.faces.add(pointIDs);
+    }
+    transform(active = !this._transformActive) {
+        if (active === this._transformActive)
+            return;
+        if (active && this._selected === null)
+            return;
+        this._transformActive = active;
+        if (!active) {
+            this.setHelperLineVisible(false);
+            this.faces.mesh.geometry.computeBoundingSphere();
+            this.faces.mesh.geometry.computeBoundingBox();
+            window.removeEventListener("mousemove", this.updateTransform);
+            return;
+        }
+        if (this._selected === null)
+            return;
+        this.setHelperLineVisible(true);
+        const center = this.faces.getCenter(this._selected);
+        if (center === null) {
+            this.transform(false);
+            return;
+        }
+        const [cx, cy, cz] = center;
+        this._helperPlane.position.set(cx, cy, cz);
+        const camera = this._cameraGetter();
+        this._helperPlane.rotation.copy(camera.rotation);
+        this._helperPlane.updateMatrix();
+        this._helperPlane.updateMatrixWorld();
+        const result = this._caster.cast([this._helperPlane])[0];
+        if (!result) {
+            this.transform(false);
+            return;
+        }
+        this._previousTransform.setPosition(result.point);
+        this._newTransform.setPosition(result.point);
+        const { x, y, z } = result.point;
+        this._lines.setPoint(this._helperLine1.start, [x, y, z]);
+        this._lines.setPoint(this._helperLine1.end, [x, y, z]);
+        this._lines.setPoint(this._helperLine2.start, [x, y, z]);
+        this._lines.setPoint(this._helperLine2.end, [x, y, z]);
+        this._state = "DRAWING_AXIS_1";
+        if (this.transformMode === "TRANSLATE") {
+            window.addEventListener("click", this.finishDrawing);
+        }
+        else {
+            window.addEventListener("click", this.startDrawing);
+        }
+        window.addEventListener("mousemove", this.updateTransform);
+    }
+    updateAxis(result) {
+        const { x, y, z } = result.point;
+        const isFirstAxis = this._state === "DRAWING_AXIS_1";
+        const axis = isFirstAxis ? this._helperLine1 : this._helperLine2;
+        this._lines.setPoint(axis.end, [x, y, z]);
+    }
+    getTransformData() {
+        if (this.transformMode === "TRANSLATE") {
+            this.getTranslation();
+        }
+        else if (this.transformMode === "ROTATE") {
+            this.getRotation();
+        }
+        else if (this.transformMode === "SCALE") {
+            this.getScale();
+        }
+    }
+    getTranslation() {
+        const endPoint = this._lines.vertices.get(this._helperLine1.end);
+        if (endPoint === null)
+            return;
+        const [x, y, z] = endPoint;
+        this._v1.set(x, y, z);
+        this._newTransform.setPosition(this._v1);
+    }
+    getScale() {
+        if (this._state === "DRAWING_AXIS_1")
+            return;
+        this.getSegmentVectors();
+        const firstLength = this._v2.length();
+        const secondLength = this._v4.length();
+        const factor = secondLength / firstLength;
+        this._newTransform.identity();
+        const { x, y, z } = this._v1;
+        const move = new THREE.Matrix4().makeTranslation(x, y, z);
+        const scale = new THREE.Matrix4().makeScale(factor, factor, factor);
+        const invMove = move.clone().invert();
+        this._newTransform.multiply(move);
+        this._newTransform.multiply(scale);
+        this._newTransform.multiply(invMove);
+        this._newTransform.multiply(this._helperPlane.matrix);
+    }
+    getRotation() {
+        if (this._state === "DRAWING_AXIS_1")
+            return;
+        this.getSegmentVectors();
+        let angle = this._v4.angleTo(this._v2);
+        // Correct angle sign (otherwise it's always the shorter unsigned angle)
+        this._v3.set(0, 0, 1);
+        this._v3.applyEuler(this._helperPlane.rotation);
+        this._v4.cross(this._v2);
+        const dot = this._v4.dot(this._v3);
+        if (dot > 0) {
+            angle *= -1;
+        }
+        // Get axis from camera
+        const axis = new THREE.Vector3();
+        axis.set(0, 0, 1);
+        const camera = this._cameraGetter();
+        axis.applyEuler(camera.rotation);
+        this._q.setFromAxisAngle(axis, angle);
+        this._newTransform.identity();
+        const { x, y, z } = this._v1;
+        const move = new THREE.Matrix4().makeTranslation(x, y, z);
+        const rotation = new THREE.Matrix4().makeRotationFromQuaternion(this._q);
+        const invMove = move.clone().invert();
+        this._newTransform.multiply(move);
+        this._newTransform.multiply(rotation);
+        this._newTransform.multiply(invMove);
+        this._newTransform.multiply(this._helperPlane.matrix);
+    }
+    getSegmentVectors() {
+        const first = this._lines.get(this._helperLine1.id);
+        const second = this._lines.get(this._helperLine2.id);
+        if (first === null || second === null)
+            return;
+        const [[ax, ay, az], [bx, by, bz]] = first;
+        const [[cx, cy, cz], [dx, dy, dz]] = second;
+        this._v1.set(ax, ay, az);
+        this._v2.set(bx, by, bz);
+        this._v3.set(cx, cy, cz);
+        this._v4.set(dx, dy, dz);
+        this._v2.sub(this._v1);
+        this._v4.sub(this._v3);
+    }
+    applyTransform() {
+        // Rotation and scale only update when updating the second axis
+        const isNotMove = this.transformMode !== "TRANSLATE";
+        const isFirstAxis = this._state === "DRAWING_AXIS_1";
+        if (isFirstAxis && isNotMove)
+            return;
+        this._tempTransform.copy(this._newTransform);
+        if (this._state === "START_DRAWING_AXIS_2") {
+            this._state = "FINISH_DRAWING_AXIS_2";
+            this._previousTransform = this._newTransform.clone();
+        }
+        this._tempTransform.multiply(this._previousTransform.invert());
+        this.faces.transform(this._tempTransform);
+        this._previousTransform.copy(this._newTransform);
+    }
+    setHelperLineVisible(active) {
+        if (active) {
+            this._scene.add(this._lines.mesh, this._lines.vertices.mesh);
+        }
+        else {
+            this._scene.remove(this._lines.mesh, this._lines.vertices.mesh);
+        }
     }
 }
 
@@ -3872,4 +5256,4 @@ class Snapper {
     }
 }
 
-export { BufferManager, Control, Faces, IdIndexMap, Lines, Primitive, Raycaster, Selector, Snapper, Vector, Vertices };
+export { BufferManager, Control, Extrusions, Faces, IdIndexMap, Lines, OffsetFaces, Planes, Polygons, Primitive, Raycaster, Selector, Slabs, Snapper, Vector, Vertices, Walls };
