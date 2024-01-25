@@ -225,7 +225,7 @@ export class Faces extends Primitive {
     }
 
     const idsArray: number[] = [];
-    const oldIndex = this._index.array as number[];
+    const oldIndex = Array.from(this._index.array);
     for (const index of oldIndex) {
       const id = this.vertices.idMap.getId(index);
       idsArray.push(id);
@@ -417,7 +417,7 @@ export class Faces extends Primitive {
   private updateBuffers() {
     const positionBuffer = this.vertices.mesh.geometry.attributes.position;
     const normalBuffer = this.vertices.mesh.geometry.attributes.normal;
-    if (this._positionBuffer !== positionBuffer) {
+    if (this._positionBufferObject.buffer !== positionBuffer) {
       this.mesh.geometry.deleteAttribute("position");
       this.mesh.geometry.deleteAttribute("normal");
       this.mesh.geometry.deleteAttribute("color");
@@ -428,11 +428,14 @@ export class Faces extends Primitive {
       this.mesh.geometry.setAttribute("color", colorAttribute);
       this.updateColor();
     }
-    this._colorBuffer.count = positionBuffer.count;
+
+    const colorBuffer = new Float32Array(positionBuffer.count * 3);
+    const colorAttribute = new THREE.BufferAttribute(colorBuffer, 3);
+    this.mesh.geometry.setAttribute("color", colorAttribute);
   }
 
   private updateColor(ids = this.ids as Iterable<number>) {
-    const colorAttribute = this._colorBuffer;
+    const colorAttribute = this._colorBufferObject.buffer;
     for (const id of ids) {
       const face = this.list[id];
       const isSelected = this.selected.data.has(face.id);
