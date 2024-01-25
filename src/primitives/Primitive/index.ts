@@ -1,6 +1,13 @@
 import * as THREE from "three";
 import { Selector } from "../../utils";
 
+export type BufferAttributeType = "color" | "uv" | "normal" | "position";
+
+export type ObjectWithBufferAndBufferAttributeType = {
+  buffer: THREE.BufferAttribute;
+  bufferAttributeType: BufferAttributeType;
+};
+
 export abstract class Primitive {
   /** Physical object with a geometry and one or many materials that can be placed in the scene. */
   abstract mesh: {
@@ -62,16 +69,31 @@ export abstract class Primitive {
     };
   } = {};
 
-  protected get _positionBuffer() {
-    return this.mesh.geometry.attributes.position as THREE.BufferAttribute;
+  _getObjectWithBufferAndBufferAttributeType(
+    bufferAttributeType: BufferAttributeType
+  ) {
+    return {
+      buffer: this.mesh.geometry.attributes[
+        bufferAttributeType
+      ] as THREE.BufferAttribute,
+      bufferAttributeType,
+    };
   }
 
-  protected get _colorBuffer() {
-    return this.mesh.geometry.attributes.color as THREE.BufferAttribute;
+  protected get _positionBufferObject(): ObjectWithBufferAndBufferAttributeType {
+    return this._getObjectWithBufferAndBufferAttributeType("position");
   }
 
-  protected get _normalBuffer() {
-    return this.mesh.geometry.attributes.normal as THREE.BufferAttribute;
+  protected get _colorBufferObject(): ObjectWithBufferAndBufferAttributeType {
+    return this._getObjectWithBufferAndBufferAttributeType("color");
+  }
+
+  protected get _normalBufferObject(): ObjectWithBufferAndBufferAttributeType {
+    return this._getObjectWithBufferAndBufferAttributeType("normal");
+  }
+
+  protected get _uvBufferObject(): ObjectWithBufferAndBufferAttributeType {
+    return this._getObjectWithBufferAndBufferAttributeType("uv");
   }
 
   protected get _attributes() {
