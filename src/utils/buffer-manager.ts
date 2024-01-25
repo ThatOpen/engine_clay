@@ -44,8 +44,13 @@ export class BufferManager {
 
   updateCount(size: number) {
     for (const attribute of this.attributes) {
-      attribute.count = size;
-      attribute.needsUpdate = true;
+      const newArray = new Float32Array(size * attribute.itemSize);
+      const newAttribute = new THREE.BufferAttribute(
+        newArray,
+        attribute.itemSize
+      );
+      newAttribute.needsUpdate = true;
+      this.geometry.setAttribute(attribute.name, newAttribute);
     }
   }
 
@@ -65,9 +70,10 @@ export class BufferManager {
   private resizeBuffers(attribute: THREE.BufferAttribute, oldCapacity: number) {
     this.geometry.deleteAttribute(attribute.name);
     const array = new Float32Array(this.capacity);
+
     const newAttribute = new THREE.BufferAttribute(array, 3);
     newAttribute.name = attribute.name;
-    newAttribute.count = attribute.count;
+    // newAttribute.count = attribute.count;
     this.geometry.setAttribute(attribute.name, newAttribute);
     for (let i = 0; i < oldCapacity; i++) {
       const x = attribute.getX(i);
