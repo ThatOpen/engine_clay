@@ -1,1 +1,1 @@
-export * from "./Walls";
+export * from "./Walls/Wall";
