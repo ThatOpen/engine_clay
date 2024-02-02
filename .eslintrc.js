@@ -13,7 +13,7 @@ module.exports = {
   ignorePatterns: ["**/dist/*", "**/node_modules/*", "**/*.json", "**/*.js"],
   rules: {
     "prettier/prettier": [
-      "error",
+      "off",
       {
         endOfLine: "auto",
       },
