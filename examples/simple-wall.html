@@ -42,6 +42,7 @@
           "openbim-clay": "../resources/openbim-clay.js",
           "stats.js/src/Stats.js": "https://unpkg.com/stats-js@1.0.1/src/Stats.js",
           "three/examples/jsm/libs/lil-gui.module.min": "https://unpkg.com/three@0.152.2/examples/jsm/libs/lil-gui.module.min.js",
+          "three/examples/jsm/controls/TransformControls": "https://unpkg.com/three@0.135.0/examples/jsm/controls/TransformControls.js",
           "web-ifc": "../node_modules/web-ifc/web-ifc-api.js"
         }
       }
@@ -55,10 +56,12 @@
   import * as WEBIFC from "web-ifc";
   import Stats from "stats.js/src/Stats.js";
   import * as dat from "three/examples/jsm/libs/lil-gui.module.min";
+  import { TransformControls } from "three/examples/jsm/controls/TransformControls";
 
   const container = document.getElementById("container");
 
   const components = new OBC.Components();
+
   components.scene = new OBC.SimpleScene(components);
   components.renderer = new OBC.PostproductionRenderer(components, container);
   components.camera = new OBC.SimpleCamera(components);
@@ -75,6 +78,7 @@
   components.scene.setup();
 
   const grid = new OBC.SimpleGrid(components, new THREE.Color(0x666666));
+
   const customEffects = components.renderer.postproduction.customEffects;
   customEffects.excludedMeshes.push(grid.get());
 
@@ -93,6 +97,28 @@
 
   // // Set up GUI
 
+  const settings = {
+    transformMode: "translate",
+  };
+
+  // const helper = new THREE.Object3D();
+  const camera = components.camera.get();
+
+  // const controls = new TransformControls(camera, container);
+  // controls.attach(wall.mesh);
+  // scene.add(controls);
+
+  // controls.addEventListener(
+  //   "dragging-changed",
+  //   (event) => (components.camera.enabled = !event.value)
+  // );
+
+  // let transform = new THREE.Matrix4();
+  // controls.addEventListener("change", () => {
+  //   const mesh = wall.mesh;
+  //   mesh.updateMatrix();
+  // });
+
   const gui = new dat.GUI();
   gui.add(wall, "width").min(1).max(30).step(1);
   gui.add(wall, "height").min(1).max(30).step(1);
@@ -100,6 +126,17 @@
   // gui.add(walls, "xPosition").min(-2).max(2).step(0.1);
   // gui.add(walls, "yPosition").min(-0.2).max(0.2).step(0.01);
   // gui.add(walls, "zPosition").min(-2).max(2).step(0.1);
+
+  // gui
+  //   .add(settings, "transformMode", {
+  //     translate: "translate",
+  //     rotate: "rotate",
+  //     scale: "scale",
+  //   })
+  //   .name("Transform mode")
+  //   .onChange((result) => {
+  //     controls.setMode(result);
+  //   });
 
   // // Set up stats
 

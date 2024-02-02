@@ -1,16 +1,12 @@
 import * as WEBIFC from "web-ifc";
-import * as THREE from "three";
-import { Family } from "../../Family";
 import { createIfcEntity } from "../../../utils/generics";
+import { Extrusion } from "../../../geometries";
 
-export class Wall extends Family {
-  private ids: number[];
-  private geometryNeedsUpdate: boolean;
+export class Wall extends Extrusion {
   private solid: WEBIFC.IFC4X3.IfcBooleanOperand &
     WEBIFC.IfcLineObject &
     WEBIFC.IFC4X3.IfcExtrudedAreaSolid;
   private profile: WEBIFC.IFC4X3.IfcRectangleProfileDef;
-  public mesh: THREE.InstancedMesh;
   private _width: number = 20;
   private _height: number = 10;
   private _thickness: number = 0.5;
@@ -21,22 +17,13 @@ export class Wall extends Family {
     public location: number[] | WEBIFC.IFC4X3.IfcDirection = [0, 0, 0]
   ) {
     super(ifcAPI, modelId);
-    const material = new THREE.MeshLambertMaterial();
-    const geometry = new THREE.BufferGeometry();
-    this.mesh = new THREE.InstancedMesh(geometry, material, 10);
-    this.mesh.count = 0;
-    this.ids = [];
-    this.geometryNeedsUpdate = true;
-
     const direction = this.direction([0, 0, 1]);
     const axis = this.axis2Placement2D([0, 0]);
     const x = this.positiveLength(20);
     const y = this.positiveLength(0.25);
     this.profile = this.rectangularProfile(axis, x, y);
-
     const { placement } = this.axis2Placement3D([0, 0, 0]);
     this.solid = this.extrudedAreaSolid(this.profile, placement, direction, 2);
-
     this.create();
   }
 
@@ -94,30 +81,6 @@ export class Wall extends Family {
     );
 
     this.ifcAPI.WriteLine(this.modelID, wall);
-
-    this.ids.push(wall.expressID);
-
-    this.ifcAPI.StreamMeshes(this.modelID, [wall.expressID], (mesh) => {
-      console.log(mesh.geometries.size());
-      const geometry = mesh.geometries.get(0);
-      const matrix = new THREE.Matrix4().fromArray(geometry.flatTransformation);
-      this.mesh.setMatrixAt(this.mesh.count++, matrix);
-    });
-
-    this.mesh.instanceMatrix.needsUpdate = true;
-
-    if (this.geometryNeedsUpdate) {
-      this.regenerate();
-      this.geometryNeedsUpdate = false;
-    }
-  }
-
-  protected regenerate() {
-    this.ifcAPI.StreamMeshes(this.modelID, [this.ids[0]], (mesh) => {
-      this.mesh.geometry.dispose();
-      const geometryID = mesh.geometries.get(0).geometryExpressID;
-      const data = this.ifcAPI.GetGeometry(this.modelID, geometryID);
-      this.mesh.geometry = this.geometry(data);
-    });
+    this.updateMeshTransformations(wall);
   }
 }

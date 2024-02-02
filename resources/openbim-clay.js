@@ -54520,7 +54520,7 @@ function createIfcType(ifcAPI, modelID, type, value) {
     return ifcAPI.CreateIfcType(modelID, type, value);
 }
 
-class Family {
+class Base {
     ifcAPI;
     modelID;
     types;
@@ -54579,9 +54579,38 @@ class Family {
         const placement = createIfcEntity(this.ifcAPI, this.modelID, IFCAXIS2PLACEMENT3D, location, axis, direction);
         return { placement, location };
     }
+    bool(first, second) {
+        return createIfcEntity(this.ifcAPI, this.modelID, IFCBOOLEANCLIPPINGRESULT, IFC4X3.IfcBooleanOperator.DIFFERENCE, first, second);
+    }
+    vector(values, type) {
+        if (!this.types[type])
+            throw new Error(`Type not found: ${type}`);
+        const action = this.types[type];
+        return values.map((value) => action(value));
+    }
+}
+
+class Extrusion extends Base {
+    ifcAPI;
+    modelID;
+    mesh;
+    geometryNeedsUpdate;
+    ids;
+    constructor(ifcAPI, modelID) {
+        super(ifcAPI, modelID);
+        this.ifcAPI = ifcAPI;
+        this.modelID = modelID;
+        const geometry = new THREE.BufferGeometry();
+        const material = new THREE.MeshLambertMaterial();
+        this.ids = [];
+        this.mesh = new THREE.InstancedMesh(geometry, material, 10);
+        this.mesh.count = 0;
+        this.geometryNeedsUpdate = true;
+    }
     extrudedAreaSolid(profile, position, direction, length) {
-        if (Array.isArray(position))
+        if (Array.isArray(position)) {
             position = this.axis2Placement3D(position).placement;
+        }
         if (Array.isArray(direction))
             direction = this.direction(direction);
         if (typeof length === "number")
@@ -54591,14 +54620,18 @@ class Family {
     rectangularProfile(position, x, y) {
         return createIfcEntity(this.ifcAPI, this.modelID, IFCRECTANGLEPROFILEDEF, IFC4X3.IfcProfileTypeEnum.AREA, this.label("Rectangle profile"), position, x, y);
     }
-    bool(first, second) {
-        return createIfcEntity(this.ifcAPI, this.modelID, IFCBOOLEANCLIPPINGRESULT, IFC4X3.IfcBooleanOperator.DIFFERENCE, first, second);
-    }
-    vector(values, type) {
-        if (!this.types[type])
-            throw new Error(`Type not found: ${type}`);
-        const action = this.types[type];
-        return values.map((value) => action(value));
+    updateMeshTransformations(entity) {
+        this.ids.push(entity.expressID);
+        this.ifcAPI.StreamMeshes(this.modelID, [entity.expressID], (mesh) => {
+            const geometry = mesh.geometries.get(0);
+            const matrix = new THREE.Matrix4().fromArray(geometry.flatTransformation);
+            this.mesh.setMatrixAt(this.mesh.count++, matrix);
+        });
+        this.mesh.instanceMatrix.needsUpdate = true;
+        if (this.geometryNeedsUpdate) {
+            this.regenerate();
+            this.geometryNeedsUpdate = false;
+        }
     }
     geometry(data) {
         const index = this.ifcAPI.GetIndexArray(data.GetIndexData(), data.GetIndexDataSize());
@@ -54619,19 +54652,22 @@ class Family {
         geometry.setIndex(Array.from(index));
         return geometry;
     }
+    regenerate() {
+        this.ifcAPI.StreamMeshes(this.modelID, [this.ids[0]], (mesh) => {
+            this.mesh.geometry.dispose();
+            const geometryID = mesh.geometries.get(0).geometryExpressID;
+            const data = this.ifcAPI.GetGeometry(this.modelID, geometryID);
+            this.mesh.geometry = this.geometry(data);
+        });
+    }
 }
 
-class Wall extends Family {
+class Wall extends Extrusion {
     ifcAPI;
     modelId;
     location;
-    ids;
-    geometryNeedsUpdate;
     solid;
     profile;
-    // private openingProfile: WEBIFC.IfcLineObject;
-    // private openingSolid: WEBIFC.IfcLineObject;
-    mesh;
     _width = 20;
     _height = 10;
     _thickness = 0.5;
@@ -54640,12 +54676,6 @@ class Wall extends Family {
         this.ifcAPI = ifcAPI;
         this.modelId = modelId;
         this.location = location;
-        const material = new THREE.MeshLambertMaterial();
-        const geometry = new THREE.BufferGeometry();
-        this.mesh = new THREE.InstancedMesh(geometry, material, 10);
-        this.mesh.count = 0;
-        this.ids = [];
-        this.geometryNeedsUpdate = true;
         const direction = this.direction([0, 0, 1]);
         const axis = this.axis2Placement2D([0, 0]);
         const x = this.positiveLength(20);
@@ -54653,21 +54683,6 @@ class Wall extends Family {
         this.profile = this.rectangularProfile(axis, x, y);
         const { placement } = this.axis2Placement3D([0, 0, 0]);
         this.solid = this.extrudedAreaSolid(this.profile, placement, direction, 2);
-        // const openingAxis = this.axis2Placement2D([0, 0]);
-        // const openingX = this.positiveLength(1);
-        // const openingY = this.positiveLength(0.25);
-        // this.openingProfile = this.rectangularProfile(
-        //   openingAxis,
-        //   openingX,
-        //   openingY
-        // );
-        // const openingPlacement = this.axis2Placement3D([0.1, 0.1, 0.1]);
-        // this.openingSolid = this.extrudedAreaSolid(
-        //   this.openingProfile,
-        //   openingPlacement.placement,
-        //   direction,
-        //   2
-        // );
         this.create();
     }
     get thickness() {
@@ -54697,45 +54712,13 @@ class Wall extends Family {
         this.ifcAPI.WriteLine(this.modelID, this.solid);
         this.regenerate();
     }
-    // location: number[] | WEBIFC.IFC4X3.IfcDirection
     create() {
         const placement = this.objectPlacement();
         const mesh = this
             .solid;
         const wall = createIfcEntity(this.ifcAPI, this.modelID, IFCWALL, this.guid("GUID"), null, this.label("name"), null, this.label("label"), placement, mesh, this.identifier("wall"), null);
         this.ifcAPI.WriteLine(this.modelID, wall);
-        this.ids.push(wall.expressID);
-        this.ifcAPI.StreamMeshes(this.modelID, [wall.expressID], (mesh) => {
-            console.log(mesh.geometries.size());
-            const geometry = mesh.geometries.get(0);
-            const matrix = new THREE.Matrix4().fromArray(geometry.flatTransformation);
-            this.mesh.setMatrixAt(this.mesh.count++, matrix);
-        });
-        this.mesh.instanceMatrix.needsUpdate = true;
-        if (this.geometryNeedsUpdate) {
-            this.regenerate();
-            this.geometryNeedsUpdate = false;
-        }
-    }
-    regenerate() {
-        this.ifcAPI.StreamMeshes(this.modelID, [this.ids[0]], (mesh) => {
-            this.mesh.geometry.dispose();
-            const geometryID = mesh.geometries.get(0).geometryExpressID;
-            const data = this.ifcAPI.GetGeometry(this.modelID, geometryID);
-            this.mesh.geometry = this.geometry(data);
-        });
-    }
-}
-
-class Extrusion {
-    ifcAPI;
-    modelId;
-    constructor(ifcAPI, modelId) {
-        this.ifcAPI = ifcAPI;
-        this.modelId = modelId;
-    }
-    create() {
-        return this.ifcAPI.CreateIfcEntity(this.modelId, IFCEXTRUDEDAREASOLID);
+        this.updateMeshTransformations(wall);
     }
 }
 
