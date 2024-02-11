@@ -8,26 +8,27 @@ export type Solid = WEBIFC.IFC4X3.IfcBooleanOperand &
   WEBIFC.IFC4X3.IfcExtrudedAreaSolid;
 export class Extrusion {
   public mesh: THREE.InstancedMesh;
-  protected geometryNeedsUpdate: boolean;
-  protected ids: number[];
+  public geometryNeedsUpdate: boolean;
+  public ids: number[];
   private base: Base;
   public solid: Solid;
+  public material: THREE.MeshLambertMaterial;
 
   constructor(
     public ifcAPI: WEBIFC.IfcAPI,
     public modelID: number,
     profile: WEBIFC.IFC4X3.IfcProfileDef,
     direction: number[] = [0, 0, 1],
-    axis: number[] = [0, 0, 0],
-    depth: number = 10,
+    position: number[] = [0, 0, 0],
+    depth: number = 5,
   ) {
     const geometry = new THREE.BufferGeometry();
-    const material = new THREE.MeshLambertMaterial();
+    this.material = new THREE.MeshLambertMaterial();
     this.ids = [];
-    this.mesh = new THREE.InstancedMesh(geometry, material, 10);
+    this.mesh = new THREE.InstancedMesh(geometry, this.material, 10);
     this.mesh.count = 0;
     this.base = new Base(ifcAPI, modelID);
-    this.solid = this.extrudedAreaSolid(profile, axis, direction, depth);
+    this.solid = this.extrudedAreaSolid(profile, position, direction, depth);
     this.geometryNeedsUpdate = true;
   }
 
@@ -35,7 +36,7 @@ export class Extrusion {
     profile:
       | WEBIFC.IFC4X3.IfcProfileDef
       | WEBIFC.Handle<WEBIFC.IFC4X3.IfcProfileDef>,
-    axis: number[],
+    position: number[],
     direction: number[],
     depth: number,
   ) {
@@ -44,7 +45,7 @@ export class Extrusion {
       this.modelID,
       WEBIFC.IFCEXTRUDEDAREASOLID,
       profile,
-      this.base.axis2Placement3D(axis).placement,
+      this.base.axis2Placement3D(position).placement,
       this.base.direction(direction),
       this.base.positiveLength(depth),
     );
@@ -60,7 +61,6 @@ export class Extrusion {
     });
 
     this.mesh.instanceMatrix.needsUpdate = true;
-
     if (this.geometryNeedsUpdate) {
       this.regenerate();
       this.geometryNeedsUpdate = false;

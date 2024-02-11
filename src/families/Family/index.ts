@@ -1,7 +1,7 @@
 import { Extrusion } from "../../geometries";
 import { Profile } from "../../geometries/Profiles/Profile";
 
-export type Geometries = {
+type Geometries = {
   profile: Profile;
   extrusion: Extrusion;
 };

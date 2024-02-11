@@ -1,1 +1,1 @@
-export * from "./RectangularProfile";
+export * from "./RectangleProfile";

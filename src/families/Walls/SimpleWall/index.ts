@@ -1,13 +1,14 @@
 import * as WEBIFC from "web-ifc";
 import * as THREE from "three";
+import { v4 as uuidv4 } from "uuid";
 import { createIfcEntity } from "../../../utils/generics";
 import { Extrusion, Solid } from "../../../geometries";
-import { RectangularProfile } from "../../../geometries/Profiles/RectangularProfile";
+import { RectangleProfile } from "../../../geometries/Profiles/RectangleProfile";
 import { Base } from "../../../base";
 import { Family } from "../../Family";
 
-export type Geometries = {
-  profile: RectangularProfile;
+type Geometries = {
+  profile: RectangleProfile;
   extrusion: Extrusion;
 };
 
@@ -27,22 +28,23 @@ export class SimpleWall extends Family {
     this.modelID = modelID;
     this.ifcAPI = ifcAPI;
     this.base = new Base(this.ifcAPI, this.modelID);
-    const rectangularProfile = new RectangularProfile(
-      this.ifcAPI,
-      this.modelID,
-    );
+    this.geometries = this.createGeometries();
+    this.mesh = this.geometries.extrusion.mesh;
+    this.wall = this.create();
+  }
+
+  private createGeometries() {
+    const rectangleProfile = new RectangleProfile(this.ifcAPI, this.modelID);
     const extrusion = new Extrusion(
       this.ifcAPI,
       this.modelID,
-      rectangularProfile.profile,
+      rectangleProfile.profile,
     );
 
-    this.geometries = {
-      profile: rectangularProfile,
+    return {
+      profile: rectangleProfile,
       extrusion,
     };
-    this.mesh = this.geometries.extrusion.mesh;
-    this.wall = this.create();
   }
 
   public get toSubtract(): Geometries {
@@ -89,28 +91,27 @@ export class SimpleWall extends Family {
     const bool = this.base.bool(
       this.geometries.extrusion.solid,
       extrusion.solid,
-    );
+    ) as Solid;
 
-    this.geometries.extrusion.solid = bool as Solid;
-    this.wall.Representation =
-      bool as unknown as WEBIFC.IFC4X3.IfcProductRepresentation;
-    this.ifcAPI.WriteLine(this.modelID, this.wall);
-    this.geometries.extrusion.regenerate();
+    this.ifcAPI.DeleteLine(this.modelID, this.wall.expressID);
+    this.geometries = this.createGeometries();
+    this.mesh = this.geometries.extrusion.mesh;
+    this.wall = this.create(bool);
   }
 
-  protected create(): WEBIFC.IFC4X3.IfcWall {
+  protected create(solid: Solid | null = null): WEBIFC.IFC4X3.IfcWall {
+    solid = solid || this.geometries.extrusion.solid;
     const wall = createIfcEntity<typeof WEBIFC.IFC4X3.IfcWall>(
       this.ifcAPI,
       this.modelID,
       WEBIFC.IFCWALL,
-      this.base.guid("SimpleWall"),
+      this.base.guid(uuidv4()),
       null,
       this.base.label("SimpleWall"),
       null,
       this.base.label("wall"),
       this.base.objectPlacement(),
-      this.geometries.extrusion
-        .solid as unknown as WEBIFC.IFC4X3.IfcProductRepresentation,
+      solid as unknown as WEBIFC.IFC4X3.IfcProductRepresentation,
       this.base.identifier("wall"),
       null,
     );
