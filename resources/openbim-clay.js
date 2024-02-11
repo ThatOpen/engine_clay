@@ -13131,6 +13131,7 @@ var IFCLABEL = 3258342251;
 var IFCIDENTIFIER = 983778844;
 var IFCGLOBALLYUNIQUEID = 3064340077;
 var IFCWALL = 2391406946;
+var IFCOPENINGELEMENT = 3588315303;
 var IFCBOOLEANCLIPPINGRESULT = 3649129432;
 var IFCEXTRUDEDAREASOLID = 477187591;
 var IFCDIRECTION = 32440307;
@@ -54551,6 +54552,12 @@ class Base {
     positiveLength(value) {
         return createIfcType(this.ifcAPI, this.modelID, IFCPOSITIVELENGTHMEASURE, value);
     }
+    objectPlacement(placementRelTo = null) {
+        return createIfcEntity(this.ifcAPI, this.modelID, IFCAXIS2PLACEMENT2D, placementRelTo);
+    }
+    opening(guid, placement, mesh) {
+        return createIfcEntity(this.ifcAPI, this.modelID, IFCOPENINGELEMENT, this.guid(guid), null, this.label("name"), null, this.label("label"), placement, mesh, this.identifier("sadf"), null);
+    }
     direction(values) {
         return createIfcEntity(this.ifcAPI, this.modelID, IFCDIRECTION, this.vector(values, "REAL"));
     }
@@ -54559,9 +54566,6 @@ class Base {
     }
     point() {
         return createIfcEntity(this.ifcAPI, this.modelID, IFCCARTESIANPOINT);
-    }
-    objectPlacement(placementRelTo = null) {
-        return createIfcEntity(this.ifcAPI, this.modelID, IFCAXIS2PLACEMENT2D, placementRelTo);
     }
     axis2Placement2D(location, direction = null) {
         if (Array.isArray(location))
@@ -54579,8 +54583,8 @@ class Base {
         const placement = createIfcEntity(this.ifcAPI, this.modelID, IFCAXIS2PLACEMENT3D, location, axis, direction);
         return { placement, location };
     }
-    bool(first, second) {
-        return createIfcEntity(this.ifcAPI, this.modelID, IFCBOOLEANCLIPPINGRESULT, IFC4X3.IfcBooleanOperator.DIFFERENCE, first, second);
+    bool(firstOperand, secondOperand) {
+        return createIfcEntity(this.ifcAPI, this.modelID, IFCBOOLEANCLIPPINGRESULT, IFC4X3.IfcBooleanOperator.DIFFERENCE, firstOperand, secondOperand);
     }
     vector(values, type) {
         if (!this.types[type])
@@ -54590,14 +54594,15 @@ class Base {
     }
 }
 
-class Extrusion extends Base {
+class Extrusion {
     ifcAPI;
     modelID;
     mesh;
     geometryNeedsUpdate;
     ids;
-    constructor(ifcAPI, modelID) {
-        super(ifcAPI, modelID);
+    base;
+    solid;
+    constructor(ifcAPI, modelID, profile, direction = [0, 0, 1], axis = [0, 0, 0], depth = 10) {
         this.ifcAPI = ifcAPI;
         this.modelID = modelID;
         const geometry = new THREE.BufferGeometry();
@@ -54605,20 +54610,12 @@ class Extrusion extends Base {
         this.ids = [];
         this.mesh = new THREE.InstancedMesh(geometry, material, 10);
         this.mesh.count = 0;
+        this.base = new Base(ifcAPI, modelID);
+        this.solid = this.extrudedAreaSolid(profile, axis, direction, depth);
         this.geometryNeedsUpdate = true;
     }
-    extrudedAreaSolid(profile, position, direction, length) {
-        if (Array.isArray(position)) {
-            position = this.axis2Placement3D(position).placement;
-        }
-        if (Array.isArray(direction))
-            direction = this.direction(direction);
-        if (typeof length === "number")
-            length = this.positiveLength(length);
-        return createIfcEntity(this.ifcAPI, this.modelID, IFCEXTRUDEDAREASOLID, profile, position, direction, length);
-    }
-    rectangularProfile(position, x, y) {
-        return createIfcEntity(this.ifcAPI, this.modelID, IFCRECTANGLEPROFILEDEF, IFC4X3.IfcProfileTypeEnum.AREA, this.label("Rectangle profile"), position, x, y);
+    extrudedAreaSolid(profile, axis, direction, depth) {
+        return createIfcEntity(this.ifcAPI, this.modelID, IFCEXTRUDEDAREASOLID, profile, this.base.axis2Placement3D(axis).placement, this.base.direction(direction), this.base.positiveLength(depth));
     }
     updateMeshTransformations(entity) {
         this.ids.push(entity.expressID);
@@ -54662,64 +54659,112 @@ class Extrusion extends Base {
     }
 }
 
-class Wall extends Extrusion {
+class Breps {
     ifcAPI;
     modelId;
-    location;
-    solid;
-    profile;
-    _width = 20;
-    _height = 10;
-    _thickness = 0.5;
-    constructor(ifcAPI, modelId, location = [0, 0, 0]) {
-        super(ifcAPI, modelId);
+    constructor(ifcAPI, modelId) {
         this.ifcAPI = ifcAPI;
         this.modelId = modelId;
-        this.location = location;
-        const direction = this.direction([0, 0, 1]);
-        const axis = this.axis2Placement2D([0, 0]);
-        const x = this.positiveLength(20);
-        const y = this.positiveLength(0.25);
-        this.profile = this.rectangularProfile(axis, x, y);
-        const { placement } = this.axis2Placement3D([0, 0, 0]);
-        this.solid = this.extrudedAreaSolid(this.profile, placement, direction, 2);
-        this.create();
+    }
+}
+
+class Profile {
+}
+
+class RectangularProfile extends Profile {
+    ifcAPI;
+    modelID;
+    profile;
+    base;
+    constructor(ifcAPI, modelID, axis = [0, 0], xDim = 1, yDim = 0.25) {
+        super();
+        this.ifcAPI = ifcAPI;
+        this.modelID = modelID;
+        this.base = new Base(ifcAPI, modelID);
+        this.profile = this.create(this.base.axis2Placement2D(axis), this.base.positiveLength(xDim), this.base.positiveLength(yDim));
+    }
+    create(position, xDim, yDim) {
+        return createIfcEntity(this.ifcAPI, this.modelID, IFCRECTANGLEPROFILEDEF, IFC4X3.IfcProfileTypeEnum.AREA, this.base.label("Rectangular profile"), position, xDim, yDim);
+    }
+}
+
+class Family {
+}
+
+class SimpleWall extends Family {
+    ifcAPI;
+    modelID;
+    _width = 1;
+    _height = 1;
+    _thickness = 0.25;
+    geometries;
+    mesh = null;
+    base;
+    wall;
+    constructor(ifcAPI, modelID) {
+        super();
+        this.ifcAPI = ifcAPI;
+        this.modelID = modelID;
+        this.modelID = modelID;
+        this.ifcAPI = ifcAPI;
+        this.base = new Base(this.ifcAPI, this.modelID);
+        const rectangularProfile = new RectangularProfile(this.ifcAPI, this.modelID);
+        const extrusion = new Extrusion(this.ifcAPI, this.modelID, rectangularProfile.profile);
+        this.geometries = {
+            profile: rectangularProfile,
+            extrusion,
+        };
+        this.mesh = this.geometries.extrusion.mesh;
+        this.wall = this.create();
+    }
+    get toSubtract() {
+        return this.geometries;
     }
     get thickness() {
         return this._thickness;
     }
     set thickness(value) {
         this._thickness = value;
-        this.profile.YDim.value = value;
-        this.ifcAPI.WriteLine(this.modelID, this.profile);
-        this.regenerate();
+        const profile = this.geometries.profile.profile;
+        profile.YDim.value = value;
+        this.ifcAPI.WriteLine(this.modelID, profile);
+        this.geometries.extrusion.regenerate();
     }
     get width() {
         return this._width;
     }
     set width(value) {
         this._width = value;
-        this.profile.XDim.value = value;
-        this.ifcAPI.WriteLine(this.modelID, this.profile);
-        this.regenerate();
+        const profile = this.geometries.profile.profile;
+        profile.XDim.value = value;
+        this.ifcAPI.WriteLine(this.modelID, profile);
+        this.geometries.extrusion.regenerate();
     }
     get height() {
         return this._height;
     }
     set height(value) {
         this._height = value;
-        this.solid.Depth.value = value;
-        this.ifcAPI.WriteLine(this.modelID, this.solid);
-        this.regenerate();
+        const solid = this.geometries.extrusion.solid;
+        solid.Depth.value = value;
+        this.ifcAPI.WriteLine(this.modelID, solid);
+        this.geometries.extrusion.regenerate();
+    }
+    subtract(extrusion) {
+        const bool = this.base.bool(this.geometries.extrusion.solid, extrusion.solid);
+        this.geometries.extrusion.solid = bool;
+        this.wall.Representation =
+            bool;
+        this.ifcAPI.WriteLine(this.modelID, this.wall);
+        this.geometries.extrusion.regenerate();
     }
     create() {
-        const placement = this.objectPlacement();
-        const mesh = this
-            .solid;
-        const wall = createIfcEntity(this.ifcAPI, this.modelID, IFCWALL, this.guid("GUID"), null, this.label("name"), null, this.label("label"), placement, mesh, this.identifier("wall"), null);
+        const wall = createIfcEntity(this.ifcAPI, this.modelID, IFCWALL, this.base.guid("SimpleWall"), null, this.base.label("SimpleWall"), null, this.base.label("wall"), this.base.objectPlacement(), this.geometries.extrusion
+            .solid, this.base.identifier("wall"), null);
         this.ifcAPI.WriteLine(this.modelID, wall);
-        this.updateMeshTransformations(wall);
+        this.geometries.extrusion.updateMeshTransformations(wall);
+        return wall;
     }
 }
 
-export { BufferManager, Control, Extrusion, Faces, IdIndexMap, Lines, Primitive, Raycaster, Selector, Snapper, Vector, Vertices, Wall };
+export { Base, Breps, BufferManager, Control, Extrusion, Faces, IdIndexMap, Lines, Primitive, Raycaster, RectangularProfile, Selector, SimpleWall, Snapper, Vector, Vertices };

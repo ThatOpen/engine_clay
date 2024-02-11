@@ -38,12 +38,12 @@
       {
         "imports": {
           "three": "https://unpkg.com/three@0.152.2/build/three.module.js",
-          "openbim-components": "../resources/openbim-components.js",
-          "openbim-clay": "../resources/openbim-clay.js",
+          "openbim-components": "../../../../resources/openbim-components.js",
+          "openbim-clay": "../../../../resources/openbim-clay.js",
+          "web-ifc": "../../../../node_modules/web-ifc/web-ifc-api.js",
           "stats.js/src/Stats.js": "https://unpkg.com/stats-js@1.0.1/src/Stats.js",
           "three/examples/jsm/libs/lil-gui.module.min": "https://unpkg.com/three@0.152.2/examples/jsm/libs/lil-gui.module.min.js",
-          "three/examples/jsm/controls/TransformControls": "https://unpkg.com/three@0.135.0/examples/jsm/controls/TransformControls.js",
-          "web-ifc": "../node_modules/web-ifc/web-ifc-api.js"
+          "three/examples/jsm/controls/TransformControls": "https://unpkg.com/three@0.135.0/examples/jsm/controls/TransformControls.js"
         }
       }
     </script>
@@ -52,8 +52,9 @@
 <script type="module">
   import * as THREE from "three";
   import * as OBC from "openbim-components";
-  import { Wall } from "openbim-clay";
+  import * as CLAY from "openbim-clay";
   import * as WEBIFC from "web-ifc";
+
   import Stats from "stats.js/src/Stats.js";
   import * as dat from "three/examples/jsm/libs/lil-gui.module.min";
   import { TransformControls } from "three/examples/jsm/controls/TransformControls";
@@ -86,13 +87,30 @@
 
   const ifcAPI = new WEBIFC.IfcAPI();
 
-  ifcAPI.SetWasmPath("../../node_modules/web-ifc/", false);
+  ifcAPI.SetWasmPath("../../../../node_modules/web-ifc/", false);
   await ifcAPI.Init();
 
-  const model = ifcAPI.CreateModel({ schema: WEBIFC.Schemas.IFC4X3 });
+  const modelID = ifcAPI.CreateModel({ schema: WEBIFC.Schemas.IFC4X3 });
 
-  const wall = new Wall(ifcAPI, model);
+  const openingProfile = new CLAY.RectangularProfile(
+    ifcAPI,
+    modelID,
+    [0, 0],
+    1,
+    0.25,
+  );
+  const openingExtrusion = new CLAY.Extrusion(
+    ifcAPI,
+    modelID,
+    openingProfile.profile,
+    [0.1, 0.1, 0.1],
+    [0, 0, 1],
+    2,
+  );
 
+  const wall = new CLAY.SimpleWall(ifcAPI, modelID);
+
+  wall.subtract(openingExtrusion);
   scene.add(wall.mesh);
 
   // // Set up GUI

@@ -1,68 +1,56 @@
 import * as WEBIFC from "web-ifc";
 import * as THREE from "three";
 import { createIfcEntity } from "../../utils/generics";
-import { Base } from "../../families/Base";
+import { Base } from "../../base";
 
-export class Extrusion extends Base {
+export type Solid = WEBIFC.IFC4X3.IfcBooleanOperand &
+  WEBIFC.IfcLineObject &
+  WEBIFC.IFC4X3.IfcExtrudedAreaSolid;
+export class Extrusion {
   public mesh: THREE.InstancedMesh;
   protected geometryNeedsUpdate: boolean;
   protected ids: number[];
+  private base: Base;
+  public solid: Solid;
 
   constructor(
-    protected ifcAPI: WEBIFC.IfcAPI,
-    protected modelID: number
+    public ifcAPI: WEBIFC.IfcAPI,
+    public modelID: number,
+    profile: WEBIFC.IFC4X3.IfcProfileDef,
+    direction: number[] = [0, 0, 1],
+    axis: number[] = [0, 0, 0],
+    depth: number = 10,
   ) {
-    super(ifcAPI, modelID);
     const geometry = new THREE.BufferGeometry();
     const material = new THREE.MeshLambertMaterial();
     this.ids = [];
     this.mesh = new THREE.InstancedMesh(geometry, material, 10);
     this.mesh.count = 0;
+    this.base = new Base(ifcAPI, modelID);
+    this.solid = this.extrudedAreaSolid(profile, axis, direction, depth);
     this.geometryNeedsUpdate = true;
   }
 
-  protected extrudedAreaSolid(
+  private extrudedAreaSolid(
     profile:
       | WEBIFC.IFC4X3.IfcProfileDef
       | WEBIFC.Handle<WEBIFC.IFC4X3.IfcProfileDef>,
-    position: number[] | WEBIFC.IFC4X3.IfcAxis2Placement3D,
-    direction: number[] | WEBIFC.IFC4X3.IfcDirection,
-    length: number | WEBIFC.IFC4X3.IfcPositiveLengthMeasure
+    axis: number[],
+    direction: number[],
+    depth: number,
   ) {
-    if (Array.isArray(position)) {
-      position = this.axis2Placement3D(position).placement;
-    }
-    if (Array.isArray(direction)) direction = this.direction(direction);
-    if (typeof length === "number") length = this.positiveLength(length);
     return createIfcEntity<typeof WEBIFC.IFC4X3.IfcExtrudedAreaSolid>(
       this.ifcAPI,
       this.modelID,
       WEBIFC.IFCEXTRUDEDAREASOLID,
       profile,
-      position,
-      direction,
-      length
+      this.base.axis2Placement3D(axis).placement,
+      this.base.direction(direction),
+      this.base.positiveLength(depth),
     );
   }
 
-  protected rectangularProfile(
-    position: WEBIFC.IFC4X3.IfcAxis2Placement2D,
-    x: WEBIFC.IFC4X3.IfcPositiveLengthMeasure,
-    y: WEBIFC.IFC4X3.IfcPositiveLengthMeasure
-  ) {
-    return createIfcEntity<typeof WEBIFC.IFC4X3.IfcRectangleProfileDef>(
-      this.ifcAPI,
-      this.modelID,
-      WEBIFC.IFCRECTANGLEPROFILEDEF,
-      WEBIFC.IFC4X3.IfcProfileTypeEnum.AREA,
-      this.label("Rectangle profile"),
-      position,
-      x,
-      y
-    );
-  }
-
-  protected updateMeshTransformations(entity: WEBIFC.IfcLineObject) {
+  public updateMeshTransformations(entity: WEBIFC.IfcLineObject) {
     this.ids.push(entity.expressID);
 
     this.ifcAPI.StreamMeshes(this.modelID, [entity.expressID], (mesh) => {
@@ -79,17 +67,15 @@ export class Extrusion extends Base {
     }
   }
 
-  protected geometry(
-    data: WEBIFC.IfcGeometry
-  ): THREE.BufferGeometry<THREE.NormalBufferAttributes> {
+  public geometry(data: WEBIFC.IfcGeometry) {
     const index = this.ifcAPI.GetIndexArray(
       data.GetIndexData(),
-      data.GetIndexDataSize()
+      data.GetIndexDataSize(),
     );
 
     const vertexData = this.ifcAPI.GetVertexArray(
       data.GetVertexData(),
-      data.GetVertexDataSize()
+      data.GetVertexDataSize(),
     );
 
     const position = new Float32Array(vertexData.length / 2);
@@ -109,11 +95,10 @@ export class Extrusion extends Base {
     geometry.setAttribute("position", new THREE.BufferAttribute(position, 3));
     geometry.setAttribute("normal", new THREE.BufferAttribute(normal, 3));
     geometry.setIndex(Array.from(index));
-
     return geometry;
   }
 
-  protected regenerate() {
+  public regenerate() {
     this.ifcAPI.StreamMeshes(this.modelID, [this.ids[0]], (mesh) => {
       this.mesh.geometry.dispose();
       const geometryID = mesh.geometries.get(0).geometryExpressID;

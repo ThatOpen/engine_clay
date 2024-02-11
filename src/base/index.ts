@@ -1,5 +1,5 @@
 import * as WEBIFC from "web-ifc";
-import { createIfcEntity, createIfcType } from "../../utils/generics";
+import { createIfcEntity, createIfcType } from "../utils/generics";
 
 type Types = {
   REAL: (value: number) => WEBIFC.IFC4X3.IfcReal;
@@ -7,12 +7,12 @@ type Types = {
   POSITIVE_LENGTH: (value: number) => WEBIFC.IFC4X3.IfcPositiveLengthMeasure;
 };
 
-export abstract class Base {
+export class Base {
   protected types: Types;
 
   constructor(
-    protected ifcAPI: WEBIFC.IfcAPI,
-    protected modelID: number
+    public ifcAPI: WEBIFC.IfcAPI,
+    public modelID: number,
   ) {
     this.types = {
       REAL: (value: number) => this.real(value),
@@ -21,100 +21,121 @@ export abstract class Base {
     };
   }
 
-  protected guid(value: string) {
+  public guid(value: string) {
     return createIfcType<typeof WEBIFC.IFC4X3.IfcGloballyUniqueId>(
       this.ifcAPI,
       this.modelID,
       WEBIFC.IFCGLOBALLYUNIQUEID,
-      value
+      value,
     );
   }
 
-  protected identifier(value: string) {
+  public identifier(value: string) {
     return createIfcType<typeof WEBIFC.IFC4X3.IfcIdentifier>(
       this.ifcAPI,
       this.modelID,
       WEBIFC.IFCIDENTIFIER,
-      value
+      value,
     );
   }
 
-  protected real(value: number) {
+  public real(value: number) {
     return createIfcType<typeof WEBIFC.IFC4X3.IfcReal>(
       this.ifcAPI,
       this.modelID,
       WEBIFC.IFCREAL,
-      value
+      value,
     );
   }
 
-  protected label(text: string) {
+  public label(text: string) {
     return createIfcType<typeof WEBIFC.IFC4X3.IfcLabel>(
       this.ifcAPI,
       this.modelID,
       WEBIFC.IFCLABEL,
-      text
+      text,
     );
   }
 
-  protected length(value: number) {
+  public length(value: number) {
     return createIfcType<typeof WEBIFC.IFC4X3.IfcLengthMeasure>(
       this.ifcAPI,
       this.modelID,
       WEBIFC.IFCLENGTHMEASURE,
-      value
+      value,
     );
   }
 
-  protected positiveLength(value: number) {
+  public positiveLength(value: number) {
     return createIfcType<typeof WEBIFC.IFC4X3.IfcPositiveLengthMeasure>(
       this.ifcAPI,
       this.modelID,
       WEBIFC.IFCPOSITIVELENGTHMEASURE,
-      value
+      value,
     );
   }
 
-  protected direction(values: number[]) {
-    return createIfcEntity<typeof WEBIFC.IFC4X3.IfcDirection>(
-      this.ifcAPI,
-      this.modelID,
-      WEBIFC.IFCDIRECTION,
-      this.vector(values, "REAL")
-    );
-  }
-
-  protected cartesianPoint(values: number[]) {
-    return createIfcEntity<typeof WEBIFC.IFC4X3.IfcCartesianPoint>(
-      this.ifcAPI,
-      this.modelID,
-      WEBIFC.IFCCARTESIANPOINT,
-      this.vector(values, "LENGTH")
-    );
-  }
-
-  protected point() {
-    return createIfcEntity<typeof WEBIFC.IFC4X3.IfcPoint>(
-      this.ifcAPI,
-      this.modelID,
-      WEBIFC.IFCCARTESIANPOINT
-    );
-  }
-
-  protected objectPlacement(
-    placementRelTo: WEBIFC.IFC4X3.IfcObjectPlacement | null = null
+  public objectPlacement(
+    placementRelTo: WEBIFC.IFC4X3.IfcObjectPlacement | null = null,
   ) {
     return createIfcEntity<typeof WEBIFC.IFC4X3.IfcObjectPlacement>(
       this.ifcAPI,
       this.modelID,
       WEBIFC.IFCAXIS2PLACEMENT2D,
-      placementRelTo
+      placementRelTo,
     );
   }
 
-  protected axis2Placement2D(
+  public opening(
+    guid: string,
+    placement: WEBIFC.IFC4X3.IfcObjectPlacement,
+    mesh: WEBIFC.IFC4X3.IfcProductRepresentation,
+  ) {
+    return createIfcEntity<typeof WEBIFC.IFC4X3.IfcOpeningElement>(
+      this.ifcAPI,
+      this.modelID,
+      WEBIFC.IFCOPENINGELEMENT,
+      this.guid(guid),
+      null,
+      this.label("name"),
+      null,
+      this.label("label"),
+      placement,
+      mesh,
+      this.identifier("sadf"),
+      null,
+    );
+  }
+
+  public direction(values: number[]) {
+    return createIfcEntity<typeof WEBIFC.IFC4X3.IfcDirection>(
+      this.ifcAPI,
+      this.modelID,
+      WEBIFC.IFCDIRECTION,
+      this.vector(values, "REAL"),
+    );
+  }
+
+  public cartesianPoint(values: number[]) {
+    return createIfcEntity<typeof WEBIFC.IFC4X3.IfcCartesianPoint>(
+      this.ifcAPI,
+      this.modelID,
+      WEBIFC.IFCCARTESIANPOINT,
+      this.vector(values, "LENGTH"),
+    );
+  }
+
+  public point() {
+    return createIfcEntity<typeof WEBIFC.IFC4X3.IfcPoint>(
+      this.ifcAPI,
+      this.modelID,
+      WEBIFC.IFCCARTESIANPOINT,
+    );
+  }
+
+  public axis2Placement2D(
     location: number[] | WEBIFC.IFC4X3.IfcCartesianPoint,
-    direction: number[] | WEBIFC.IFC4X3.IfcDirection | null = null
+    direction: number[] | WEBIFC.IFC4X3.IfcDirection | null = null,
   ) {
     if (Array.isArray(location)) location = this.cartesianPoint(location);
     if (Array.isArray(direction)) direction = this.direction(direction);
@@ -123,13 +144,13 @@ export abstract class Base {
       this.modelID,
       WEBIFC.IFCAXIS2PLACEMENT2D,
       location,
-      direction
+      direction,
     );
   }
 
-  protected axis2Placement3D(
+  public axis2Placement3D(
     axis: number[] | WEBIFC.IFC4X3.IfcDirection | null = null,
-    direction: number[] | WEBIFC.IFC4X3.IfcDirection | null = null
+    direction: number[] | WEBIFC.IFC4X3.IfcDirection | null = null,
   ) {
     const location = this.point();
     if (Array.isArray(axis)) axis = this.direction(axis);
@@ -140,26 +161,26 @@ export abstract class Base {
       WEBIFC.IFCAXIS2PLACEMENT3D,
       location,
       axis,
-      direction
+      direction,
     );
     return { placement, location };
   }
 
-  protected bool(
-    first: WEBIFC.IFC4X3.IfcBooleanOperand,
-    second: WEBIFC.IFC4X3.IfcBooleanOperand
+  public bool(
+    firstOperand: WEBIFC.IFC4X3.IfcBooleanOperand,
+    secondOperand: WEBIFC.IFC4X3.IfcBooleanOperand,
   ) {
     return createIfcEntity<typeof WEBIFC.IFC4X3.IfcBooleanClippingResult>(
       this.ifcAPI,
       this.modelID,
       WEBIFC.IFCBOOLEANCLIPPINGRESULT,
       WEBIFC.IFC4X3.IfcBooleanOperator.DIFFERENCE,
-      first,
-      second
+      firstOperand,
+      secondOperand,
     );
   }
 
-  protected vector(values: number[], type: keyof Types) {
+  public vector(values: number[], type: keyof Types) {
     if (!this.types[type]) throw new Error(`Type not found: ${type}`);
     const action = this.types[type];
     return values.map((value) => action(value));
