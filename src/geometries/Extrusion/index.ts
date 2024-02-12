@@ -71,7 +71,23 @@ export class Extrusion {
     );
   }
 
-  public getGeometry(data: WEBIFC.IfcGeometry) {
+  public regenerate() {
+    this.ifcAPI.StreamMeshes(this.modelID, [this.ids[0]], (mesh) => {
+      this.mesh.geometry.dispose();
+      const {geometryExpressID, flatTransformation} = mesh.geometries.get(0);
+      const data = this.ifcAPI.GetGeometry(this.modelID, geometryExpressID);
+      this.mesh.geometry = this.getGeometry(data);
+
+      const matrix = new THREE.Matrix4().fromArray(flatTransformation);
+      this.mesh.position.set(0, 0, 0);
+      this.mesh.rotation.set(0, 0, 0);
+      this.mesh.scale.set(1, 1, 1);
+      this.mesh.updateMatrix();
+      this.mesh.applyMatrix4(matrix);
+    });
+  }
+
+  private getGeometry(data: WEBIFC.IfcGeometry) {
     const index = this.ifcAPI.GetIndexArray(
       data.GetIndexData(),
       data.GetIndexDataSize(),
@@ -100,21 +116,5 @@ export class Extrusion {
     geometry.setAttribute("normal", new THREE.BufferAttribute(normal, 3));
     geometry.setIndex(Array.from(index));
     return geometry;
-  }
-
-  public regenerate() {
-    this.ifcAPI.StreamMeshes(this.modelID, [this.ids[0]], (mesh) => {
-      this.mesh.geometry.dispose();
-      const {geometryExpressID, flatTransformation} = mesh.geometries.get(0);
-      const data = this.ifcAPI.GetGeometry(this.modelID, geometryExpressID);
-      this.mesh.geometry = this.getGeometry(data);
-
-      const matrix = new THREE.Matrix4().fromArray(flatTransformation);
-      this.mesh.position.set(0, 0, 0);
-      this.mesh.rotation.set(0, 0, 0);
-      this.mesh.scale.set(1, 1, 1);
-      this.mesh.updateMatrix();
-      this.mesh.applyMatrix4(matrix);
-    });
   }
 }

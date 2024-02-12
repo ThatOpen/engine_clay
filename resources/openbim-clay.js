@@ -55105,6 +55105,20 @@ class Extrusion {
     extrudedAreaSolid(profile, position, direction, depth) {
         return createIfcEntity(this.ifcAPI, this.modelID, IFCEXTRUDEDAREASOLID, profile, this.base.axis2Placement3D(position).placement, this.base.direction(direction), this.base.positiveLength(depth));
     }
+    regenerate() {
+        this.ifcAPI.StreamMeshes(this.modelID, [this.ids[0]], (mesh) => {
+            this.mesh.geometry.dispose();
+            const { geometryExpressID, flatTransformation } = mesh.geometries.get(0);
+            const data = this.ifcAPI.GetGeometry(this.modelID, geometryExpressID);
+            this.mesh.geometry = this.getGeometry(data);
+            const matrix = new THREE.Matrix4().fromArray(flatTransformation);
+            this.mesh.position.set(0, 0, 0);
+            this.mesh.rotation.set(0, 0, 0);
+            this.mesh.scale.set(1, 1, 1);
+            this.mesh.updateMatrix();
+            this.mesh.applyMatrix4(matrix);
+        });
+    }
     getGeometry(data) {
         const index = this.ifcAPI.GetIndexArray(data.GetIndexData(), data.GetIndexDataSize());
         const vertexData = this.ifcAPI.GetVertexArray(data.GetVertexData(), data.GetVertexDataSize());
@@ -55123,20 +55137,6 @@ class Extrusion {
         geometry.setAttribute("normal", new THREE.BufferAttribute(normal, 3));
         geometry.setIndex(Array.from(index));
         return geometry;
-    }
-    regenerate() {
-        this.ifcAPI.StreamMeshes(this.modelID, [this.ids[0]], (mesh) => {
-            this.mesh.geometry.dispose();
-            const { geometryExpressID, flatTransformation } = mesh.geometries.get(0);
-            const data = this.ifcAPI.GetGeometry(this.modelID, geometryExpressID);
-            this.mesh.geometry = this.getGeometry(data);
-            const matrix = new THREE.Matrix4().fromArray(flatTransformation);
-            this.mesh.position.set(0, 0, 0);
-            this.mesh.rotation.set(0, 0, 0);
-            this.mesh.scale.set(1, 1, 1);
-            this.mesh.updateMatrix();
-            this.mesh.applyMatrix4(matrix);
-        });
     }
 }
 
