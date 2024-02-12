@@ -1,51 +1,73 @@
 import * as WEBIFC from "web-ifc";
 import * as THREE from "three";
-
-import { Family } from "../Family";
+import { v4 as uuidv4 } from "uuid";
 import { createIfcEntity } from "../../utils/generics";
+import { Family } from "../Family";
 import { Base } from "../../base";
-import { Extrusion, RectangleProfile, Solid } from "../../geometries";
+import {
+  Extrusion,
+  RectangleProfile,
+  ExtrusionArgs,
+  RectangleProfileArgs,
+} from "../../geometries";
 
 type Geometries = {
   profile: RectangleProfile;
   extrusion: Extrusion;
 };
 
+type OpeningArgs = {
+  profile: RectangleProfileArgs;
+  extrusion: ExtrusionArgs;
+};
+
 export class Opening extends Family {
-  private base: Base;
-  private opening: WEBIFC.IFC4X3.IfcOpeningElement;
   private geometries: Geometries;
   public mesh: THREE.InstancedMesh | null = null;
+  private base: Base;
+  private opening: WEBIFC.IFC4X3.IfcOpeningElement;
   constructor(
     public ifcAPI: WEBIFC.IfcAPI,
     public modelID: number,
+    args: OpeningArgs = {
+      profile: {
+        position: [-1, 2],
+        xDim: 1,
+        yDim: 10,
+      },
+      extrusion: {
+        direction: [0, 0, 1],
+        position: [0, 0, 0],
+        depth: 2,
+      },
+    },
   ) {
     super();
     this.modelID = modelID;
     this.ifcAPI = ifcAPI;
     this.base = new Base(this.ifcAPI, this.modelID);
+    this.geometries = this.createGeometries(args);
+    this.mesh = this.geometries.extrusion.mesh;
+    this.opening = this.create();
+  }
+
+  private createGeometries(args: OpeningArgs) {
     const rectangleProfile = new RectangleProfile(
       this.ifcAPI,
       this.modelID,
-      [-1, 2],
-      1,
-      10,
+      args.profile,
     );
     const extrusion = new Extrusion(
       this.ifcAPI,
       this.modelID,
       rectangleProfile.profile,
-      [0, 0, 1],
-      [0, 0, 0],
-      2,
+      args.extrusion,
     );
 
-    this.geometries = {
+    return {
       profile: rectangleProfile,
       extrusion,
     };
-    this.mesh = this.geometries.extrusion.mesh;
-    this.opening = this.create();
   }
 
   public get toSubtract(): Geometries {
@@ -53,24 +75,26 @@ export class Opening extends Family {
   }
 
   public subtract(extrusion: Extrusion) {
+    const lastGeometries = { ...this.geometries };
     const bool = this.base.bool(
-      this.geometries.extrusion.solid,
+      lastGeometries.extrusion.solid,
       extrusion.solid,
     );
 
-    this.geometries.extrusion.solid = bool as Solid;
     this.opening.Representation =
       bool as unknown as WEBIFC.IFC4X3.IfcProductRepresentation;
     this.ifcAPI.WriteLine(this.modelID, this.opening);
+    this.geometries.extrusion.resetMesh();
+    this.mesh = this.geometries.extrusion.mesh;
+    this.geometries.extrusion.updateMeshTransformations(this.opening);
     this.geometries.extrusion.regenerate();
   }
-
   protected create(): WEBIFC.IFC4X3.IfcOpeningElement {
     const opening = createIfcEntity<typeof WEBIFC.IFC4X3.IfcOpeningElement>(
       this.ifcAPI,
       this.modelID,
       WEBIFC.IFCOPENINGELEMENT,
-      this.base.guid("Opening"),
+      this.base.guid(uuidv4()),
       null,
       this.base.label("Opening"),
       null,

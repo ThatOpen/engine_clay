@@ -94,9 +94,12 @@
 
   const wall = new CLAY.SimpleWall(ifcAPI, modelID);
 
-  const opening = new CLAY.Opening(ifcAPI, modelID);
+  const opening1 = new CLAY.Opening(ifcAPI, modelID);
 
-  wall.subtract(opening.toSubtract.extrusion);
+  const opening2 = new CLAY.Opening(ifcAPI, modelID);
+
+  wall.subtract(opening1.toSubtract.extrusion);
+  wall.subtract(opening2.toSubtract.extrusion);
   scene.add(wall.mesh);
 
   // scene.add(opening.mesh);

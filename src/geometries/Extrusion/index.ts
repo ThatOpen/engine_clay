@@ -6,8 +6,15 @@ import { Base } from "../../base";
 export type Solid = WEBIFC.IFC4X3.IfcBooleanOperand &
   WEBIFC.IfcLineObject &
   WEBIFC.IFC4X3.IfcExtrudedAreaSolid;
+
+export type ExtrusionArgs = {
+  direction: number[];
+  position: number[];
+  depth: number;
+};
 export class Extrusion {
   public mesh: THREE.InstancedMesh;
+  public geometry: THREE.BufferGeometry;
   public geometryNeedsUpdate: boolean;
   public ids: number[];
   private base: Base;
@@ -18,18 +25,26 @@ export class Extrusion {
     public ifcAPI: WEBIFC.IfcAPI,
     public modelID: number,
     profile: WEBIFC.IFC4X3.IfcProfileDef,
-    direction: number[] = [0, 0, 1],
-    position: number[] = [0, 0, 0],
-    depth: number = 5,
+    args: ExtrusionArgs,
   ) {
-    const geometry = new THREE.BufferGeometry();
+    this.geometry = new THREE.BufferGeometry();
     this.material = new THREE.MeshLambertMaterial();
     this.ids = [];
-    this.mesh = new THREE.InstancedMesh(geometry, this.material, 10);
+    this.mesh = new THREE.InstancedMesh(this.geometry, this.material, 10);
     this.mesh.count = 0;
     this.base = new Base(ifcAPI, modelID);
-    this.solid = this.extrudedAreaSolid(profile, position, direction, depth);
+    this.solid = this.extrudedAreaSolid(
+      profile,
+      args.position,
+      args.direction,
+      args.depth,
+    );
     this.geometryNeedsUpdate = true;
+  }
+
+  public resetMesh() {
+    this.mesh = new THREE.InstancedMesh(this.geometry, this.material, 10);
+    this.mesh.count = 0;
   }
 
   private extrudedAreaSolid(
@@ -52,7 +67,9 @@ export class Extrusion {
   }
 
   public updateMeshTransformations(entity: WEBIFC.IfcLineObject) {
-    this.ids.push(entity.expressID);
+    if (!this.ids.includes(entity.expressID)) {
+      this.ids.push(entity.expressID);
+    }
 
     this.ifcAPI.StreamMeshes(this.modelID, [entity.expressID], (mesh) => {
       const geometry = mesh.geometries.get(0);
@@ -67,7 +84,7 @@ export class Extrusion {
     }
   }
 
-  public geometry(data: WEBIFC.IfcGeometry) {
+  public getGeometry(data: WEBIFC.IfcGeometry) {
     const index = this.ifcAPI.GetIndexArray(
       data.GetIndexData(),
       data.GetIndexDataSize(),
@@ -103,7 +120,7 @@ export class Extrusion {
       this.mesh.geometry.dispose();
       const geometryID = mesh.geometries.get(0).geometryExpressID;
       const data = this.ifcAPI.GetGeometry(this.modelID, geometryID);
-      this.mesh.geometry = this.geometry(data);
+      this.mesh.geometry = this.getGeometry(data);
     });
   }
 }

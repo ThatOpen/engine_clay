@@ -3,6 +3,11 @@ import { createIfcEntity } from "../../../utils/generics";
 import { Profile } from "../Profile";
 import { Base } from "../../../base";
 
+export type RectangleProfileArgs = {
+  position: number[];
+  xDim: number;
+  yDim: number;
+};
 export class RectangleProfile extends Profile {
   public profile: WEBIFC.IFC4X3.IfcRectangleProfileDef;
   private base: Base;
@@ -10,16 +15,14 @@ export class RectangleProfile extends Profile {
   constructor(
     public ifcAPI: WEBIFC.IfcAPI,
     public modelID: number,
-    position: number[] = [0, 0],
-    xDim: number = 5,
-    yDim: number = 3,
+    args: RectangleProfileArgs,
   ) {
     super();
     this.base = new Base(ifcAPI, modelID);
     this.profile = this.create(
-      this.base.axis2Placement2D(position),
-      this.base.positiveLength(xDim),
-      this.base.positiveLength(yDim),
+      this.base.axis2Placement2D(args.position),
+      this.base.positiveLength(args.xDim),
+      this.base.positiveLength(args.yDim),
     );
   }
 

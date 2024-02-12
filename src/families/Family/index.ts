@@ -8,6 +8,6 @@ type Geometries = {
 
 export abstract class Family {
   public abstract toSubtract: Geometries;
-  protected abstract create(...args: any[]): void;
+  protected abstract create(): void;
   public abstract subtract(extrusion: Extrusion): void;
 }
