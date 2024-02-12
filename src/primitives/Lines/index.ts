@@ -1,6 +1,9 @@
 import * as THREE from "three";
 import { Vertices } from "../Vertices";
-import { Primitive } from "../Primitive";
+import {
+  ObjectWithBufferAndBufferAttributeType,
+  Primitive,
+} from "../Primitive";
 import { BufferManager, IdIndexMap } from "../../utils";
 
 export class Lines extends Primitive {
@@ -105,10 +108,13 @@ export class Lines extends Primitive {
       startPoint.start.add(id);
       endPoint.end.add(id);
 
-      this._positionBuffer.setXYZ(index * 2, start[0], start[1], start[2]);
-      this._positionBuffer.setXYZ(index * 2 + 1, end[0], end[1], end[2]);
-      this._colorBuffer.setXYZ(index * 2, r, g, b);
-      this._colorBuffer.setXYZ(index * 2 + 1, r, g, b);
+      const positionBuffer = this._positionBufferObject.buffer;
+      const colorBuffer = this._colorBufferObject.buffer;
+
+      positionBuffer.setXYZ(index * 2, start[0], start[1], start[2]);
+      positionBuffer.setXYZ(index * 2 + 1, end[0], end[1], end[2]);
+      colorBuffer.setXYZ(index * 2, r, g, b);
+      colorBuffer.setXYZ(index * 2 + 1, r, g, b);
 
       this.list[id] = { id, start: startID, end: endID };
     }
@@ -169,14 +175,12 @@ export class Lines extends Primitive {
    * removes all the selected lines.
    */
   remove(ids = this.selected.data as Iterable<number>) {
-    const position = this._positionBuffer;
-    const color = this._colorBuffer;
     const points: number[] = [];
     for (const id of ids) {
       const line = this.list[id];
       if (line === undefined) continue;
-      this.removeFromBuffer(id, position);
-      this.removeFromBuffer(id, color);
+      this.removeFromBuffer(id, this._positionBufferObject);
+      this.removeFromBuffer(id, this._colorBufferObject);
       this.idMap.remove(id);
       const startPoint = this.points[line.start];
       points.push(line.start, line.end);
@@ -186,8 +190,8 @@ export class Lines extends Primitive {
       delete this.list[id];
       this.selected.data.delete(id);
     }
-    position.needsUpdate = true;
-    color.needsUpdate = true;
+    this._positionBufferObject.buffer.needsUpdate = true;
+    this._colorBufferObject.buffer.needsUpdate = true;
     this.selectPoints(false, points);
   }
 
@@ -258,7 +262,11 @@ export class Lines extends Primitive {
     this._buffers.createAttribute("color");
   }
 
-  private removeFromBuffer(id: number, buffer: THREE.BufferAttribute) {
+  private removeFromBuffer(
+    id: number,
+    objectWithBufferAndBufferAttributeType: ObjectWithBufferAndBufferAttributeType
+  ) {
+    const buffer = objectWithBufferAndBufferAttributeType.buffer;
     const index = this.idMap.getIndex(id);
     if (index === null) return;
     const lastIndex = this.idMap.getLastIndex();
@@ -272,41 +280,61 @@ export class Lines extends Primitive {
       buffer.setXYZ(indices[i], x, y, z);
     }
 
-    buffer.count -= 2;
+    const newArray = new Float32Array(
+      buffer.array.length - 2 * buffer.itemSize
+    );
+    for (let i = 0, j = 0; i < buffer.array.length; i += buffer.itemSize) {
+      if (indices.indexOf(i / buffer.itemSize) === -1) {
+        newArray[j] = buffer.getX(i / buffer.itemSize);
+        newArray[j + 1] = buffer.getY(i / buffer.itemSize);
+        newArray[j + 2] = buffer.getZ(i / buffer.itemSize);
+        j += buffer.itemSize;
+      }
+    }
+
+    const newBuffer = new THREE.BufferAttribute(newArray, buffer.itemSize);
+    this.mesh.geometry.setAttribute(
+      objectWithBufferAndBufferAttributeType.bufferAttributeType,
+      newBuffer
+    );
   }
 
   private transformLines(matrix: THREE.Matrix4, indices: Iterable<number>) {
     const vector = new THREE.Vector3();
+
+    const positionBuffer = this._positionBufferObject.buffer;
+
     for (const index of indices) {
-      const x = this._positionBuffer.getX(index);
-      const y = this._positionBuffer.getY(index);
-      const z = this._positionBuffer.getZ(index);
+      const x = positionBuffer.getX(index);
+      const y = positionBuffer.getY(index);
+      const z = positionBuffer.getZ(index);
       vector.set(x, y, z);
       vector.applyMatrix4(matrix);
-      this._positionBuffer.setXYZ(index, vector.x, vector.y, vector.z);
+      positionBuffer.setXYZ(index, vector.x, vector.y, vector.z);
     }
-    this._positionBuffer.needsUpdate = true;
+    positionBuffer.needsUpdate = true;
   }
 
   private setLines(coords: number[], indices: Iterable<number>) {
     const [x, y, z] = coords;
+    const positionBuffer = this._positionBufferObject.buffer;
     for (const index of indices) {
-      this._positionBuffer.setXYZ(index, x, y, z);
+      positionBuffer.setXYZ(index, x, y, z);
     }
-    this._positionBuffer.needsUpdate = true;
+    positionBuffer.needsUpdate = true;
   }
 
   private updateColor(ids = this.ids as Iterable<number>) {
-    const colorAttribute = this._colorBuffer;
+    const colorBuffer = this._colorBufferObject.buffer;
     for (const id of ids) {
       const line = this.list[id];
       const isSelected = this.selected.data.has(line.id);
       const { r, g, b } = isSelected ? this._selectColor : this._baseColor;
       const index = this.idMap.getIndex(id);
       if (index === null) continue;
-      colorAttribute.setXYZ(index * 2, r, g, b);
-      colorAttribute.setXYZ(index * 2 + 1, r, g, b);
+      colorBuffer.setXYZ(index * 2, r, g, b);
+      colorBuffer.setXYZ(index * 2 + 1, r, g, b);
     }
-    colorAttribute.needsUpdate = true;
+    colorBuffer.needsUpdate = true;
   }
 }
