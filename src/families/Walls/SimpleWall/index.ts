@@ -3,7 +3,7 @@ import * as THREE from "three";
 import { v4 as uuidv4 } from "uuid";
 import { createIfcEntity } from "../../../utils/generics";
 import { Base } from "../../../base";
-import { Family } from "../../Family";
+import { Family, Subtract } from "../../Family";
 import {
   Extrusion,
   RectangleProfile,
@@ -29,6 +29,8 @@ export class SimpleWall extends Family {
   public mesh: THREE.InstancedMesh | null = null;
   private base: Base;
   private wall: WEBIFC.IFC4X3.IfcWall;
+  private _subtract: Subtract;
+
   constructor(
     public ifcAPI: WEBIFC.IfcAPI,
     public modelID: number,
@@ -51,6 +53,7 @@ export class SimpleWall extends Family {
     this.base = new Base(this.ifcAPI, this.modelID);
     this.geometries = this.createGeometries(args);
     this.mesh = this.geometries.extrusion.mesh;
+    this._subtract = { extrusion: { solid: this.geometries.extrusion.solid } };
     this.wall = this.create();
   }
 
@@ -73,11 +76,7 @@ export class SimpleWall extends Family {
     };
   }
 
-  public get toSubtract(): Geometries {
-    return this.geometries;
-  }
-
-  public get thickness(): number {
+  public get thickness() {
     return this._thickness;
   }
 
@@ -88,7 +87,7 @@ export class SimpleWall extends Family {
     this.geometries.extrusion.regenerate();
   }
 
-  public get width(): number {
+  public get width() {
     return this._width;
   }
 
@@ -99,7 +98,7 @@ export class SimpleWall extends Family {
     this.geometries.extrusion.regenerate();
   }
 
-  public get height(): number {
+  public get height() {
     return this._height;
   }
 
@@ -110,15 +109,17 @@ export class SimpleWall extends Family {
     this.geometries.extrusion.regenerate();
   }
 
-  public subtract(extrusion: Extrusion) {
-    const lastGeometries = { ...this.geometries };
-    const bool = this.base.bool(
-      lastGeometries.extrusion.solid,
-      extrusion.solid,
-    );
+  public get toSubtract(): Subtract {
+    return this._subtract;
+  }
 
-    this.wall.Representation =
-      bool as unknown as WEBIFC.IFC4X3.IfcProductRepresentation;
+  public subtract(extrusion: Extrusion) {
+    const bool = this.base.bool(
+      this._subtract.extrusion.solid as WEBIFC.IFC4X3.IfcBooleanOperand,
+      extrusion.solid,
+    ) as unknown as WEBIFC.IFC4X3.IfcProductRepresentation;
+    this._subtract = { extrusion: { solid: bool } };
+    this.wall.Representation = bool;
     this.ifcAPI.WriteLine(this.modelID, this.wall);
     this.geometries.extrusion.resetMesh();
     this.mesh = this.geometries.extrusion.mesh;
@@ -133,13 +134,13 @@ export class SimpleWall extends Family {
       WEBIFC.IFCWALL,
       this.base.guid(uuidv4()),
       null,
-      this.base.label("SimpleWall"),
+      this.base.label("Simple Wall"),
       null,
-      this.base.label("wall"),
+      this.base.label("Simple Wall"),
       this.base.objectPlacement(),
       this.geometries.extrusion
         .solid as unknown as WEBIFC.IFC4X3.IfcProductRepresentation,
-      this.base.identifier("wall"),
+      this.base.identifier("Simple Wall"),
       null,
     );
 

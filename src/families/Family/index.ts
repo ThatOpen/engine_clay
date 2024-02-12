@@ -1,13 +1,14 @@
-import { Extrusion } from "../../geometries";
-import { Profile } from "../../geometries/Profiles/Profile";
+import * as WEBIFC from "web-ifc";
+import { Extrusion, Solid } from "../../geometries";
 
-type Geometries = {
-  profile: Profile;
-  extrusion: Extrusion;
+export type Subtract = {
+  extrusion: {
+    solid: WEBIFC.IFC4X3.IfcProductRepresentation | Solid;
+  };
 };
 
 export abstract class Family {
-  public abstract toSubtract: Geometries;
+  public abstract toSubtract: Subtract;
   protected abstract create(): void;
   public abstract subtract(extrusion: Extrusion): void;
 }

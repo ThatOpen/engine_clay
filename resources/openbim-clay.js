@@ -55249,6 +55249,7 @@ class SimpleWall extends Family {
     mesh = null;
     base;
     wall;
+    _subtract;
     constructor(ifcAPI, modelID, args = {
         profile: {
             position: [0, 0],
@@ -55269,6 +55270,7 @@ class SimpleWall extends Family {
         this.base = new Base(this.ifcAPI, this.modelID);
         this.geometries = this.createGeometries(args);
         this.mesh = this.geometries.extrusion.mesh;
+        this._subtract = { extrusion: { solid: this.geometries.extrusion.solid } };
         this.wall = this.create();
     }
     createGeometries(args) {
@@ -55278,9 +55280,6 @@ class SimpleWall extends Family {
             profile: rectangleProfile,
             extrusion,
         };
-    }
-    get toSubtract() {
-        return this.geometries;
     }
     get thickness() {
         return this._thickness;
@@ -55309,11 +55308,14 @@ class SimpleWall extends Family {
         this.ifcAPI.WriteLine(this.modelID, this.geometries.extrusion.solid);
         this.geometries.extrusion.regenerate();
     }
+    get toSubtract() {
+        return this._subtract;
+    }
     subtract(extrusion) {
-        const lastGeometries = { ...this.geometries };
-        const bool = this.base.bool(lastGeometries.extrusion.solid, extrusion.solid);
-        this.wall.Representation =
-            bool;
+        // const lastGeometries = { ...this.geometries };
+        const bool = this.base.bool(this._subtract.extrusion.solid, extrusion.solid);
+        this._subtract = { extrusion: { solid: bool } };
+        this.wall.Representation = bool;
         this.ifcAPI.WriteLine(this.modelID, this.wall);
         this.geometries.extrusion.resetMesh();
         this.mesh = this.geometries.extrusion.mesh;
@@ -55321,8 +55323,8 @@ class SimpleWall extends Family {
         this.geometries.extrusion.regenerate();
     }
     create() {
-        const wall = createIfcEntity(this.ifcAPI, this.modelID, IFCWALL, this.base.guid(v4()), null, this.base.label("SimpleWall"), null, this.base.label("wall"), this.base.objectPlacement(), this.geometries.extrusion
-            .solid, this.base.identifier("wall"), null);
+        const wall = createIfcEntity(this.ifcAPI, this.modelID, IFCWALL, this.base.guid(v4()), null, this.base.label("Simple Wall"), null, this.base.label("Simple Wall"), this.base.objectPlacement(), this.geometries.extrusion
+            .solid, this.base.identifier("Simple Wall"), null);
         this.ifcAPI.WriteLine(this.modelID, wall);
         this.geometries.extrusion.updateMeshTransformations(wall);
         return wall;
