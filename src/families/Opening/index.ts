@@ -85,9 +85,7 @@ export class Opening extends Family {
     this._subtract = { extrusion: { solid: bool } };
     this.opening.Representation = bool;
     this.ifcAPI.WriteLine(this.modelID, this.opening);
-    this.geometries.extrusion.resetMesh();
     this.mesh = this.geometries.extrusion.mesh;
-    this.geometries.extrusion.updateMeshTransformations(this.opening);
     this.geometries.extrusion.regenerate();
   }
 
@@ -109,7 +107,6 @@ export class Opening extends Family {
     );
 
     this.ifcAPI.WriteLine(this.modelID, opening);
-    this.geometries.extrusion.updateMeshTransformations(opening);
 
     return opening;
   }

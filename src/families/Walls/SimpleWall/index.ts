@@ -55,6 +55,7 @@ export class SimpleWall extends Family {
     this.mesh = this.geometries.extrusion.mesh;
     this._subtract = { extrusion: { solid: this.geometries.extrusion.solid } };
     this.wall = this.create();
+    this.geometries.extrusion.ids.push(this.wall.expressID);
   }
 
   private createGeometries(args: SimpleWallArgs) {
@@ -63,6 +64,7 @@ export class SimpleWall extends Family {
       this.modelID,
       args.profile,
     );
+
     const extrusion = new Extrusion(
       this.ifcAPI,
       this.modelID,
@@ -121,9 +123,7 @@ export class SimpleWall extends Family {
     this._subtract = { extrusion: { solid: bool } };
     this.wall.Representation = bool;
     this.ifcAPI.WriteLine(this.modelID, this.wall);
-    this.geometries.extrusion.resetMesh();
     this.mesh = this.geometries.extrusion.mesh;
-    this.geometries.extrusion.updateMeshTransformations(this.wall);
     this.geometries.extrusion.regenerate();
   }
 
@@ -145,7 +145,6 @@ export class SimpleWall extends Family {
     );
 
     this.ifcAPI.WriteLine(this.modelID, wall);
-    this.geometries.extrusion.updateMeshTransformations(wall);
 
     return wall;
   }

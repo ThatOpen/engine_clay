@@ -12,11 +12,14 @@ export type ExtrusionArgs = {
   position: number[];
   depth: number;
 };
+
 export class Extrusion {
+
   public mesh: THREE.InstancedMesh;
   public geometry: THREE.BufferGeometry;
   public geometryNeedsUpdate: boolean;
   public ids: number[];
+
   private base: Base;
   public solid: Solid;
   public material: THREE.MeshLambertMaterial;
@@ -30,9 +33,15 @@ export class Extrusion {
     this.geometry = new THREE.BufferGeometry();
     this.material = new THREE.MeshLambertMaterial();
     this.ids = [];
+
     this.mesh = new THREE.InstancedMesh(this.geometry, this.material, 10);
-    this.mesh.count = 0;
+    this.mesh.count = 1;
+    const identity = new THREE.Matrix4().identity();
+    this.mesh.setMatrixAt(0, identity);
+    this.mesh.instanceMatrix.needsUpdate = true;
+
     this.base = new Base(ifcAPI, modelID);
+    
     this.solid = this.extrudedAreaSolid(
       profile,
       args.position,
@@ -40,11 +49,7 @@ export class Extrusion {
       args.depth,
     );
     this.geometryNeedsUpdate = true;
-  }
 
-  public resetMesh() {
-    this.mesh = new THREE.InstancedMesh(this.geometry, this.material, 10);
-    this.mesh.count = 0;
   }
 
   private extrudedAreaSolid(
@@ -64,24 +69,6 @@ export class Extrusion {
       this.base.direction(direction),
       this.base.positiveLength(depth),
     );
-  }
-
-  public updateMeshTransformations(entity: WEBIFC.IfcLineObject) {
-    if (!this.ids.includes(entity.expressID)) {
-      this.ids.push(entity.expressID);
-    }
-
-    this.ifcAPI.StreamMeshes(this.modelID, [entity.expressID], (mesh) => {
-      const geometry = mesh.geometries.get(0);
-      const matrix = new THREE.Matrix4().fromArray(geometry.flatTransformation);
-      this.mesh.setMatrixAt(this.mesh.count++, matrix);
-    });
-
-    this.mesh.instanceMatrix.needsUpdate = true;
-    if (this.geometryNeedsUpdate) {
-      this.regenerate();
-      this.geometryNeedsUpdate = false;
-    }
   }
 
   public getGeometry(data: WEBIFC.IfcGeometry) {
@@ -118,9 +105,16 @@ export class Extrusion {
   public regenerate() {
     this.ifcAPI.StreamMeshes(this.modelID, [this.ids[0]], (mesh) => {
       this.mesh.geometry.dispose();
-      const geometryID = mesh.geometries.get(0).geometryExpressID;
-      const data = this.ifcAPI.GetGeometry(this.modelID, geometryID);
+      const {geometryExpressID, flatTransformation} = mesh.geometries.get(0);
+      const data = this.ifcAPI.GetGeometry(this.modelID, geometryExpressID);
       this.mesh.geometry = this.getGeometry(data);
+
+      const matrix = new THREE.Matrix4().fromArray(flatTransformation);
+      this.mesh.position.set(0, 0, 0);
+      this.mesh.rotation.set(0, 0, 0);
+      this.mesh.scale.set(1, 1, 1);
+      this.mesh.updateMatrix();
+      this.mesh.applyMatrix4(matrix);
     });
   }
 }

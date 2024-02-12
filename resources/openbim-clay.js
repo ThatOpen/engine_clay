@@ -55094,32 +55094,16 @@ class Extrusion {
         this.material = new THREE.MeshLambertMaterial();
         this.ids = [];
         this.mesh = new THREE.InstancedMesh(this.geometry, this.material, 10);
-        this.mesh.count = 0;
+        this.mesh.count = 1;
+        const identity = new THREE.Matrix4().identity();
+        this.mesh.setMatrixAt(0, identity);
+        this.mesh.instanceMatrix.needsUpdate = true;
         this.base = new Base(ifcAPI, modelID);
         this.solid = this.extrudedAreaSolid(profile, args.position, args.direction, args.depth);
         this.geometryNeedsUpdate = true;
     }
-    resetMesh() {
-        this.mesh = new THREE.InstancedMesh(this.geometry, this.material, 10);
-        this.mesh.count = 0;
-    }
     extrudedAreaSolid(profile, position, direction, depth) {
         return createIfcEntity(this.ifcAPI, this.modelID, IFCEXTRUDEDAREASOLID, profile, this.base.axis2Placement3D(position).placement, this.base.direction(direction), this.base.positiveLength(depth));
-    }
-    updateMeshTransformations(entity) {
-        if (!this.ids.includes(entity.expressID)) {
-            this.ids.push(entity.expressID);
-        }
-        this.ifcAPI.StreamMeshes(this.modelID, [entity.expressID], (mesh) => {
-            const geometry = mesh.geometries.get(0);
-            const matrix = new THREE.Matrix4().fromArray(geometry.flatTransformation);
-            this.mesh.setMatrixAt(this.mesh.count++, matrix);
-        });
-        this.mesh.instanceMatrix.needsUpdate = true;
-        if (this.geometryNeedsUpdate) {
-            this.regenerate();
-            this.geometryNeedsUpdate = false;
-        }
     }
     getGeometry(data) {
         const index = this.ifcAPI.GetIndexArray(data.GetIndexData(), data.GetIndexDataSize());
@@ -55143,9 +55127,15 @@ class Extrusion {
     regenerate() {
         this.ifcAPI.StreamMeshes(this.modelID, [this.ids[0]], (mesh) => {
             this.mesh.geometry.dispose();
-            const geometryID = mesh.geometries.get(0).geometryExpressID;
-            const data = this.ifcAPI.GetGeometry(this.modelID, geometryID);
+            const { geometryExpressID, flatTransformation } = mesh.geometries.get(0);
+            const data = this.ifcAPI.GetGeometry(this.modelID, geometryExpressID);
             this.mesh.geometry = this.getGeometry(data);
+            const matrix = new THREE.Matrix4().fromArray(flatTransformation);
+            this.mesh.position.set(0, 0, 0);
+            this.mesh.rotation.set(0, 0, 0);
+            this.mesh.scale.set(1, 1, 1);
+            this.mesh.updateMatrix();
+            this.mesh.applyMatrix4(matrix);
         });
     }
 }
@@ -55186,6 +55176,7 @@ class Opening extends Family {
     mesh = null;
     base;
     opening;
+    _subtract;
     constructor(ifcAPI, modelID, args = {
         profile: {
             position: [-1, 2],
@@ -55206,6 +55197,7 @@ class Opening extends Family {
         this.base = new Base(this.ifcAPI, this.modelID);
         this.geometries = this.createGeometries(args);
         this.mesh = this.geometries.extrusion.mesh;
+        this._subtract = { extrusion: { solid: this.geometries.extrusion.solid } };
         this.opening = this.create();
     }
     createGeometries(args) {
@@ -55217,24 +55209,20 @@ class Opening extends Family {
         };
     }
     get toSubtract() {
-        return this.geometries;
+        return this._subtract;
     }
     subtract(extrusion) {
-        const lastGeometries = { ...this.geometries };
-        const bool = this.base.bool(lastGeometries.extrusion.solid, extrusion.solid);
-        this.opening.Representation =
-            bool;
+        const bool = this.base.bool(this._subtract.extrusion.solid, extrusion.solid);
+        this._subtract = { extrusion: { solid: bool } };
+        this.opening.Representation = bool;
         this.ifcAPI.WriteLine(this.modelID, this.opening);
-        this.geometries.extrusion.resetMesh();
         this.mesh = this.geometries.extrusion.mesh;
-        this.geometries.extrusion.updateMeshTransformations(this.opening);
         this.geometries.extrusion.regenerate();
     }
     create() {
-        const opening = createIfcEntity(this.ifcAPI, this.modelID, IFCOPENINGELEMENT, this.base.guid(v4()), null, this.base.label("Opening"), null, this.base.label("opening"), this.base.objectPlacement(), this.geometries.extrusion
-            .solid, this.base.identifier("opening"), null);
+        const opening = createIfcEntity(this.ifcAPI, this.modelID, IFCOPENINGELEMENT, this.base.guid(v4()), null, this.base.label("Opening"), null, this.base.label("Opening"), this.base.objectPlacement(), this.geometries.extrusion
+            .solid, this.base.identifier("Opening"), null);
         this.ifcAPI.WriteLine(this.modelID, opening);
-        this.geometries.extrusion.updateMeshTransformations(opening);
         return opening;
     }
 }
@@ -55272,6 +55260,7 @@ class SimpleWall extends Family {
         this.mesh = this.geometries.extrusion.mesh;
         this._subtract = { extrusion: { solid: this.geometries.extrusion.solid } };
         this.wall = this.create();
+        this.geometries.extrusion.ids.push(this.wall.expressID);
     }
     createGeometries(args) {
         const rectangleProfile = new RectangleProfile(this.ifcAPI, this.modelID, args.profile);
@@ -55312,21 +55301,17 @@ class SimpleWall extends Family {
         return this._subtract;
     }
     subtract(extrusion) {
-        // const lastGeometries = { ...this.geometries };
         const bool = this.base.bool(this._subtract.extrusion.solid, extrusion.solid);
         this._subtract = { extrusion: { solid: bool } };
         this.wall.Representation = bool;
         this.ifcAPI.WriteLine(this.modelID, this.wall);
-        this.geometries.extrusion.resetMesh();
         this.mesh = this.geometries.extrusion.mesh;
-        this.geometries.extrusion.updateMeshTransformations(this.wall);
         this.geometries.extrusion.regenerate();
     }
     create() {
         const wall = createIfcEntity(this.ifcAPI, this.modelID, IFCWALL, this.base.guid(v4()), null, this.base.label("Simple Wall"), null, this.base.label("Simple Wall"), this.base.objectPlacement(), this.geometries.extrusion
             .solid, this.base.identifier("Simple Wall"), null);
         this.ifcAPI.WriteLine(this.modelID, wall);
-        this.geometries.extrusion.updateMeshTransformations(wall);
         return wall;
     }
 }
