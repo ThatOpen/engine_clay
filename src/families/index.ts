@@ -1,1 +1,2 @@
-export * from "./Walls/Wall";
+export * from "./Opening";
+export * from "./Walls";

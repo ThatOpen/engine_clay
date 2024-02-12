@@ -38,12 +38,12 @@
       {
         "imports": {
           "three": "https://unpkg.com/three@0.152.2/build/three.module.js",
-          "openbim-components": "../resources/openbim-components.js",
-          "openbim-clay": "../resources/openbim-clay.js",
+          "openbim-components": "../../../../resources/openbim-components.js",
+          "openbim-clay": "../../../../resources/openbim-clay.js",
+          "web-ifc": "../../../../node_modules/web-ifc/web-ifc-api.js",
           "stats.js/src/Stats.js": "https://unpkg.com/stats-js@1.0.1/src/Stats.js",
           "three/examples/jsm/libs/lil-gui.module.min": "https://unpkg.com/three@0.152.2/examples/jsm/libs/lil-gui.module.min.js",
-          "three/examples/jsm/controls/TransformControls": "https://unpkg.com/three@0.135.0/examples/jsm/controls/TransformControls.js",
-          "web-ifc": "../node_modules/web-ifc/web-ifc-api.js"
+          "three/examples/jsm/controls/TransformControls": "https://unpkg.com/three@0.135.0/examples/jsm/controls/TransformControls.js"
         }
       }
     </script>
@@ -52,8 +52,9 @@
 <script type="module">
   import * as THREE from "three";
   import * as OBC from "openbim-components";
-  import { Wall } from "openbim-clay";
+  import * as CLAY from "openbim-clay";
   import * as WEBIFC from "web-ifc";
+
   import Stats from "stats.js/src/Stats.js";
   import * as dat from "three/examples/jsm/libs/lil-gui.module.min";
   import { TransformControls } from "three/examples/jsm/controls/TransformControls";
@@ -86,14 +87,33 @@
 
   const ifcAPI = new WEBIFC.IfcAPI();
 
-  ifcAPI.SetWasmPath("../../node_modules/web-ifc/", false);
+  ifcAPI.SetWasmPath("../../../../node_modules/web-ifc/", false);
   await ifcAPI.Init();
 
-  const model = ifcAPI.CreateModel({ schema: WEBIFC.Schemas.IFC4X3 });
+  const modelID = ifcAPI.CreateModel({ schema: WEBIFC.Schemas.IFC4X3 });
 
-  const wall = new Wall(ifcAPI, model);
+  const wall = new CLAY.SimpleWall(ifcAPI, modelID);
 
+  const opening1 = new CLAY.Opening(ifcAPI, modelID);
+
+  const opening2 = new CLAY.Opening(ifcAPI, modelID, {
+    profile: {
+      position: [-1, 0],
+      xDim: 2,
+      yDim: 2,
+    },
+    extrusion: {
+      direction: [0, 0, 10],
+      position: [0, 0, 0],
+      depth: 1,
+    },
+  });
+
+  wall.subtract(opening1.toSubtract.extrusion);
+  wall.subtract(opening2.toSubtract.extrusion);
   scene.add(wall.mesh);
+
+  // scene.add(opening.mesh);
 
   // // Set up GUI
 
@@ -101,44 +121,12 @@
     transformMode: "translate",
   };
 
-  // const helper = new THREE.Object3D();
   const camera = components.camera.get();
 
-  // const controls = new TransformControls(camera, container);
-  // controls.attach(wall.mesh);
-  // scene.add(controls);
-
-  // controls.addEventListener(
-  //   "dragging-changed",
-  //   (event) => (components.camera.enabled = !event.value)
-  // );
-
-  // let transform = new THREE.Matrix4();
-  // controls.addEventListener("change", () => {
-  //   const mesh = wall.mesh;
-  //   mesh.updateMatrix();
-  // });
-
   const gui = new dat.GUI();
-  gui.add(wall, "width").min(1).max(30).step(1);
-  gui.add(wall, "height").min(1).max(30).step(1);
-  gui.add(wall, "thickness").min(0.1).max(1).step(0.1);
-  // gui.add(walls, "xPosition").min(-2).max(2).step(0.1);
-  // gui.add(walls, "yPosition").min(-0.2).max(0.2).step(0.01);
-  // gui.add(walls, "zPosition").min(-2).max(2).step(0.1);
-
-  // gui
-  //   .add(settings, "transformMode", {
-  //     translate: "translate",
-  //     rotate: "rotate",
-  //     scale: "scale",
-  //   })
-  //   .name("Transform mode")
-  //   .onChange((result) => {
-  //     controls.setMode(result);
-  //   });
-
-  // // Set up stats
+  gui.add(wall, "width").min(0).max(30).step(0.1);
+  gui.add(wall, "height").min(0).max(30).step(0.1);
+  gui.add(wall, "thickness").min(0).max(30).step(0.1);
 
   const stats = new Stats();
   stats.showPanel(2);
