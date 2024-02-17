@@ -55316,4 +55316,93 @@ class SimpleWall extends Family {
     }
 }
 
-export { Base, Breps, BufferManager, Control, Extrusion, Faces, IdIndexMap, Lines, Opening, Primitive, Raycaster, RectangleProfile, Selector, SimpleWall, Snapper, Vector, Vertices };
+class SimpleSlab extends Family {
+  ifcAPI;
+  modelID;
+  _width = 5;
+  _height = 3;
+  _thickness = 0.25;
+  geometries;
+  mesh = null;
+  base;
+  wall;
+  _subtract;
+  constructor(ifcAPI, modelID, args = {
+      profile: {
+          position: [0, 0],
+          xDim: 5,
+          yDim: 3,
+      },
+      extrusion: {
+          direction: [0, 0, 1],
+          position: [0, 0, 0],
+          depth: 0.25,
+      },
+  }) {
+      super();
+      this.ifcAPI = ifcAPI;
+      this.modelID = modelID;
+      this.modelID = modelID;
+      this.ifcAPI = ifcAPI;
+      this.base = new Base(this.ifcAPI, this.modelID);
+      this.geometries = this.createGeometries(args);
+      this.mesh = this.geometries.extrusion.mesh;
+      this._subtract = { extrusion: { solid: this.geometries.extrusion.solid } };
+      this.wall = this.create();
+      this.geometries.extrusion.ids.push(this.wall.expressID);
+  }
+  createGeometries(args) {
+      const rectangleProfile = new RectangleProfile(this.ifcAPI, this.modelID, args.profile);
+      const extrusion = new Extrusion(this.ifcAPI, this.modelID, rectangleProfile.profile, args.extrusion);
+      return {
+          profile: rectangleProfile,
+          extrusion,
+      };
+  }
+  get thickness() {
+      return this._thickness;
+  }
+  set thickness(value) {
+      this._thickness = value;
+     this.geometries.extrusion.solid.Depth.value = value;
+     this.ifcAPI.WriteLine(this.modelID, this.geometries.extrusion.solid);
+     this.geometries.extrusion.regenerate();
+  }
+  get width() {
+      return this._width;
+  }
+  set width(value) {
+      this._width = value;
+      this.geometries.profile.profile.XDim.value = value;
+      this.ifcAPI.WriteLine(this.modelID, this.geometries.profile.profile);
+      this.geometries.extrusion.regenerate();
+  }
+  get height() {
+      return this._height;
+  }
+  set height(value) {
+      this._height = value;
+      this.geometries.profile.profile.YDim.value = value;
+      this.ifcAPI.WriteLine(this.modelID, this.geometries.profile.profile);
+      this.geometries.extrusion.regenerate();
+  }
+  get toSubtract() {
+      return this._subtract;
+  }
+  subtract(extrusion) {
+      const bool = this.base.bool(this._subtract.extrusion.solid, extrusion.solid);
+      this._subtract = { extrusion: { solid: bool } };
+      this.wall.Representation = bool;
+      this.ifcAPI.WriteLine(this.modelID, this.wall);
+      this.mesh = this.geometries.extrusion.mesh;
+      this.geometries.extrusion.regenerate();
+  }
+  create() {
+      const wall = createIfcEntity(this.ifcAPI, this.modelID, IFCWALL, this.base.guid(v4()), null, this.base.label("Simple Slab"), null, this.base.label("Simple Slab"), this.base.objectPlacement(), this.geometries.extrusion
+          .solid, this.base.identifier("Simple Slab"), null);
+      this.ifcAPI.WriteLine(this.modelID, wall);
+      return wall;
+  }
+}
+
+export { Base, Breps, BufferManager, Control, Extrusion, Faces, IdIndexMap, Lines, Opening, Primitive, Raycaster, RectangleProfile, Selector, SimpleWall, SimpleSlab, Snapper, Vector, Vertices };
