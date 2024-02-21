@@ -140,6 +140,14 @@ export class SimpleWall extends Family {
       direction,
     );
 
+    const { location, placement } = this.base.axis2Placement3D(
+      this._startPoint,
+    );
+
+    this.geometries.extrusion.solid.Position = placement;
+    this.geometries.extrusion.location = location;
+
+    this.ifcAPI.WriteLine(this.modelID, this.geometries.extrusion.solid);
     this.ifcAPI.WriteLine(this.modelID, this.geometries.profile.profile);
     this.geometries.extrusion.regenerate();
   }
@@ -168,6 +176,14 @@ export class SimpleWall extends Family {
       direction,
     );
 
+    const { location, placement } = this.base.axis2Placement3D(
+      this._startPoint,
+    );
+
+    this.geometries.extrusion.solid.Position = placement;
+    this.geometries.extrusion.location = location;
+
+    this.ifcAPI.WriteLine(this.modelID, this.geometries.extrusion.solid);
     this.ifcAPI.WriteLine(this.modelID, this.geometries.profile.profile);
     this.geometries.extrusion.regenerate();
   }
@@ -177,6 +193,7 @@ export class SimpleWall extends Family {
   }
 
   set xPosition(value) {
+    console.log(value);
     this._xPosition = value;
     const location = this.geometries.extrusion.location;
     location.Coordinates[0].value = value;
