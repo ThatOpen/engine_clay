@@ -94,7 +94,7 @@
 
   const slab = new CLAY.SimpleSlab(ifcAPI, modelID);
 
-  const opening1 = new CLAY.Opening(ifcAPI, modelID, {
+  const opening = new CLAY.Opening(ifcAPI, modelID, {
     profile: {
       position: [-1, 0],
       xDim: 2,
@@ -107,7 +107,7 @@
     },
   });
 
-  slab.subtract(opening1.toSubtract.extrusion);
+  slab.subtract(opening.toSubtract.extrusion);
   scene.add(slab.mesh);
 
   // scene.add(opening.mesh);
