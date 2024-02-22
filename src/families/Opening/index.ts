@@ -22,6 +22,9 @@ type OpeningArgs = {
 };
 
 export class Opening extends Family {
+  private _width: number = 0;
+  private _height: number = 0;
+  private _thickness: number = 0;
   private geometries: Geometries;
   public mesh: THREE.InstancedMesh | null = null;
   private base: Base;
@@ -33,6 +36,7 @@ export class Opening extends Family {
     public modelID: number,
     args: OpeningArgs = {
       profile: {
+        direction: [1, 1],
         position: [-1, 2],
         xDim: 1,
         yDim: 10,
@@ -45,12 +49,17 @@ export class Opening extends Family {
     },
   ) {
     super();
+    this._thickness = args.profile.yDim;
+    this._width = args.profile.xDim;
+    this._height = args.extrusion.depth;
     this.modelID = modelID;
     this.ifcAPI = ifcAPI;
     this.base = new Base(this.ifcAPI, this.modelID);
     this.geometries = this.createGeometries(args);
     this.mesh = this.geometries.extrusion.mesh;
-    this._subtract = { extrusion: { solid: this.geometries.extrusion.solid } };
+    this._subtract = {
+      extrusion: this.geometries.extrusion,
+    };
     this.opening = this.create();
   }
 
@@ -65,7 +74,12 @@ export class Opening extends Family {
       this.modelID,
       rectangleProfile.profile,
       args.extrusion,
+      args.profile.direction,
     );
+
+    extrusion.material.transparent = true;
+    extrusion.material.opacity = 0.3;
+    extrusion.material.color = new THREE.Color(0xffaaff);
 
     return {
       profile: rectangleProfile,
@@ -73,16 +87,49 @@ export class Opening extends Family {
     };
   }
 
-  public get toSubtract(): Subtract {
+  get thickness() {
+    return this._thickness;
+  }
+
+  set thickness(value) {
+    this._thickness = value;
+    this.geometries.profile.profile.YDim.value = value;
+    this.ifcAPI.WriteLine(this.modelID, this.geometries.profile.profile);
+    this.geometries.extrusion.regenerate();
+  }
+
+  get width() {
+    return this._width;
+  }
+
+  set width(value) {
+    this._width = value;
+    this.geometries.profile.profile.XDim.value = value;
+    this.ifcAPI.WriteLine(this.modelID, this.geometries.profile.profile);
+    this.geometries.extrusion.regenerate();
+  }
+
+  get height() {
+    return this._height;
+  }
+
+  set height(value) {
+    this._height = value;
+    this.geometries.extrusion.solid.Depth.value = value;
+    this.ifcAPI.WriteLine(this.modelID, this.geometries.extrusion.solid);
+    this.geometries.extrusion.regenerate();
+  }
+
+  get toSubtract(): Subtract {
     return this._subtract;
   }
 
-  public subtract(extrusion: Extrusion) {
+  subtract(extrusion: Extrusion) {
     const bool = this.base.bool(
       this._subtract.extrusion.solid as WEBIFC.IFC4X3.IfcBooleanOperand,
       extrusion.solid,
     ) as unknown as WEBIFC.IFC4X3.IfcProductRepresentation;
-    this._subtract = { extrusion: { solid: bool } };
+    this._subtract.extrusion.solid = bool;
     this.opening.Representation = bool;
     this.ifcAPI.WriteLine(this.modelID, this.opening);
     this.mesh = this.geometries.extrusion.mesh;
@@ -107,6 +154,8 @@ export class Opening extends Family {
     );
 
     this.ifcAPI.WriteLine(this.modelID, opening);
+    this.geometries.extrusion.ids.push(opening.expressID);
+    this.geometries.extrusion.regenerate();
 
     return opening;
   }

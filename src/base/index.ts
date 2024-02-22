@@ -1,3 +1,4 @@
+import * as THREE from "three";
 import * as WEBIFC from "web-ifc";
 import { createIfcEntity, createIfcType } from "../utils/generics";
 
@@ -21,7 +22,149 @@ export class Base {
     };
   }
 
-  public guid(value: string) {
+  radiansToDegrees(radians: number) {
+    return radians * (180 / Math.PI);
+  }
+
+  degreesToRadians(degree: number) {
+    return (degree * Math.PI) / 180;
+  }
+
+  getZAxis(xDirection: number[]) {
+    const xAxis = new THREE.Vector3(
+      xDirection[0],
+      xDirection[1],
+      xDirection[2],
+    );
+    const yAxis = new THREE.Vector3(0, 1, 0);
+    const zAxis = new THREE.Vector3();
+    zAxis.crossVectors(xAxis, yAxis);
+    return zAxis.toArray();
+  }
+
+  calculatePoints(midPoint: number[], length: number, angle: number) {
+    const radians = this.degreesToRadians(angle);
+    const halfLength = length / 2;
+
+    const startPoint = [
+      midPoint[0] - halfLength * Math.cos(radians),
+      midPoint[1] - halfLength * Math.sin(radians),
+    ];
+    const endPoint = [
+      midPoint[0] + halfLength * Math.cos(radians),
+      midPoint[1] + halfLength * Math.sin(radians),
+    ];
+    return [startPoint, endPoint];
+  }
+
+  calculateRotationAngleFromDirection(direction: number[]) {
+    return Math.atan2(direction[0], direction[1]);
+  }
+
+  calculateRotationAngleFromTwoPoints(
+    firstPoint: number[],
+    secondPoint: number[],
+  ) {
+    const dx = secondPoint[0] - firstPoint[0];
+    const dy = secondPoint[1] - firstPoint[1];
+    return Math.atan2(dy, dx);
+  }
+
+  rotate(firstPoint: number[], secondPoint: number[], degree: number) {
+    const theta = this.degreesToRadians(degree);
+    const midPoint = [
+      (firstPoint[0] + secondPoint[0]) / 2,
+      (firstPoint[1] + secondPoint[1]) / 2,
+      (firstPoint[2] + secondPoint[2]) / 2,
+    ];
+
+    return [firstPoint, secondPoint].map((point) => {
+      const x = point[0] - midPoint[0];
+      const y = point[1] - midPoint[1];
+      return [
+        x * Math.cos(theta) - y * Math.sin(theta) + midPoint[0],
+        x * Math.sin(theta) + y * Math.cos(theta) + midPoint[1],
+        midPoint[2],
+      ];
+    });
+  }
+
+  calculateEndPoint(
+    startPoint: number[],
+    direction: number[],
+    magnitude: number,
+  ) {
+    const vectorMagnitude = Math.sqrt(
+      direction[0] ** 2 + direction[1] ** 2 + direction[2] ** 2,
+    );
+    const unitVector = direction.map(
+      (component) => component / vectorMagnitude,
+    );
+    const displacementVector = unitVector.map(
+      (component) => component * magnitude,
+    );
+    return [
+      startPoint[0] + displacementVector[0],
+      startPoint[1] + displacementVector[1],
+      startPoint[2] + displacementVector[2],
+    ];
+  }
+
+  pointsDistance(firstPoint: number[], secondPoint: number[]) {
+    const dx = firstPoint[0] - secondPoint[0];
+    const dy = firstPoint[1] - secondPoint[1];
+    const dz = firstPoint[2] - secondPoint[2];
+    return Math.sqrt(dx * dx + dy * dy + dz * dz);
+  }
+
+  representationContext() {
+    return createIfcEntity<typeof WEBIFC.IFC4X3.IfcRepresentationContext>(
+      this.ifcAPI,
+      this.modelID,
+      WEBIFC.IFCREPRESENTATIONCONTEXT,
+      this.label("Body"),
+      this.label("Model"),
+    );
+  }
+
+  productDefinitionShape(representations: WEBIFC.IFC4X3.IfcRepresentation[]) {
+    return createIfcEntity<typeof WEBIFC.IFC4X3.IfcProductDefinitionShape>(
+      this.ifcAPI,
+      this.modelID,
+      WEBIFC.IFCPRODUCTDEFINITIONSHAPE,
+      this.label(""),
+      this.label(""),
+      representations,
+    );
+  }
+
+  shapeRepresentation(
+    identifier: string,
+    type: string,
+    representation: WEBIFC.IFC4X3.IfcRepresentationItem,
+  ) {
+    return createIfcEntity<typeof WEBIFC.IFC4X3.IfcShapeRepresentation>(
+      this.ifcAPI,
+      this.modelID,
+      WEBIFC.IFCSHAPEREPRESENTATION,
+      this.representationContext(),
+      this.label(identifier),
+      this.label(type),
+      [representation],
+    );
+  }
+
+  polyline(points: number[][]) {
+    const listOfPoints = points.map((point) => this.cartesianPoint(point));
+    return createIfcEntity<typeof WEBIFC.IFC4X3.IfcPolyline>(
+      this.ifcAPI,
+      this.modelID,
+      WEBIFC.IFCPOLYLINE,
+      listOfPoints,
+    );
+  }
+
+  guid(value: string) {
     return createIfcType<typeof WEBIFC.IFC4X3.IfcGloballyUniqueId>(
       this.ifcAPI,
       this.modelID,
@@ -30,7 +173,7 @@ export class Base {
     );
   }
 
-  public identifier(value: string) {
+  identifier(value: string) {
     return createIfcType<typeof WEBIFC.IFC4X3.IfcIdentifier>(
       this.ifcAPI,
       this.modelID,
@@ -39,7 +182,7 @@ export class Base {
     );
   }
 
-  public real(value: number) {
+  real(value: number) {
     return createIfcType<typeof WEBIFC.IFC4X3.IfcReal>(
       this.ifcAPI,
       this.modelID,
@@ -48,7 +191,7 @@ export class Base {
     );
   }
 
-  public label(text: string) {
+  label(text: string) {
     return createIfcType<typeof WEBIFC.IFC4X3.IfcLabel>(
       this.ifcAPI,
       this.modelID,
@@ -57,7 +200,7 @@ export class Base {
     );
   }
 
-  public length(value: number) {
+  length(value: number) {
     return createIfcType<typeof WEBIFC.IFC4X3.IfcLengthMeasure>(
       this.ifcAPI,
       this.modelID,
@@ -66,7 +209,7 @@ export class Base {
     );
   }
 
-  public positiveLength(value: number) {
+  positiveLength(value: number) {
     return createIfcType<typeof WEBIFC.IFC4X3.IfcPositiveLengthMeasure>(
       this.ifcAPI,
       this.modelID,
@@ -75,7 +218,7 @@ export class Base {
     );
   }
 
-  public objectPlacement(
+  objectPlacement(
     placementRelTo: WEBIFC.IFC4X3.IfcObjectPlacement | null = null,
   ) {
     return createIfcEntity<typeof WEBIFC.IFC4X3.IfcObjectPlacement>(
@@ -86,28 +229,7 @@ export class Base {
     );
   }
 
-  public opening(
-    guid: string,
-    placement: WEBIFC.IFC4X3.IfcObjectPlacement,
-    mesh: WEBIFC.IFC4X3.IfcProductRepresentation,
-  ) {
-    return createIfcEntity<typeof WEBIFC.IFC4X3.IfcOpeningElement>(
-      this.ifcAPI,
-      this.modelID,
-      WEBIFC.IFCOPENINGELEMENT,
-      this.guid(guid),
-      null,
-      this.label("name"),
-      null,
-      this.label("label"),
-      placement,
-      mesh,
-      this.identifier("sadf"),
-      null,
-    );
-  }
-
-  public direction(values: number[]) {
+  direction(values: number[]) {
     return createIfcEntity<typeof WEBIFC.IFC4X3.IfcDirection>(
       this.ifcAPI,
       this.modelID,
@@ -116,7 +238,7 @@ export class Base {
     );
   }
 
-  public cartesianPoint(values: number[]) {
+  cartesianPoint(values: number[]) {
     return createIfcEntity<typeof WEBIFC.IFC4X3.IfcCartesianPoint>(
       this.ifcAPI,
       this.modelID,
@@ -125,7 +247,7 @@ export class Base {
     );
   }
 
-  public point() {
+  point() {
     return createIfcEntity<typeof WEBIFC.IFC4X3.IfcPoint>(
       this.ifcAPI,
       this.modelID,
@@ -133,7 +255,7 @@ export class Base {
     );
   }
 
-  public axis2Placement2D(
+  axis2Placement2D(
     location: number[] | WEBIFC.IFC4X3.IfcCartesianPoint,
     direction: number[] | WEBIFC.IFC4X3.IfcDirection | null = null,
   ) {
@@ -148,13 +270,15 @@ export class Base {
     );
   }
 
-  public axis2Placement3D(
+  axis2Placement3D(
+    location: number[] | WEBIFC.IFC4X3.IfcCartesianPoint,
     axis: number[] | WEBIFC.IFC4X3.IfcDirection | null = null,
     direction: number[] | WEBIFC.IFC4X3.IfcDirection | null = null,
   ) {
-    const location = this.point();
+    if (Array.isArray(location)) location = this.cartesianPoint(location);
     if (Array.isArray(axis)) axis = this.direction(axis);
     if (Array.isArray(direction)) direction = this.direction(direction);
+
     const placement = createIfcEntity<typeof WEBIFC.IFC4X3.IfcAxis2Placement3D>(
       this.ifcAPI,
       this.modelID,
@@ -166,7 +290,7 @@ export class Base {
     return { placement, location };
   }
 
-  public bool(
+  bool(
     firstOperand: WEBIFC.IFC4X3.IfcBooleanOperand,
     secondOperand: WEBIFC.IFC4X3.IfcBooleanOperand,
   ) {
@@ -180,7 +304,7 @@ export class Base {
     );
   }
 
-  public vector(values: number[], type: keyof Types) {
+  vector(values: number[], type: keyof Types) {
     if (!this.types[type]) throw new Error(`Type not found: ${type}`);
     const action = this.types[type];
     return values.map((value) => action(value));

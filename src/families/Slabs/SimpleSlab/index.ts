@@ -22,9 +22,9 @@ type SimpleSlabArgs = {
 };
 
 export class SimpleSlab extends Family {
-  private _width: number = 1;
-  private _height: number = 1;
-  private _thickness: number = 0.25;
+  private _width: number = 0;
+  private _height: number = 0;
+  private _thickness: number = 0;
   private geometries: Geometries;
   public mesh: THREE.InstancedMesh | null = null;
   private base: Base;
@@ -36,6 +36,7 @@ export class SimpleSlab extends Family {
     public modelID: number,
     args: SimpleSlabArgs = {
       profile: {
+        direction: [1, 1],
         position: [0, 0],
         xDim: 5,
         yDim: 3,
@@ -48,14 +49,16 @@ export class SimpleSlab extends Family {
     },
   ) {
     super();
+    this._thickness = args.profile.yDim;
+    this._width = args.profile.xDim;
+    this._height = args.extrusion.depth;
     this.modelID = modelID;
     this.ifcAPI = ifcAPI;
     this.base = new Base(this.ifcAPI, this.modelID);
     this.geometries = this.createGeometries(args);
     this.mesh = this.geometries.extrusion.mesh;
-    this._subtract = { extrusion: { solid: this.geometries.extrusion.solid } };
+    this._subtract = { extrusion: this.geometries.extrusion };
     this.slab = this.create();
-    this.geometries.extrusion.ids.push(this.slab.expressID);
   }
 
   private createGeometries(args: SimpleSlabArgs) {
@@ -70,6 +73,7 @@ export class SimpleSlab extends Family {
       this.modelID,
       rectangleProfile.profile,
       args.extrusion,
+      args.profile.direction,
     );
 
     return {
@@ -78,44 +82,44 @@ export class SimpleSlab extends Family {
     };
   }
 
-  public get thickness() {
+  get thickness() {
     return this._thickness;
   }
 
-  public set thickness(value) {
+  set thickness(value) {
     this._thickness = value;
     this.geometries.extrusion.solid.Depth.value = value;
     this.ifcAPI.WriteLine(this.modelID, this.geometries.extrusion.solid);
     this.geometries.extrusion.regenerate();
   }
 
-  public get width() {
+  get width() {
     return this._width;
   }
 
-  public set width(value) {
+  set width(value) {
     this._width = value;
     this.geometries.profile.profile.XDim.value = value;
     this.ifcAPI.WriteLine(this.modelID, this.geometries.profile.profile);
     this.geometries.extrusion.regenerate();
   }
 
-  public get height() {
+  get height() {
     return this._height;
   }
 
-  public set height(value) {
+  set height(value) {
     this._height = value;
     this.geometries.profile.profile.YDim.value = value;
     this.ifcAPI.WriteLine(this.modelID, this.geometries.profile.profile);
     this.geometries.extrusion.regenerate();
   }
 
-  public get toSubtract(): Subtract {
+  get toSubtract(): Subtract {
     return this._subtract;
   }
 
-  public subtract(extrusion: Extrusion) {
+  subtract(extrusion: Extrusion) {
     const bool = this.base.bool(
       this._subtract.extrusion.solid as WEBIFC.IFC4X3.IfcBooleanOperand,
       extrusion.solid,
@@ -145,6 +149,8 @@ export class SimpleSlab extends Family {
     );
 
     this.ifcAPI.WriteLine(this.modelID, slab);
+    this.geometries.extrusion.ids.push(slab.expressID);
+    this.geometries.extrusion.regenerate();
 
     return slab;
   }

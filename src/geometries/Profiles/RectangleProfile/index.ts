@@ -4,6 +4,7 @@ import { Profile } from "../Profile";
 import { Base } from "../../../base";
 
 export type RectangleProfileArgs = {
+  direction: number[];
   position: number[];
   xDim: number;
   yDim: number;
@@ -11,6 +12,8 @@ export type RectangleProfileArgs = {
 export class RectangleProfile extends Profile {
   public profile: WEBIFC.IFC4X3.IfcRectangleProfileDef;
   private base: Base;
+  public position: number[];
+  public direction: number[];
 
   constructor(
     public ifcAPI: WEBIFC.IfcAPI,
@@ -19,8 +22,10 @@ export class RectangleProfile extends Profile {
   ) {
     super();
     this.base = new Base(ifcAPI, modelID);
+    this.position = args.position;
+    this.direction = args.direction;
     this.profile = this.create(
-      this.base.axis2Placement2D(args.position),
+      this.base.axis2Placement2D(this.position, this.direction),
       this.base.positiveLength(args.xDim),
       this.base.positiveLength(args.yDim),
     );

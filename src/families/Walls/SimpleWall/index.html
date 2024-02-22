@@ -92,41 +92,108 @@
 
   const modelID = ifcAPI.CreateModel({ schema: WEBIFC.Schemas.IFC4X3 });
 
-  const wall = new CLAY.SimpleWall(ifcAPI, modelID);
-
-  const opening1 = new CLAY.Opening(ifcAPI, modelID);
-
-  const opening2 = new CLAY.Opening(ifcAPI, modelID, {
+  const params = {
+    startPoint: [0, 0, 0],
+    endPoint: [5, 5, 0],
     profile: {
-      position: [-1, 0],
+      direction: [1, 1],
+      position: [0, 0, 0],
       xDim: 2,
       yDim: 2,
     },
     extrusion: {
-      direction: [0, 0, 10],
+      direction: [0, 0, 1],
       position: [0, 0, 0],
-      depth: 1,
+      depth: 2,
     },
-  });
+  };
 
-  wall.subtract(opening1.toSubtract.extrusion);
-  wall.subtract(opening2.toSubtract.extrusion);
+  const wall = new CLAY.SimpleWall(ifcAPI, modelID, params);
+
+  // const opening = new CLAY.Opening(ifcAPI, modelID);
+
   scene.add(wall.mesh);
 
-  // scene.add(opening.mesh);
+  const axesHelper = new THREE.AxesHelper(1);
+
+  // Adiciona o AxesHelper à cena
+  scene.add(axesHelper);
 
   // // Set up GUI
 
-  const settings = {
-    transformMode: "translate",
-  };
-
   const camera = components.camera.get();
 
+  const startPoint = {
+    x: params.startPoint[0],
+    y: params.startPoint[1],
+    z: params.startPoint[2],
+  };
+  const endPoint = {
+    x: params.endPoint[0],
+    y: params.endPoint[1],
+    z: params.endPoint[2],
+  };
+  const rotation = { z: 0 };
+
   const gui = new dat.GUI();
-  gui.add(wall, "width").min(0).max(30).step(0.1);
-  gui.add(wall, "height").min(0).max(30).step(0.1);
-  gui.add(wall, "thickness").min(0).max(30).step(0.1);
+  const startPointFolder = gui.addFolder("Start Point");
+  startPointFolder
+    .add(startPoint, "x")
+    .min(-10)
+    .max(10)
+    .step(1)
+    .onChange(() => (wall.startPoint = startPoint));
+  startPointFolder
+    .add(startPoint, "y")
+    .min(-10)
+    .max(10)
+    .step(1)
+    .onChange(() => (wall.startPoint = startPoint));
+
+  // startPointFolder
+  //   .add(startPoint, "z")
+  //   .min(-10)
+  //   .max(10)
+  //   .step(1)
+  //   .onChange(() => (wall.startPoint = startPoint));
+
+  const endPointFolder = gui.addFolder("End Point");
+  endPointFolder
+    .add(endPoint, "x")
+    .min(-10)
+    .max(10)
+    .step(1)
+    .onChange(() => (wall.endPoint = endPoint));
+  endPointFolder
+    .add(endPoint, "y")
+    .min(-10)
+    .max(10)
+    .step(1)
+    .onChange(() => (wall.endPoint = endPoint));
+  // endPointFolder
+  //   .add(endPoint, "z")
+  //   .min(-10)
+  //   .max(10)
+  //   .step(1)
+  //   .onChange(() => (wall.endPoint = endPoint));
+
+  const positionsFolder = gui.addFolder("Positions");
+  positionsFolder.add(wall, "xPosition").min(-10).max(10).step(1);
+  positionsFolder.add(wall, "yPosition").min(-10).max(10).step(1);
+  positionsFolder.add(wall, "zPosition").min(-10).max(10).step(1);
+
+  const rotationFolder = gui.addFolder("Rotation (degree)");
+  rotationFolder
+    .add(rotation, "z")
+    .min(-360)
+    .max(360)
+    .step(1)
+    .onChange(() => wall.rotate(rotation.z));
+
+  const generalParamsFolder = gui.addFolder("General Params");
+  generalParamsFolder.add(wall, "width").min(0).max(30).step(1);
+  generalParamsFolder.add(wall, "height").min(0).max(30).step(0.1);
+  generalParamsFolder.add(wall, "length").min(0).max(30).step(0.1);
 
   const stats = new Stats();
   stats.showPanel(2);

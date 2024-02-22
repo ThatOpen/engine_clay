@@ -14,7 +14,6 @@ export type ExtrusionArgs = {
 };
 
 export class Extrusion {
-
   public mesh: THREE.InstancedMesh;
   public geometry: THREE.BufferGeometry;
   public geometryNeedsUpdate: boolean;
@@ -24,11 +23,17 @@ export class Extrusion {
   public solid: Solid;
   public material: THREE.MeshLambertMaterial;
 
+  public location: WEBIFC.IFC4X3.IfcCartesianPoint;
+  public position: WEBIFC.IFC4X3.IfcAxis2Placement3D;
+  public direction: WEBIFC.IFC4X3.IfcDirection;
+  public depth: WEBIFC.IFC4X3.IfcPositiveLengthMeasure;
+
   constructor(
     public ifcAPI: WEBIFC.IfcAPI,
     public modelID: number,
     profile: WEBIFC.IFC4X3.IfcProfileDef,
     args: ExtrusionArgs,
+    profileDirection: number[],
   ) {
     this.geometry = new THREE.BufferGeometry();
     this.material = new THREE.MeshLambertMaterial();
@@ -41,40 +46,61 @@ export class Extrusion {
     this.mesh.instanceMatrix.needsUpdate = true;
 
     this.base = new Base(ifcAPI, modelID);
-    
+
+    // const xAxis = new THREE.Vector3(
+    //   profileDirection[0],
+    //   profileDirection[1],
+    //   profileDirection[2],
+    // );
+    // const yAxis = new THREE.Vector3(0, 1, 0);
+    // const zAxis = new THREE.Vector3();
+    // zAxis.crossVectors(xAxis, yAxis);
+
+    console.log(profileDirection);
+
+    const { placement, location } = this.base.axis2Placement3D(
+      args.position,
+      // zAxis.toArray(),
+      // profileDirection,
+    );
+
+    this.location = location;
+    this.position = placement;
+    this.direction = this.base.direction(args.direction);
+    this.depth = this.base.positiveLength(args.depth);
+
     this.solid = this.extrudedAreaSolid(
       profile,
-      args.position,
-      args.direction,
-      args.depth,
+      this.position,
+      this.direction,
+      this.depth,
     );
     this.geometryNeedsUpdate = true;
-
   }
 
   private extrudedAreaSolid(
     profile:
       | WEBIFC.IFC4X3.IfcProfileDef
       | WEBIFC.Handle<WEBIFC.IFC4X3.IfcProfileDef>,
-    position: number[],
-    direction: number[],
-    depth: number,
+    position: WEBIFC.IFC4X3.IfcAxis2Placement3D,
+    direction: WEBIFC.IFC4X3.IfcDirection,
+    location: WEBIFC.IFC4X3.IfcPositiveLengthMeasure,
   ) {
     return createIfcEntity<typeof WEBIFC.IFC4X3.IfcExtrudedAreaSolid>(
       this.ifcAPI,
       this.modelID,
       WEBIFC.IFCEXTRUDEDAREASOLID,
       profile,
-      this.base.axis2Placement3D(position).placement,
-      this.base.direction(direction),
-      this.base.positiveLength(depth),
+      position,
+      direction,
+      location,
     );
   }
 
   public regenerate() {
     this.ifcAPI.StreamMeshes(this.modelID, [this.ids[0]], (mesh) => {
       this.mesh.geometry.dispose();
-      const {geometryExpressID, flatTransformation} = mesh.geometries.get(0);
+      const { geometryExpressID, flatTransformation } = mesh.geometries.get(0);
       const data = this.ifcAPI.GetGeometry(this.modelID, geometryExpressID);
       this.mesh.geometry = this.getGeometry(data);
 
