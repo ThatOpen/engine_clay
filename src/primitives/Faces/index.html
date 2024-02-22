@@ -92,7 +92,7 @@
         [
           [12, 13, 14, 15],
           [16, 17, 18, 19],
-        ]
+        ],
       );
 
       const settings = {
@@ -146,7 +146,7 @@
 
       const control = new TransformControls(
         world.camera,
-        world.renderer.domElement
+        world.renderer.domElement,
       );
       const helper = new THREE.Object3D();
       let transform = new THREE.Matrix4();
@@ -156,12 +156,11 @@
 
       control.addEventListener(
         "dragging-changed",
-        (event) => (world.controls.enabled = !event.value)
+        (event) => (world.controls.enabled = !event.value),
       );
       control.addEventListener("change", () => {
         helper.updateMatrix();
         const temp = helper.matrix.clone();
-        console.log(temp);
         // console.log(temp.decompose());
       });
 

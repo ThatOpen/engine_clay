@@ -73,6 +73,7 @@ export class SimpleSlab extends Family {
       this.modelID,
       rectangleProfile.profile,
       args.extrusion,
+      args.profile.direction,
     );
 
     return {

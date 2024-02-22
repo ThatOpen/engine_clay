@@ -55028,6 +55028,13 @@ class Base {
     degreesToRadians(degree) {
         return (degree * Math.PI) / 180;
     }
+    getZAxis(xDirection) {
+        const xAxis = new THREE.Vector3(xDirection[0], xDirection[1], xDirection[2]);
+        const yAxis = new THREE.Vector3(0, 1, 0);
+        const zAxis = new THREE.Vector3();
+        zAxis.crossVectors(xAxis, yAxis);
+        return zAxis.toArray();
+    }
     calculatePoints(midPoint, length, angle) {
         const radians = this.degreesToRadians(angle);
         const halfLength = length / 2;
@@ -55167,7 +55174,7 @@ class Extrusion {
     position;
     direction;
     depth;
-    constructor(ifcAPI, modelID, profile, args) {
+    constructor(ifcAPI, modelID, profile, args, profileDirection) {
         this.ifcAPI = ifcAPI;
         this.modelID = modelID;
         this.geometry = new THREE.BufferGeometry();
@@ -55179,6 +55186,15 @@ class Extrusion {
         this.mesh.setMatrixAt(0, identity);
         this.mesh.instanceMatrix.needsUpdate = true;
         this.base = new Base(ifcAPI, modelID);
+        // const xAxis = new THREE.Vector3(
+        //   profileDirection[0],
+        //   profileDirection[1],
+        //   profileDirection[2],
+        // );
+        // const yAxis = new THREE.Vector3(0, 1, 0);
+        // const zAxis = new THREE.Vector3();
+        // zAxis.crossVectors(xAxis, yAxis);
+        console.log(profileDirection);
         const { placement, location } = this.base.axis2Placement3D(args.position);
         this.location = location;
         this.position = placement;
@@ -55300,7 +55316,7 @@ class Opening extends Family {
     }
     createGeometries(args) {
         const rectangleProfile = new RectangleProfile(this.ifcAPI, this.modelID, args.profile);
-        const extrusion = new Extrusion(this.ifcAPI, this.modelID, rectangleProfile.profile, args.extrusion);
+        const extrusion = new Extrusion(this.ifcAPI, this.modelID, rectangleProfile.profile, args.extrusion, args.profile.direction);
         extrusion.material.transparent = true;
         extrusion.material.opacity = 0.3;
         extrusion.material.color = new THREE.Color(0xffaaff);
@@ -55397,7 +55413,7 @@ class SimpleSlab extends Family {
     }
     createGeometries(args) {
         const rectangleProfile = new RectangleProfile(this.ifcAPI, this.modelID, args.profile);
-        const extrusion = new Extrusion(this.ifcAPI, this.modelID, rectangleProfile.profile, args.extrusion);
+        const extrusion = new Extrusion(this.ifcAPI, this.modelID, rectangleProfile.profile, args.extrusion, args.profile.direction);
         return {
             profile: rectangleProfile,
             extrusion,
@@ -55497,6 +55513,7 @@ class SimpleWall extends Family {
         args.profile.position = [
             (args.endPoint[0] - args.startPoint[0]) / 2,
             (args.endPoint[1] - args.startPoint[1]) / 2,
+            (args.endPoint[2] - args.startPoint[2]) / 2,
         ];
         args.extrusion.position = args.startPoint;
         args.profile.direction = [
@@ -55511,7 +55528,7 @@ class SimpleWall extends Family {
     }
     createGeometries(args) {
         const rectangleProfile = new RectangleProfile(this.ifcAPI, this.modelID, args.profile);
-        const extrusion = new Extrusion(this.ifcAPI, this.modelID, rectangleProfile.profile, args.extrusion);
+        const extrusion = new Extrusion(this.ifcAPI, this.modelID, rectangleProfile.profile, args.extrusion, args.profile.direction);
         return {
             profile: rectangleProfile,
             extrusion,
@@ -55532,6 +55549,11 @@ class SimpleWall extends Family {
             this._endPoint[2] - this._startPoint[2],
         ];
         this.geometries.profile.profile.Position = this.base.axis2Placement2D(position, direction);
+        // const extrudedDirection =
+        //   this.geometries.extrusion.direction.DirectionRatios.map(
+        //     (axis) => axis.value,
+        //   );
+        // const zAxis = this.base.getZAxis(direction);
         const { location, placement } = this.base.axis2Placement3D(this._startPoint);
         this.geometries.extrusion.solid.Position = placement;
         this.geometries.extrusion.location = location;
@@ -55550,20 +55572,7 @@ class SimpleWall extends Family {
         this._startPoint[0] = value.x;
         this._startPoint[1] = value.y;
         this._startPoint[2] = value.z;
-        this.geometries.profile.profile.XDim.value = this.base.pointsDistance(this._startPoint, this._endPoint);
-        const position = [
-            (this._endPoint[0] - this._startPoint[0]) / 2,
-            (this._endPoint[1] - this._startPoint[1]) / 2,
-        ];
-        const direction = [
-            this._endPoint[0] - this._startPoint[0],
-            this._endPoint[1] - this._startPoint[1],
-            this._endPoint[2] - this._startPoint[2],
-        ];
-        this.geometries.profile.profile.Position = this.base.axis2Placement2D(position, direction);
-        const { location, placement } = this.base.axis2Placement3D(this._startPoint);
-        this.geometries.extrusion.solid.Position = placement;
-        this.geometries.extrusion.location = location;
+        this.adjustProfileAndSolidRepresentations();
         this.ifcAPI.WriteLine(this.modelID, this.geometries.extrusion.solid);
         this.ifcAPI.WriteLine(this.modelID, this.geometries.profile.profile);
         this.geometries.extrusion.regenerate();
@@ -55575,6 +55584,12 @@ class SimpleWall extends Family {
         this._endPoint[0] = value.x;
         this._endPoint[1] = value.y;
         this._endPoint[2] = value.z;
+        this.adjustProfileAndSolidRepresentations();
+        this.ifcAPI.WriteLine(this.modelID, this.geometries.extrusion.solid);
+        this.ifcAPI.WriteLine(this.modelID, this.geometries.profile.profile);
+        this.geometries.extrusion.regenerate();
+    }
+    adjustProfileAndSolidRepresentations() {
         this.geometries.profile.profile.XDim.value = this.base.pointsDistance(this._startPoint, this._endPoint);
         const position = [
             (this._endPoint[0] - this._startPoint[0]) / 2,
@@ -55586,12 +55601,14 @@ class SimpleWall extends Family {
             this._endPoint[2] - this._startPoint[2],
         ];
         this.geometries.profile.profile.Position = this.base.axis2Placement2D(position, direction);
+        // const extrudedDirection =
+        //   this.geometries.extrusion.direction.DirectionRatios.map(
+        //     (axis) => axis.value,
+        //   );
+        // const zAxis = this.base.getZAxis(direction);
         const { location, placement } = this.base.axis2Placement3D(this._startPoint);
         this.geometries.extrusion.solid.Position = placement;
         this.geometries.extrusion.location = location;
-        this.ifcAPI.WriteLine(this.modelID, this.geometries.extrusion.solid);
-        this.ifcAPI.WriteLine(this.modelID, this.geometries.profile.profile);
-        this.geometries.extrusion.regenerate();
     }
     get xPosition() {
         return this._xPosition;
@@ -55599,17 +55616,7 @@ class SimpleWall extends Family {
     set xPosition(value) {
         this._xPosition = value;
         this.geometries.extrusion.location.Coordinates[0].value = value;
-        const direction = [
-            this._endPoint[0] - this._startPoint[0],
-            this._endPoint[1] - this._startPoint[1],
-            this._endPoint[2] - this._startPoint[2],
-        ];
-        this._startPoint = [
-            this.geometries.extrusion.location.Coordinates[0].value,
-            this.geometries.extrusion.location.Coordinates[1].value,
-            this.geometries.extrusion.location.Coordinates[2].value,
-        ];
-        this._endPoint = this.base.calculateEndPoint(this._startPoint, direction, this.geometries.profile.profile.XDim.value);
+        this.adjustStartAndEndPoints();
         this.ifcAPI.WriteLine(this.modelID, this.geometries.extrusion.location);
         this.geometries.extrusion.regenerate();
     }
@@ -55619,17 +55626,7 @@ class SimpleWall extends Family {
     set yPosition(value) {
         this._yPosition = value;
         this.geometries.extrusion.location.Coordinates[1].value = value;
-        const direction = [
-            this._endPoint[0] - this._startPoint[0],
-            this._endPoint[1] - this._startPoint[1],
-            this._endPoint[2] - this._startPoint[2],
-        ];
-        this._startPoint = [
-            this.geometries.extrusion.location.Coordinates[0].value,
-            this.geometries.extrusion.location.Coordinates[1].value,
-            this.geometries.extrusion.location.Coordinates[2].value,
-        ];
-        this._endPoint = this.base.calculateEndPoint(this._startPoint, direction, this.geometries.profile.profile.XDim.value);
+        this.adjustStartAndEndPoints();
         this.ifcAPI.WriteLine(this.modelID, this.geometries.extrusion.location);
         this.geometries.extrusion.regenerate();
     }
@@ -55639,6 +55636,11 @@ class SimpleWall extends Family {
     set zPosition(value) {
         this._zPosition = value;
         this.geometries.extrusion.location.Coordinates[2].value = value;
+        this.adjustStartAndEndPoints();
+        this.ifcAPI.WriteLine(this.modelID, this.geometries.extrusion.location);
+        this.geometries.extrusion.regenerate();
+    }
+    adjustStartAndEndPoints() {
         const direction = [
             this._endPoint[0] - this._startPoint[0],
             this._endPoint[1] - this._startPoint[1],
@@ -55650,8 +55652,6 @@ class SimpleWall extends Family {
             this.geometries.extrusion.location.Coordinates[2].value,
         ];
         this._endPoint = this.base.calculateEndPoint(this._startPoint, direction, this.geometries.profile.profile.XDim.value);
-        this.ifcAPI.WriteLine(this.modelID, this.geometries.extrusion.location);
-        this.geometries.extrusion.regenerate();
     }
     get width() {
         return this._width;

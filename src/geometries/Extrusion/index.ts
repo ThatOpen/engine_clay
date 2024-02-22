@@ -33,6 +33,7 @@ export class Extrusion {
     public modelID: number,
     profile: WEBIFC.IFC4X3.IfcProfileDef,
     args: ExtrusionArgs,
+    profileDirection: number[],
   ) {
     this.geometry = new THREE.BufferGeometry();
     this.material = new THREE.MeshLambertMaterial();
@@ -45,7 +46,24 @@ export class Extrusion {
     this.mesh.instanceMatrix.needsUpdate = true;
 
     this.base = new Base(ifcAPI, modelID);
-    const { placement, location } = this.base.axis2Placement3D(args.position);
+
+    // const xAxis = new THREE.Vector3(
+    //   profileDirection[0],
+    //   profileDirection[1],
+    //   profileDirection[2],
+    // );
+    // const yAxis = new THREE.Vector3(0, 1, 0);
+    // const zAxis = new THREE.Vector3();
+    // zAxis.crossVectors(xAxis, yAxis);
+
+    console.log(profileDirection);
+
+    const { placement, location } = this.base.axis2Placement3D(
+      args.position,
+      // zAxis.toArray(),
+      // profileDirection,
+    );
+
     this.location = location;
     this.position = placement;
     this.direction = this.base.direction(args.direction);

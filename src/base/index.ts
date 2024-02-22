@@ -1,3 +1,4 @@
+import * as THREE from "three";
 import * as WEBIFC from "web-ifc";
 import { createIfcEntity, createIfcType } from "../utils/generics";
 
@@ -27,6 +28,18 @@ export class Base {
 
   degreesToRadians(degree: number) {
     return (degree * Math.PI) / 180;
+  }
+
+  getZAxis(xDirection: number[]) {
+    const xAxis = new THREE.Vector3(
+      xDirection[0],
+      xDirection[1],
+      xDirection[2],
+    );
+    const yAxis = new THREE.Vector3(0, 1, 0);
+    const zAxis = new THREE.Vector3();
+    zAxis.crossVectors(xAxis, yAxis);
+    return zAxis.toArray();
   }
 
   calculatePoints(midPoint: number[], length: number, angle: number) {
