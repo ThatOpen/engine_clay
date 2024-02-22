@@ -112,7 +112,8 @@
 
   // const opening = new CLAY.Opening(ifcAPI, modelID);
 
-  // wall.subtract(opening.toSubtract.extrusion);
+  console.log(wall.mesh);
+
   scene.add(wall.mesh);
 
   const axesHelper = new THREE.AxesHelper(1);
@@ -124,8 +125,18 @@
 
   const camera = components.camera.get();
 
-  const startPoint = { x: params.startPoint[0], y: params.startPoint[1] };
-  const endPoint = { x: params.endPoint[0], y: params.endPoint[1] };
+  const startPoint = {
+    x: params.startPoint[0],
+    y: params.startPoint[1],
+    z: params.startPoint[2],
+  };
+  const endPoint = {
+    x: params.endPoint[0],
+    y: params.endPoint[1],
+    z: params.endPoint[2],
+  };
+  const rotation = { z: 0 };
+
   const gui = new dat.GUI();
   const startPointFolder = gui.addFolder("Start Point");
   startPointFolder
@@ -159,6 +170,14 @@
   positionsFolder.add(wall, "xPosition").min(-10).max(10).step(1);
   positionsFolder.add(wall, "yPosition").min(-10).max(10).step(1);
   positionsFolder.add(wall, "zPosition").min(-10).max(10).step(1);
+
+  const rotationFolder = gui.addFolder("Rotation (degree)");
+  rotationFolder
+    .add(rotation, "z")
+    .min(-360)
+    .max(360)
+    .step(1)
+    .onChange(() => wall.rotate(rotation.z));
 
   const generalParamsFolder = gui.addFolder("General Params");
   generalParamsFolder.add(wall, "width").min(0).max(30).step(1);

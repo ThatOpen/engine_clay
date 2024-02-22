@@ -21,6 +21,61 @@ export class Base {
     };
   }
 
+  radiansToDegrees(radians: number) {
+    return radians * (180 / Math.PI);
+  }
+
+  degreesToRadians(degree: number) {
+    return (degree * Math.PI) / 180;
+  }
+
+  calculatePoints(midPoint: number[], length: number, angle: number) {
+    const radians = this.degreesToRadians(angle);
+    const halfLength = length / 2;
+
+    const startPoint = [
+      midPoint[0] - halfLength * Math.cos(radians),
+      midPoint[1] - halfLength * Math.sin(radians),
+    ];
+    const endPoint = [
+      midPoint[0] + halfLength * Math.cos(radians),
+      midPoint[1] + halfLength * Math.sin(radians),
+    ];
+    return [startPoint, endPoint];
+  }
+
+  calculateRotationAngleFromDirection(direction: number[]) {
+    return Math.atan2(direction[0], direction[1]);
+  }
+
+  calculateRotationAngleFromTwoPoints(
+    firstPoint: number[],
+    secondPoint: number[],
+  ) {
+    const dx = secondPoint[0] - firstPoint[0];
+    const dy = secondPoint[1] - firstPoint[1];
+    return Math.atan2(dy, dx);
+  }
+
+  rotate(firstPoint: number[], secondPoint: number[], degree: number) {
+    const theta = this.degreesToRadians(degree);
+    const midPoint = [
+      (firstPoint[0] + secondPoint[0]) / 2,
+      (firstPoint[1] + secondPoint[1]) / 2,
+      (firstPoint[2] + secondPoint[2]) / 2,
+    ];
+
+    return [firstPoint, secondPoint].map((point) => {
+      const x = point[0] - midPoint[0];
+      const y = point[1] - midPoint[1];
+      return [
+        x * Math.cos(theta) - y * Math.sin(theta) + midPoint[0],
+        x * Math.sin(theta) + y * Math.cos(theta) + midPoint[1],
+        midPoint[2],
+      ];
+    });
+  }
+
   calculateEndPoint(
     startPoint: number[],
     direction: number[],
@@ -45,7 +100,8 @@ export class Base {
   pointsDistance(firstPoint: number[], secondPoint: number[]) {
     const dx = firstPoint[0] - secondPoint[0];
     const dy = firstPoint[1] - secondPoint[1];
-    return Math.sqrt(dx * dx + dy * dy);
+    const dz = firstPoint[2] - secondPoint[2];
+    return Math.sqrt(dx * dx + dy * dy + dz * dz);
   }
 
   representationContext() {
