@@ -9,6 +9,6 @@ export type Subtract = {
 
 export abstract class Family {
   public abstract toSubtract: Subtract;
-  protected abstract create(): void;
+  protected abstract create(coords: number[]): void;
   public abstract subtract(extrusion: Extrusion): void;
 }

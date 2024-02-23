@@ -116,7 +116,6 @@
 
   const axesHelper = new THREE.AxesHelper(1);
 
-  // Adiciona o AxesHelper à cena
   scene.add(axesHelper);
 
   // // Set up GUI
@@ -150,13 +149,6 @@
     .step(1)
     .onChange(() => (wall.startPoint = startPoint));
 
-  // startPointFolder
-  //   .add(startPoint, "z")
-  //   .min(-10)
-  //   .max(10)
-  //   .step(1)
-  //   .onChange(() => (wall.startPoint = startPoint));
-
   const endPointFolder = gui.addFolder("End Point");
   endPointFolder
     .add(endPoint, "x")
@@ -170,12 +162,6 @@
     .max(10)
     .step(1)
     .onChange(() => (wall.endPoint = endPoint));
-  // endPointFolder
-  //   .add(endPoint, "z")
-  //   .min(-10)
-  //   .max(10)
-  //   .step(1)
-  //   .onChange(() => (wall.endPoint = endPoint));
 
   const positionsFolder = gui.addFolder("Positions");
   positionsFolder.add(wall, "xPosition").min(-10).max(10).step(1);

@@ -74,7 +74,6 @@ export class Opening extends Family {
       this.modelID,
       rectangleProfile.profile,
       args.extrusion,
-      args.profile.direction,
     );
 
     extrusion.material.transparent = true;
