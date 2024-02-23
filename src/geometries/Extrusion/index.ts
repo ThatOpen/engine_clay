@@ -33,8 +33,8 @@ export class Extrusion {
     public modelID: number,
     profile: WEBIFC.IFC4X3.IfcProfileDef,
     args: ExtrusionArgs,
-    profileDirection: number[],
   ) {
+    this.geometryNeedsUpdate = true;
     this.geometry = new THREE.BufferGeometry();
     this.material = new THREE.MeshLambertMaterial();
     this.ids = [];
@@ -47,22 +47,7 @@ export class Extrusion {
 
     this.base = new Base(ifcAPI, modelID);
 
-    // const xAxis = new THREE.Vector3(
-    //   profileDirection[0],
-    //   profileDirection[1],
-    //   profileDirection[2],
-    // );
-    // const yAxis = new THREE.Vector3(0, 1, 0);
-    // const zAxis = new THREE.Vector3();
-    // zAxis.crossVectors(xAxis, yAxis);
-
-    console.log(profileDirection);
-
-    const { placement, location } = this.base.axis2Placement3D(
-      args.position,
-      // zAxis.toArray(),
-      // profileDirection,
-    );
+    const { placement, location } = this.base.axis2Placement3D(args.position);
 
     this.location = location;
     this.position = placement;
@@ -75,7 +60,6 @@ export class Extrusion {
       this.direction,
       this.depth,
     );
-    this.geometryNeedsUpdate = true;
   }
 
   private extrudedAreaSolid(
@@ -84,7 +68,7 @@ export class Extrusion {
       | WEBIFC.Handle<WEBIFC.IFC4X3.IfcProfileDef>,
     position: WEBIFC.IFC4X3.IfcAxis2Placement3D,
     direction: WEBIFC.IFC4X3.IfcDirection,
-    location: WEBIFC.IFC4X3.IfcPositiveLengthMeasure,
+    depth: WEBIFC.IFC4X3.IfcPositiveLengthMeasure,
   ) {
     return createIfcEntity<typeof WEBIFC.IFC4X3.IfcExtrudedAreaSolid>(
       this.ifcAPI,
@@ -93,17 +77,16 @@ export class Extrusion {
       profile,
       position,
       direction,
-      location,
+      depth,
     );
   }
 
-  public regenerate() {
+  regenerate() {
     this.ifcAPI.StreamMeshes(this.modelID, [this.ids[0]], (mesh) => {
       this.mesh.geometry.dispose();
       const { geometryExpressID, flatTransformation } = mesh.geometries.get(0);
       const data = this.ifcAPI.GetGeometry(this.modelID, geometryExpressID);
       this.mesh.geometry = this.getGeometry(data);
-
       const matrix = new THREE.Matrix4().fromArray(flatTransformation);
       this.mesh.position.set(0, 0, 0);
       this.mesh.rotation.set(0, 0, 0);

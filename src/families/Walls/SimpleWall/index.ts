@@ -91,7 +91,7 @@ export class SimpleWall extends Family {
     this.geometries = this.createGeometries(args);
     this.mesh = this.geometries.extrusion.mesh;
     this._subtract = { extrusion: this.geometries.extrusion };
-    this.wall = this.create();
+    this.wall = this.create(args.extrusion.position);
   }
 
   private createGeometries(args: SimpleWallArgs) {
@@ -106,7 +106,6 @@ export class SimpleWall extends Family {
       this.modelID,
       rectangleProfile.profile,
       args.extrusion,
-      args.profile.direction,
     );
 
     return {
@@ -146,17 +145,8 @@ export class SimpleWall extends Family {
       direction,
     );
 
-    // const extrudedDirection =
-    //   this.geometries.extrusion.direction.DirectionRatios.map(
-    //     (axis) => axis.value,
-    //   );
-
-    // const zAxis = this.base.getZAxis(direction);
-
     const { location, placement } = this.base.axis2Placement3D(
       this._startPoint,
-      // zAxis,
-      // direction,
     );
 
     this.geometries.extrusion.solid.Position = placement;
@@ -221,17 +211,8 @@ export class SimpleWall extends Family {
       direction,
     );
 
-    // const extrudedDirection =
-    //   this.geometries.extrusion.direction.DirectionRatios.map(
-    //     (axis) => axis.value,
-    //   );
-
-    // const zAxis = this.base.getZAxis(direction);
-
     const { location, placement } = this.base.axis2Placement3D(
       this._startPoint,
-      // zAxis,
-      // direction,
     );
 
     this.geometries.extrusion.solid.Position = placement;
@@ -343,7 +324,7 @@ export class SimpleWall extends Family {
     this.geometries.extrusion.regenerate();
   }
 
-  protected create(): WEBIFC.IFC4X3.IfcWall {
+  protected create(coords: number[]): WEBIFC.IFC4X3.IfcWall {
     const wall = createIfcEntity<typeof WEBIFC.IFC4X3.IfcWall>(
       this.ifcAPI,
       this.modelID,
@@ -353,7 +334,8 @@ export class SimpleWall extends Family {
       this.base.label("Simple Wall"),
       null,
       this.base.label("Simple Wall"),
-      this.base.objectPlacement(),
+      this.base.axis2Placement3D(coords)
+        .placement as unknown as WEBIFC.IFC4X3.IfcObjectPlacement,
       this.geometries.extrusion
         .solid as unknown as WEBIFC.IFC4X3.IfcProductRepresentation,
       this.base.identifier("Simple Wall"),
