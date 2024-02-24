@@ -6,7 +6,7 @@ import { ClayGeometry } from "../Geometry";
 
 export class Extrusion<T extends Profile> extends ClayGeometry {
 
-    data: WEBIFC.IFC4X3.IfcExtrudedAreaSolid | WEBIFC.IFC4X3.IfcBooleanClippingResult;
+    ifcData: WEBIFC.IFC4X3.IfcExtrudedAreaSolid | WEBIFC.IFC4X3.IfcBooleanClippingResult;
 
     core: WEBIFC.IFC4X3.IfcExtrudedAreaSolid;
 
@@ -34,13 +34,13 @@ export class Extrusion<T extends Profile> extends ClayGeometry {
 
         this.core = this.model.createIfcEntity<typeof WEBIFC.IFC4X3.IfcExtrudedAreaSolid>(
             WEBIFC.IFCEXTRUDEDAREASOLID,
-            profile.data,
+            profile.ifcData,
             placement,
             direction,
             depth,
         );
 
-        this.data = this.core;
+        this.ifcData = this.core;
 
         this.update();
     }
@@ -70,6 +70,6 @@ export class Extrusion<T extends Profile> extends ClayGeometry {
         this.core.Depth.value = this.depth;
 
         this.model.set(this.core);
-        this.model.setMesh(this.data.expressID, this.mesh);
+        this.model.setMesh(this.ifcData.expressID, this.mesh);
     }
 }

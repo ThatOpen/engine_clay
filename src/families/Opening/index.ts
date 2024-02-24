@@ -10,60 +10,61 @@ import {Family} from "../Family";
 
 export class Opening extends Family {
 
-    data: WEBIFC.IFC4X3.IfcOpeningElement;
+    ifcData: WEBIFC.IFC4X3.IfcOpeningElement;
 
-    ifcGeometry: Extrusion<RectangleProfile>;
+    geometries: {body: Extrusion<RectangleProfile>};
 
     get mesh() {
-        return this.ifcGeometry.mesh;
+        return this.geometries.body.mesh;
     }
 
     get position() {
-        return this.ifcGeometry.position;
+        return this.geometries.body.position;
     }
 
     set position(value: THREE.Vector3) {
-        this.ifcGeometry.position = value;
+        this.geometries.body.position = value;
     }
 
     get baseDimension() {
-        return this.ifcGeometry.profile.dimension;
+        return this.geometries.body.profile.dimension;
     }
 
     set baseDimension(value: THREE.Vector3) {
-        this.ifcGeometry.profile.dimension = value;
+        this.geometries.body.profile.dimension = value;
     }
 
     get direction() {
-        return this.ifcGeometry.direction;
+        return this.geometries.body.direction;
     }
 
     set direction(value: THREE.Vector3) {
-        this.ifcGeometry.direction = value;
+        this.geometries.body.direction = value;
     }
 
     get height() {
-        return this.ifcGeometry.depth;
+        return this.geometries.body.depth;
     }
 
     set height(value: number) {
-        this.ifcGeometry.depth = value;
+        this.geometries.body.depth = value;
     }
 
     constructor(model: Model) {
         super(model);
 
         const profile = new RectangleProfile(model);
-        this.ifcGeometry = new Extrusion(model, profile);
+        this.geometries = {body: new Extrusion(model, profile)};
 
-        this.ifcGeometry.mesh.material = model.materialT;
+        const {body} = this.geometries;
+        body.mesh.material = model.materialT;
 
-        const representation = this.model.shapeRepresentation("Body", "SweptSolid", [this.ifcGeometry.data]);
+        const representation = this.model.shapeRepresentation("Body", "SweptSolid", [body.ifcData]);
         const shape = this.model.productDefinitionShape([representation]);
 
         const label = "Opening";
 
-        this.data = this.model.createIfcEntity<typeof WEBIFC.IFC4X3.IfcOpeningElement>(
+        this.ifcData = this.model.createIfcEntity<typeof WEBIFC.IFC4X3.IfcOpeningElement>(
             WEBIFC.IFCOPENINGELEMENT,
             this.model.guid(uuidv4()),
             null,
@@ -80,7 +81,8 @@ export class Opening extends Family {
     }
 
     update() {
-        this.ifcGeometry.profile.update();
-        this.ifcGeometry.update();
+        const {body} = this.geometries;
+        body.profile.update();
+        body.update();
     }
 }

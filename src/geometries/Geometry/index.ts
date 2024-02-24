@@ -3,7 +3,7 @@ import { ClayObject } from "../../base";
 
 export abstract class ClayGeometry extends ClayObject {
 
-    abstract data: WEBIFC.IFC4X3.IfcGeometricRepresentationItem | WEBIFC.IFC4X3.IfcBooleanClippingResult;
+    abstract ifcData: WEBIFC.IFC4X3.IfcGeometricRepresentationItem | WEBIFC.IFC4X3.IfcBooleanClippingResult;
 
     abstract core: WEBIFC.IFC4X3.IfcGeometricRepresentationItem;
 
@@ -15,14 +15,17 @@ export abstract class ClayGeometry extends ClayObject {
         bool: WEBIFC.IFC4X3.IfcBooleanClippingResult
     }>();
 
-    addSubtraction(item: WEBIFC.IFC4X3.IfcBooleanOperand & WEBIFC.IfcLineObject) {
+    addSubtraction(geometry: ClayGeometry) {
+
+        const item = geometry.ifcData;
+
         if(this.clippings.has(item.expressID)) {
             return;
         }
 
         // Create bool between the given item and the current geometry
         // (might be another bool operation)
-        const bool = this.model.bool(this.data, item);
+        const bool = this.model.bool(this.ifcData, item);
         this.model.set(bool);
 
         // Reference this clipping by last one (if any)
@@ -39,7 +42,7 @@ export abstract class ClayGeometry extends ClayObject {
         this.clippings.set(item.expressID, {bool, previous, next: null});
 
         // Make this bool the current geometry
-        this.data = bool;
+        this.ifcData = bool;
         this.update();
     }
 
@@ -53,7 +56,7 @@ export abstract class ClayGeometry extends ClayObject {
 
         if(previous === null && next === null) {
             // This was the only bool in the list
-            this.data = this.core;
+            this.ifcData = this.core;
         } else if(previous !== null && next === null) {
             // The deleted bool was the last one in the list
             const newLast = this.clippings.get(previous);
@@ -61,7 +64,7 @@ export abstract class ClayGeometry extends ClayObject {
                 throw new Error("Malformed bool structure!");
             }
             newLast.next = null;
-            this.data = newLast.bool;
+            this.ifcData = newLast.bool;
         } else if(previous === null && next !== null) {
             // The deleted bool was the first one in the list
             const newFirst = this.clippings.get(next);

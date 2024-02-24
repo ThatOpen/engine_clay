@@ -103,8 +103,8 @@
   opening2.update();
   scene.add(opening2.mesh);
 
-  wall.ifcGeometry.addSubtraction(opening.ifcGeometry.data);
-  wall.ifcGeometry.addSubtraction(opening2.ifcGeometry.data);
+  wall.geometries.body.addSubtraction(opening.geometries.body);
+  wall.geometries.body.addSubtraction(opening2.geometries.body);
 
   // Set up GUI
 

@@ -6,14 +6,14 @@ import {
     Extrusion,
     RectangleProfile,
 } from "../../../geometries";
-import {Family} from "../../Family";
+import { Family} from "../../Family";
 
 
 export class SimpleWall extends Family {
 
-    data: WEBIFC.IFC4X3.IfcWallStandardCase;
+    ifcData: WEBIFC.IFC4X3.IfcWallStandardCase;
 
-    ifcGeometry: Extrusion<RectangleProfile>;
+    geometries: {body: Extrusion<RectangleProfile>};
 
     width = 0.2;
 
@@ -24,7 +24,7 @@ export class SimpleWall extends Family {
     endPoint = new THREE.Vector3(1, 0, 0);
 
     get mesh() {
-        return this.ifcGeometry.mesh;
+        return this.geometries.body.mesh;
     }
 
     get length() {
@@ -51,14 +51,15 @@ export class SimpleWall extends Family {
         super(model);
 
         const profile = new RectangleProfile(model);
-        this.ifcGeometry = new Extrusion(model, profile);
+        this.geometries = {body: new Extrusion(model, profile)};
 
-        const representation = this.model.shapeRepresentation("Body", "SweptSolid", [this.ifcGeometry.data]);
+        const {body} = this.geometries;
+        const representation = this.model.shapeRepresentation("Body", "SweptSolid", [body.ifcData]);
         const shape = this.model.productDefinitionShape([representation]);
 
         const label = "Simple Wall";
 
-        this.data = this.model.createIfcEntity<typeof WEBIFC.IFC4X3.IfcWallStandardCase>(
+        this.ifcData = this.model.createIfcEntity<typeof WEBIFC.IFC4X3.IfcWallStandardCase>(
             WEBIFC.IFCWALLSTANDARDCASE,
             this.model.guid(uuidv4()),
             null,
@@ -75,14 +76,15 @@ export class SimpleWall extends Family {
     }
 
     update() {
-        const profile = this.ifcGeometry.profile;
+        const profile = this.geometries.body.profile;
         profile.dimension.x = this.length;
         profile.dimension.y = this.width;
         profile.position = this.midPoint;
         profile.direction = this.direction;
         profile.update();
 
-        this.ifcGeometry.depth = this.height;
-        this.ifcGeometry.update();
+        const {body} = this.geometries;
+        body.depth = this.height;
+        body.update();
     }
 }

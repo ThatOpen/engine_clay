@@ -8,38 +8,39 @@ import {
 } from "../../../geometries";
 
 export class SimpleSlab extends Family {
-  data: WEBIFC.IFC4X3.IfcSlab;
+  ifcData: WEBIFC.IFC4X3.IfcSlab;
 
-  ifcGeometry: Extrusion<RectangleProfile>;
+  geometries: {body: Extrusion<RectangleProfile>};
 
   get thickness() {
-    return this.ifcGeometry.depth;
+    return this.geometries.body.depth;
   }
 
   set thickness(value: number) {
-    this.ifcGeometry.depth = value;
+    this.geometries.body.depth = value;
   }
 
   get mesh() {
-    return this.ifcGeometry.mesh;
+    return this.geometries.body.mesh;
   }
 
   constructor(model: Model) {
     super(model);
 
     const profile = new RectangleProfile(model);
-    this.ifcGeometry = new Extrusion(model, profile);
+    this.geometries = {body: new Extrusion(model, profile)};
 
-    this.ifcGeometry.depth = 0.3;
-    this.ifcGeometry.profile.dimension.x = 5;
-    this.ifcGeometry.profile.dimension.y = 10;
+    const {body} = this.geometries;
+    body.depth = 0.3;
+    body.profile.dimension.x = 5;
+    body.profile.dimension.y = 10;
 
-    const representation = this.model.shapeRepresentation("Body", "SweptSolid", [this.ifcGeometry.data]);
+    const representation = this.model.shapeRepresentation("Body", "SweptSolid", [body.ifcData]);
     const shape = this.model.productDefinitionShape([representation]);
 
     const label = "Simple slab";
 
-    this.data = model.createIfcEntity<typeof WEBIFC.IFC4X3.IfcSlab>(
+    this.ifcData = model.createIfcEntity<typeof WEBIFC.IFC4X3.IfcSlab>(
         WEBIFC.IFCSLAB,
         this.model.guid(uuidv4()),
         null,
@@ -56,7 +57,8 @@ export class SimpleSlab extends Family {
   }
 
   update(): void {
-    this.ifcGeometry.profile.update();
-    this.ifcGeometry.update();
+    const {body} = this.geometries;
+    body.profile.update();
+    body.update();
   }
 }

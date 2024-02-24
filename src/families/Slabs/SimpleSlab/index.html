@@ -100,8 +100,8 @@
   opening2.update();
   scene.add(opening2.mesh);
 
-  slab.ifcGeometry.addSubtraction(opening.ifcGeometry.data);
-  slab.ifcGeometry.addSubtraction(opening2.ifcGeometry.data);
+  slab.geometries.body.addSubtraction(opening.geometries.body);
+  slab.geometries.body.addSubtraction(opening2.geometries.body);
 
   const stats = new Stats();
   stats.showPanel(2);
