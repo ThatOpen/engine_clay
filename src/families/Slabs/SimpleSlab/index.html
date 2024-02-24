@@ -83,46 +83,25 @@
   const customEffects = components.renderer.postproduction.customEffects;
   customEffects.excludedMeshes.push(grid.get());
 
-  // // IFC API
+    // IFC API
 
-  const ifcAPI = new WEBIFC.IfcAPI();
+    const model = new CLAY.Model();
+  model.ifcAPI.SetWasmPath("https://unpkg.com/web-ifc@0.0.50/", true);
+  await model.init();
 
-  ifcAPI.SetWasmPath("../../../../node_modules/web-ifc/", false);
-  await ifcAPI.Init();
-
-  const modelID = ifcAPI.CreateModel({ schema: WEBIFC.Schemas.IFC4X3 });
-
-  const slab = new CLAY.SimpleSlab(ifcAPI, modelID);
-
-  const opening = new CLAY.Opening(ifcAPI, modelID, {
-    profile: {
-      position: [-1, 0],
-      xDim: 2,
-      yDim: 2,
-    },
-    extrusion: {
-      direction: [0, 0, 10],
-      position: [0, 0, 0],
-      depth: 1,
-    },
-  });
-
-  slab.subtract(opening.toSubtract.extrusion);
+  const slab = new CLAY.SimpleSlab(model);
   scene.add(slab.mesh);
 
-  // scene.add(opening.mesh);
+  const opening = new CLAY.Opening(model);
+  scene.add(opening.mesh);
 
-  // // Set up GUI
-  const settings = {
-    transformMode: "translate",
-  };
+  const opening2 = new CLAY.Opening(model);
+  opening2.position.x += 2;
+  opening2.update();
+  scene.add(opening2.mesh);
 
-  const camera = components.camera.get();
-
-  const gui = new dat.GUI();
-  gui.add(slab, "width").min(0).max(30).step(0.1);
-  gui.add(slab, "height").min(0).max(30).step(0.1);
-  gui.add(slab, "thickness").min(0).max(30).step(0.1);
+  slab.geometries.body.addSubtraction(opening.geometries.body);
+  slab.geometries.body.addSubtraction(opening2.geometries.body);
 
   const stats = new Stats();
   stats.showPanel(2);

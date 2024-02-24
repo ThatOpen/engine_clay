@@ -1,14 +1,8 @@
-import * as WEBIFC from "web-ifc";
-import { Extrusion, Solid } from "../../geometries";
+import * as THREE from "three";
+import {ClayObject} from "../../base";
 
-export type Subtract = {
-  extrusion: {
-    solid: WEBIFC.IFC4X3.IfcProductRepresentation | Solid;
-  };
-};
+export abstract class Family extends ClayObject {
+    abstract geometries: {[name: string]: ClayObject};
 
-export abstract class Family {
-  public abstract toSubtract: Subtract;
-  protected abstract create(coords: number[]): void;
-  public abstract subtract(extrusion: Extrusion): void;
+    abstract get mesh(): THREE.InstancedMesh;
 }

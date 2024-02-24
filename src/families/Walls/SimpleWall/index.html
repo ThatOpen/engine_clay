@@ -7,7 +7,7 @@
       content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"
     />
     <meta http-equiv="X-UA-Compatible" content="ie=edge" />
-    <link rel="stylesheet" href="../../../resources/styles.css" />
+    <link rel="stylesheet" href="../../../../resources/styles.css" />
     <link
       rel="stylesheet"
       href="https://fonts.googleapis.com/icon?family=Material+Icons"
@@ -15,7 +15,7 @@
     <link
       rel="icon"
       type="image/x-icon"
-      href="../../../resources/favicon.ico"
+      href="../../../../resources/favicon.ico"
     />
     <title>Tools Component</title>
     <style>
@@ -83,109 +83,55 @@
   const customEffects = components.renderer.postproduction.customEffects;
   customEffects.excludedMeshes.push(grid.get());
 
-  // // IFC API
-
-  const ifcAPI = new WEBIFC.IfcAPI();
-
-  ifcAPI.SetWasmPath("../../../../node_modules/web-ifc/", false);
-  await ifcAPI.Init();
-
-  const modelID = ifcAPI.CreateModel({ schema: WEBIFC.Schemas.IFC4X3 });
-
-  const params = {
-    startPoint: [0, 0, 0],
-    endPoint: [5, 5, 0],
-    profile: {
-      direction: [1, 1],
-      position: [0, 0, 0],
-      xDim: 2,
-      yDim: 2,
-    },
-    extrusion: {
-      direction: [0, 0, 1],
-      position: [0, 0, 0],
-      depth: 2,
-    },
-  };
-
-  const wall = new CLAY.SimpleWall(ifcAPI, modelID, params);
-
-  // const opening = new CLAY.Opening(ifcAPI, modelID);
-
-  scene.add(wall.mesh);
-
   const axesHelper = new THREE.AxesHelper(1);
-
   scene.add(axesHelper);
 
-  // // Set up GUI
+  // IFC API
 
-  const camera = components.camera.get();
+  const model = new CLAY.Model();
+  model.ifcAPI.SetWasmPath("https://unpkg.com/web-ifc@0.0.50/", true);
+  await model.init();
 
-  const startPoint = {
-    x: params.startPoint[0],
-    y: params.startPoint[1],
-    z: params.startPoint[2],
-  };
-  const endPoint = {
-    x: params.endPoint[0],
-    y: params.endPoint[1],
-    z: params.endPoint[2],
-  };
-  const rotation = { z: 0 };
+  const wall = new CLAY.SimpleWall(model);
+  scene.add(wall.mesh);
+
+  const opening = new CLAY.Opening(model);
+  scene.add(opening.mesh);
+
+  const opening2 = new CLAY.Opening(model);
+  opening2.position.x += 2;
+  opening2.update();
+  scene.add(opening2.mesh);
+
+  wall.geometries.body.addSubtraction(opening.geometries.body);
+  wall.geometries.body.addSubtraction(opening2.geometries.body);
+
+  // Set up GUI
 
   const gui = new dat.GUI();
-  const startPointFolder = gui.addFolder("Start Point");
-  startPointFolder
-    .add(startPoint, "x")
-    .min(-10)
-    .max(10)
-    .step(1)
-    .onChange(() => (wall.startPoint = startPoint));
-  startPointFolder
-    .add(startPoint, "y")
-    .min(-10)
-    .max(10)
-    .step(1)
-    .onChange(() => (wall.startPoint = startPoint));
 
-  const endPointFolder = gui.addFolder("End Point");
-  endPointFolder
-    .add(endPoint, "x")
-    .min(-10)
-    .max(10)
-    .step(1)
-    .onChange(() => (wall.endPoint = endPoint));
-  endPointFolder
-    .add(endPoint, "y")
-    .min(-10)
-    .max(10)
-    .step(1)
-    .onChange(() => (wall.endPoint = endPoint));
+  gui.add(wall.startPoint, "x").name("Start X").min(-5).max(5).step(0.1).onChange(() => {
+    wall.update();
+  });
 
-  const positionsFolder = gui.addFolder("Positions");
-  positionsFolder.add(wall, "xPosition").min(-10).max(10).step(1);
-  positionsFolder.add(wall, "yPosition").min(-10).max(10).step(1);
-  positionsFolder.add(wall, "zPosition").min(-10).max(10).step(1);
+  gui.add(wall.startPoint, "y").name("Start Y").min(-5).max(5).step(0.1).onChange(() => {
+    wall.update();
+  });
 
-  const rotationFolder = gui.addFolder("Rotation (degree)");
-  rotationFolder
-    .add(rotation, "z")
-    .min(-360)
-    .max(360)
-    .step(1)
-    .onChange(() => wall.rotate(rotation.z));
+  gui.add(wall.endPoint, "x").name("Start X").min(-5).max(5).step(0.1).onChange(() => {
+    wall.update();
+  });
 
-  const generalParamsFolder = gui.addFolder("General Params");
-  generalParamsFolder.add(wall, "width").min(0).max(30).step(1);
-  generalParamsFolder.add(wall, "height").min(0).max(30).step(0.1);
-  generalParamsFolder.add(wall, "length").min(0).max(30).step(0.1);
+  gui.add(wall.endPoint, "y").name("Start Y").min(-5).max(5).step(0.1).onChange(() => {
+    wall.update();
+  });
 
-  const stats = new Stats();
-  stats.showPanel(2);
-  document.body.append(stats.dom);
-  stats.dom.style.left = "0px";
-  const renderer = components.renderer;
-  renderer.onBeforeUpdate.add(() => stats.begin());
-  renderer.onAfterUpdate.add(() => stats.end());
+  gui.add(wall, "width").name("Width").min(0.1).max(0.5).step(0.05).onChange(() => {
+    wall.update();
+  });
+
+  gui.add(wall, "height").name("Height").min(1).max(4).step(0.05).onChange(() => {
+    wall.update();
+  });
+
 </script>
