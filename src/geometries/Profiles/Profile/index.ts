@@ -1,6 +1,6 @@
 import * as WEBIFC from "web-ifc"
+import {ClayObject} from "../../../base/clay-object";
 
-export abstract class Profile {
-  public abstract profile: WEBIFC.IFC4X3.IfcProfileDef
-  protected abstract create(...args: any[]): WEBIFC.IFC4X3.IfcProfileDef
+export abstract class Profile extends ClayObject {
+  abstract data: WEBIFC.IFC4X3.IfcProfileDef;
 }

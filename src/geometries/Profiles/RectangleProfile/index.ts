@@ -1,50 +1,51 @@
+import * as THREE from "three";
 import * as WEBIFC from "web-ifc";
-import { createIfcEntity } from "../../../utils/generics";
-import { Profile } from "../Profile";
-import { Base } from "../../../base";
+import {Profile} from "../Profile";
+import {Model} from "../../../base";
 
-export type RectangleProfileArgs = {
-  direction: number[];
-  position: number[];
-  xDim: number;
-  yDim: number;
-};
+
 export class RectangleProfile extends Profile {
-  public profile: WEBIFC.IFC4X3.IfcRectangleProfileDef;
-  private base: Base;
-  public position: number[];
-  public direction: number[];
 
-  constructor(
-    public ifcAPI: WEBIFC.IfcAPI,
-    public modelID: number,
-    args: RectangleProfileArgs,
-  ) {
-    super();
-    this.base = new Base(ifcAPI, modelID);
-    this.position = args.position;
-    this.direction = args.direction;
-    this.profile = this.create(
-      this.base.axis2Placement2D(this.position, this.direction),
-      this.base.positiveLength(args.xDim),
-      this.base.positiveLength(args.yDim),
-    );
-  }
+    data: WEBIFC.IFC4X3.IfcRectangleProfileDef;
 
-  protected create(
-    position: WEBIFC.IFC4X3.IfcAxis2Placement2D,
-    xDim: WEBIFC.IFC4X3.IfcPositiveLengthMeasure,
-    yDim: WEBIFC.IFC4X3.IfcPositiveLengthMeasure,
-  ) {
-    return createIfcEntity<typeof WEBIFC.IFC4X3.IfcRectangleProfileDef>(
-      this.ifcAPI,
-      this.modelID,
-      WEBIFC.IFCRECTANGLEPROFILEDEF,
-      WEBIFC.IFC4X3.IfcProfileTypeEnum.AREA,
-      this.base.label("Rectangular profile"),
-      position,
-      xDim,
-      yDim,
-    );
-  }
+    dimension = new THREE.Vector3(1, 1, 0);
+
+    direction = new THREE.Vector3(1, 0, 0);
+
+    position = new THREE.Vector3(0, 0, 0);
+
+    constructor(model: Model) {
+        super(model);
+
+        this.data = model.createIfcEntity<typeof WEBIFC.IFC4X3.IfcRectangleProfileDef>(
+            WEBIFC.IFCRECTANGLEPROFILEDEF,
+            WEBIFC.IFC4X3.IfcProfileTypeEnum.AREA,
+            this.model.label("Rectangular profile"),
+            this.model.axis2Placement2D(this.position, this.direction),
+            this.model.positiveLength(this.dimension.x),
+            this.model.positiveLength(this.dimension.y),
+        );
+
+        this.model.set(this.data);
+    }
+
+    update() {
+
+        this.data.XDim.value = this.dimension.x;
+        this.data.YDim.value = this.dimension.y;
+
+        const placement = this.model.get(this.data.Position);
+
+        const location = this.model.get(placement.Location) as WEBIFC.IFC4X3.IfcCartesianPoint;
+        location.Coordinates[0].value = this.position.y;
+        location.Coordinates[1].value = -this.position.x;
+        this.model.set(location);
+
+        const ifcDirection = this.model.get(placement.RefDirection);
+        ifcDirection.DirectionRatios[0].value = this.direction.y;
+        ifcDirection.DirectionRatios[1].value = -this.direction.x;
+        this.model.set(ifcDirection);
+
+        this.model.set(this.data);
+    }
 }

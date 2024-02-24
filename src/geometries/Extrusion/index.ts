@@ -1,129 +1,77 @@
 import * as WEBIFC from "web-ifc";
 import * as THREE from "three";
-import { createIfcEntity } from "../../utils/generics";
-import { Base } from "../../base";
+import {Model} from "../../base";
+import {Profile} from "../Profiles/Profile";
 
-export type Solid = WEBIFC.IFC4X3.IfcBooleanOperand &
-  WEBIFC.IfcLineObject &
-  WEBIFC.IFC4X3.IfcExtrudedAreaSolid;
+export class Extrusion<T extends Profile> {
+    model: Model;
 
-export type ExtrusionArgs = {
-  direction: number[];
-  position: number[];
-  depth: number;
-};
+    data: WEBIFC.IFC4X3.IfcExtrudedAreaSolid;
 
-export class Extrusion {
-  public mesh: THREE.InstancedMesh;
-  public geometry: THREE.BufferGeometry;
-  public geometryNeedsUpdate: boolean;
-  public ids: number[];
+    mesh: THREE.InstancedMesh;
 
-  private base: Base;
-  public solid: Solid;
-  public material: THREE.MeshLambertMaterial;
+    depth = 1;
 
-  public location: WEBIFC.IFC4X3.IfcCartesianPoint;
-  public position: WEBIFC.IFC4X3.IfcAxis2Placement3D;
-  public direction: WEBIFC.IFC4X3.IfcDirection;
-  public depth: WEBIFC.IFC4X3.IfcPositiveLengthMeasure;
+    position = new THREE.Vector3(0, 0, 0);
 
-  constructor(
-    public ifcAPI: WEBIFC.IfcAPI,
-    public modelID: number,
-    profile: WEBIFC.IFC4X3.IfcProfileDef,
-    args: ExtrusionArgs,
-  ) {
-    this.geometryNeedsUpdate = true;
-    this.geometry = new THREE.BufferGeometry();
-    this.material = new THREE.MeshLambertMaterial();
-    this.ids = [];
+    rotation = new THREE.Vector3(0, 0, 0);
 
-    this.mesh = new THREE.InstancedMesh(this.geometry, this.material, 10);
-    this.mesh.count = 1;
-    const identity = new THREE.Matrix4().identity();
-    this.mesh.setMatrixAt(0, identity);
-    this.mesh.instanceMatrix.needsUpdate = true;
+    direction = new THREE.Vector3(0, 1, 0);
 
-    this.base = new Base(ifcAPI, modelID);
+    profile: T;
 
-    const { placement, location } = this.base.axis2Placement3D(args.position);
+    constructor(model: Model, profile: T) {
+        this.model = model;
+        this.profile = profile;
 
-    this.location = location;
-    this.position = placement;
-    this.direction = this.base.direction(args.direction);
-    this.depth = this.base.positiveLength(args.depth);
+        const geometry = new THREE.BufferGeometry();
+        const material = new THREE.MeshLambertMaterial();
+        this.mesh = new THREE.InstancedMesh(geometry, material, 1);
+        this.mesh.frustumCulled = false;
+        const identity = new THREE.Matrix4().identity();
+        this.mesh.setMatrixAt(0, identity);
+        this.mesh.instanceMatrix.needsUpdate = true;
 
-    this.solid = this.extrudedAreaSolid(
-      profile,
-      this.position,
-      this.direction,
-      this.depth,
-    );
-  }
+        const placement = this.model.axis2Placement3D(this.position, this.rotation);
+        const direction = this.model.direction(this.direction);
+        const depth = this.model.positiveLength(this.depth);
 
-  private extrudedAreaSolid(
-    profile:
-      | WEBIFC.IFC4X3.IfcProfileDef
-      | WEBIFC.Handle<WEBIFC.IFC4X3.IfcProfileDef>,
-    position: WEBIFC.IFC4X3.IfcAxis2Placement3D,
-    direction: WEBIFC.IFC4X3.IfcDirection,
-    depth: WEBIFC.IFC4X3.IfcPositiveLengthMeasure,
-  ) {
-    return createIfcEntity<typeof WEBIFC.IFC4X3.IfcExtrudedAreaSolid>(
-      this.ifcAPI,
-      this.modelID,
-      WEBIFC.IFCEXTRUDEDAREASOLID,
-      profile,
-      position,
-      direction,
-      depth,
-    );
-  }
+        this.data = this.model.createIfcEntity<typeof WEBIFC.IFC4X3.IfcExtrudedAreaSolid>(
+            WEBIFC.IFCEXTRUDEDAREASOLID,
+            profile.data,
+            placement,
+            direction,
+            depth,
+        );
 
-  regenerate() {
-    this.ifcAPI.StreamMeshes(this.modelID, [this.ids[0]], (mesh) => {
-      this.mesh.geometry.dispose();
-      const { geometryExpressID, flatTransformation } = mesh.geometries.get(0);
-      const data = this.ifcAPI.GetGeometry(this.modelID, geometryExpressID);
-      this.mesh.geometry = this.getGeometry(data);
-      const matrix = new THREE.Matrix4().fromArray(flatTransformation);
-      this.mesh.position.set(0, 0, 0);
-      this.mesh.rotation.set(0, 0, 0);
-      this.mesh.scale.set(1, 1, 1);
-      this.mesh.updateMatrix();
-      this.mesh.applyMatrix4(matrix);
-    });
-  }
-
-  private getGeometry(data: WEBIFC.IfcGeometry) {
-    const index = this.ifcAPI.GetIndexArray(
-      data.GetIndexData(),
-      data.GetIndexDataSize(),
-    );
-
-    const vertexData = this.ifcAPI.GetVertexArray(
-      data.GetVertexData(),
-      data.GetVertexDataSize(),
-    );
-
-    const position = new Float32Array(vertexData.length / 2);
-    const normal = new Float32Array(vertexData.length / 2);
-
-    for (let i = 0; i < vertexData.length; i += 6) {
-      position[i / 2] = vertexData[i];
-      position[i / 2 + 1] = vertexData[i + 1];
-      position[i / 2 + 2] = vertexData[i + 2];
-
-      normal[i / 2] = vertexData[i + 3];
-      normal[i / 2 + 1] = vertexData[i + 4];
-      normal[i / 2 + 2] = vertexData[i + 5];
+        this.update();
     }
 
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute("position", new THREE.BufferAttribute(position, 3));
-    geometry.setAttribute("normal", new THREE.BufferAttribute(normal, 3));
-    geometry.setIndex(Array.from(index));
-    return geometry;
-  }
+    update() {
+
+        const placement = this.model.get(this.data.Position);
+
+        const location = this.model.get(placement.Location) as WEBIFC.IFC4X3.IfcCartesianPoint;
+        location.Coordinates[0].value = this.position.z;
+        location.Coordinates[1].value = this.position.x;
+        location.Coordinates[2].value = this.position.y;
+        this.model.set(location);
+
+        const rotation = this.model.get(placement.Axis);
+        rotation.DirectionRatios[0].value = this.rotation.z;
+        rotation.DirectionRatios[1].value = this.rotation.x;
+        rotation.DirectionRatios[2].value = this.rotation.y;
+        this.model.set(rotation);
+
+        const direction = this.model.get(this.data.ExtrudedDirection);
+        direction.DirectionRatios[0].value = this.direction.z;
+        direction.DirectionRatios[1].value = this.direction.x;
+        direction.DirectionRatios[2].value = this.direction.y;
+        this.model.set(direction);
+
+        this.data.Depth.value = this.depth;
+
+        this.model.set(this.data);
+        this.model.setMesh(this.data.expressID, this.mesh);
+    }
 }
