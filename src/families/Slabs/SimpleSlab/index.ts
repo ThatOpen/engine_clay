@@ -30,6 +30,10 @@ export class SimpleSlab extends Family {
     const profile = new RectangleProfile(model);
     this.ifcGeometry = new Extrusion(model, profile);
 
+    this.ifcGeometry.depth = 0.3;
+    this.ifcGeometry.profile.dimension.x = 5;
+    this.ifcGeometry.profile.dimension.y = 10;
+
     const representation = this.model.shapeRepresentation("Body", "SweptSolid", [this.ifcGeometry.data]);
     const shape = this.model.productDefinitionShape([representation]);
 
@@ -47,9 +51,12 @@ export class SimpleSlab extends Family {
         this.model.identifier(label),
         null,
     );
+
+    this.update();
   }
 
   update(): void {
+    this.ifcGeometry.profile.update();
     this.ifcGeometry.update();
   }
 }

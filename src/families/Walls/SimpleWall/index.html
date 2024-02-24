@@ -103,16 +103,8 @@
   opening2.update();
   scene.add(opening2.mesh);
 
-  window.addEventListener("keydown", ({code}) => {
-    if(code === "KeyP") {
-      wall.ifcGeometry.addSubtraction(opening.ifcGeometry.data);
-      wall.ifcGeometry.addSubtraction(opening2.ifcGeometry.data);
-    }
-    else if(code === "KeyO") {
-      wall.ifcGeometry.removeSubtraction(opening.ifcGeometry.data);
-      wall.ifcGeometry.removeSubtraction(opening2.ifcGeometry.data);
-    }
-  })
+  wall.ifcGeometry.addSubtraction(opening.ifcGeometry.data);
+  wall.ifcGeometry.addSubtraction(opening2.ifcGeometry.data);
 
   // Set up GUI
 
