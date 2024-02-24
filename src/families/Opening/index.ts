@@ -56,6 +56,8 @@ export class Opening extends Family {
         const profile = new RectangleProfile(model);
         this.ifcGeometry = new Extrusion(model, profile);
 
+        this.ifcGeometry.mesh.material = model.materialT;
+
         const representation = this.model.shapeRepresentation("Body", "SweptSolid", [this.ifcGeometry.data]);
         const shape = this.model.productDefinitionShape([representation]);
 

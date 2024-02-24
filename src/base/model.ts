@@ -7,6 +7,10 @@ type ConstructorArg<T> = T extends new (arg: infer U) => any ? U : never;
 
 export class Model {
 
+    material = new THREE.MeshLambertMaterial();
+    
+    materialT = new THREE.MeshLambertMaterial({transparent: true, opacity: 0.2});
+
     ifcAPI = new WEBIFC.IfcAPI();
 
     private _modelID?: number;
@@ -24,8 +28,17 @@ export class Model {
         return this._modelID;
     }
 
+    async init() {
+        await this.ifcAPI.Init();
+        this._modelID = this.ifcAPI.CreateModel({schema: WEBIFC.Schemas.IFC4X3});
+    }
+
     set(item: WEBIFC.IfcLineObject) {
         this.ifcAPI.WriteLine(this.modelID, item);
+    }
+
+    delete(item: WEBIFC.IfcLineObject) {
+        this.ifcAPI.DeleteLine(this.modelID, item.expressID);
     }
 
     get<T extends WEBIFC.IfcLineObject>(item: WEBIFC.Handle<T> | T | null) {
@@ -53,10 +66,14 @@ export class Model {
         });
     }
 
-
-    async init() {
-        await this.ifcAPI.Init();
-        this._modelID = this.ifcAPI.CreateModel({schema: WEBIFC.Schemas.IFC4X3});
+    newThreeMesh() {
+        const geometry = new THREE.BufferGeometry();
+        const mesh = new THREE.InstancedMesh(geometry, this.material, 1);
+        mesh.frustumCulled = false;
+        const identity = new THREE.Matrix4().identity();
+        mesh.setMatrixAt(0, identity);
+        mesh.instanceMatrix.needsUpdate = true;
+        return mesh;
     }
 
     createIfcEntity<T extends new (...args: any[]) => any>(

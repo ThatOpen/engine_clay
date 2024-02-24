@@ -85,5 +85,4 @@ export class SimpleWall extends Family {
         this.ifcGeometry.depth = this.height;
         this.ifcGeometry.update();
     }
-
 }
