@@ -96,25 +96,49 @@
   const furniture = new CLAY.Furniture(model, geometry);
   scene.add(furniture.mesh);
 
-  // const opening = new CLAY.Opening(model);
-  // scene.add(opening.mesh);
-  //
+  const opening = new CLAY.Opening(model);
+  opening.baseDimension.x = 2;
+  opening.baseDimension.y = 2;
+  opening.update();
+  scene.add(opening.mesh);
+
   // const opening2 = new CLAY.Opening(model);
   // opening2.position.x += 2;
   // opening2.update();
   // scene.add(opening2.mesh);
 
-  // furniture.geometries.body.addSubtraction(opening.geometries.body);
+  window.addEventListener("keydown", ({code}) => {
+      furniture.geometries.body.baseGeometry = new THREE.TorusGeometry()
+  })
+
+  furniture.geometries.body.addSubtraction(opening.geometries.body);
   // furniture.geometries.body.addSubtraction(opening2.geometries.body);
 
   // Set up GUI
 
-  // const gui = new dat.GUI();
-  //
-  // gui.add(furniture.startPoint, "x").name("Start X").min(-5).max(5).step(0.1).onChange(() => {
-  //   furniture.update();
-  // });
-  //
+  const gui = new dat.GUI();
+
+  const geometries = [
+    new THREE.TorusGeometry(),
+    new THREE.TorusKnotGeometry(),
+  ];
+
+  let index = 0;
+
+  const actions = {
+    changeGeometries: () => {
+      const geometry = geometries[index++];
+      if(index > geometries.length - 1) {
+        index = 0;
+      }
+      furniture.geometries.body.baseGeometry = geometry;
+    }
+  }
+
+  gui.add(actions, "changeGeometries").name("Change geometry").onChange(() => {
+    furniture.update();
+  });
+
   // gui.add(furniture.startPoint, "y").name("Start Y").min(-5).max(5).step(0.1).onChange(() => {
   //   furniture.update();
   // });

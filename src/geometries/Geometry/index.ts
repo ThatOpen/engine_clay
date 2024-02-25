@@ -10,7 +10,8 @@ export abstract class ClayGeometry extends ClayObject {
 
   abstract core: IFC.IfcGeometricRepresentationItem;
 
-  lastClipping: number | null = null;
+  protected firstClipping: number | null = null;
+  protected lastClipping: number | null = null;
 
   clippings = new Map<
     number,
@@ -65,6 +66,12 @@ export abstract class ClayGeometry extends ClayObject {
 
     this.model.set(bool);
 
+    // If it's the first clipping, reference it
+    const isFirstClipping = this.clippings.size === 0;
+    if (isFirstClipping) {
+      this.firstClipping = item.expressID;
+    }
+
     // Reference this clipping by last one (if any)
     if (this.lastClipping) {
       const lastBool = this.clippings.get(this.lastClipping);
@@ -94,6 +101,8 @@ export abstract class ClayGeometry extends ClayObject {
     if (previous === null && next === null) {
       // This was the only bool in the list
       this.ifcData = this.core;
+      this.firstClipping = null;
+      this.lastClipping = null;
     } else if (previous !== null && next === null) {
       // The deleted bool was the last one in the list
       const newLast = this.clippings.get(previous);
@@ -108,6 +117,7 @@ export abstract class ClayGeometry extends ClayObject {
       if (!newFirst) {
         throw new Error("Malformed bool structure!");
       }
+      this.firstClipping = next;
       newFirst.previous = null;
       newFirst.bool.FirstOperand = this.core;
       this.model.set(newFirst.bool);

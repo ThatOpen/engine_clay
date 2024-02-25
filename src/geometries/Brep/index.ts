@@ -11,12 +11,33 @@ export class Brep extends ClayGeometry {
 
   mesh: THREE.InstancedMesh;
 
-  baseGeometry: THREE.BufferGeometry;
+  private _baseGeometry: THREE.BufferGeometry;
+
+  get baseGeometry() {
+    return this._baseGeometry;
+  }
+
+  set baseGeometry(geometry: THREE.BufferGeometry) {
+    this.disposePreviousBrep();
+    this._baseGeometry = geometry;
+    this.core = this.getBrep();
+
+    if (this.firstClipping !== null) {
+      const firstBool = this.clippings.get(this.firstClipping);
+      if (!firstBool) {
+        throw new Error("Malformed bool!");
+      }
+      const { bool } = firstBool;
+      bool.FirstOperand = this.core;
+      this.model.set(bool);
+    }
+    this.update();
+  }
 
   constructor(model: Model, geometry: THREE.BufferGeometry) {
     super(model);
     this.mesh = this.newThreeMesh();
-    this.baseGeometry = geometry;
+    this._baseGeometry = geometry;
     this.core = this.getBrep();
     this.ifcData = this.core;
     this.update();
@@ -28,8 +49,8 @@ export class Brep extends ClayGeometry {
   }
 
   private getBrep() {
-    const position = this.baseGeometry.getAttribute("position");
-    const index = this.baseGeometry.getIndex();
+    const position = this._baseGeometry.getAttribute("position");
+    const index = this._baseGeometry.getIndex();
 
     const ifcClosedShell = new IFC.IfcClosedShell([]);
 
@@ -66,5 +87,23 @@ export class Brep extends ClayGeometry {
     const polyLoop = new IFC.IfcPolyLoop(points);
     const faceBound = new IFC.IfcFaceBound(polyLoop, new IFC.IfcBoolean("T"));
     return new IFC.IfcFace([faceBound]);
+  }
+
+  private disposePreviousBrep() {
+    const outer = this.model.get(this.core.Outer);
+    for (const faceRef of outer.CfsFaces) {
+      const face = this.model.get(faceRef);
+      for (const faceBoundRef of face.Bounds) {
+        const faceBound = this.model.get(faceBoundRef) as IFC.IfcFaceBound;
+        const polyLoop = this.model.get(faceBound.Bound) as IFC.IfcPolyLoop;
+        for (const pointRef of polyLoop.Polygon) {
+          const point = this.model.get(pointRef);
+          this.model.delete(point);
+        }
+        this.model.delete(polyLoop);
+        this.model.delete(faceBound);
+      }
+    }
+    this.model.delete(outer);
   }
 }
