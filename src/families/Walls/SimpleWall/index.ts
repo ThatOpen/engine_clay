@@ -11,7 +11,7 @@ import { Family} from "../../Family";
 
 export class SimpleWall extends Family {
 
-    ifcData: WEBIFC.IFC4X3.IfcWallStandardCase;
+    ifcData: WEBIFC.IFC4X3.IfcWall;
 
     geometries: {body: Extrusion<RectangleProfile>};
 
@@ -59,7 +59,7 @@ export class SimpleWall extends Family {
 
         const label = "Simple Wall";
 
-        this.ifcData = this.model.createIfcEntity<typeof WEBIFC.IFC4X3.IfcWallStandardCase>(
+        this.ifcData = this.model.createIfcEntity<typeof WEBIFC.IFC4X3.IfcWall>(
             WEBIFC.IFCWALLSTANDARDCASE,
             this.model.guid(uuidv4()),
             null,

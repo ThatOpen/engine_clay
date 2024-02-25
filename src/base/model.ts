@@ -8,7 +8,7 @@ type ConstructorArg<T> = T extends new (arg: infer U) => any ? U : never;
 export class Model {
 
     material = new THREE.MeshLambertMaterial();
-    
+
     materialT = new THREE.MeshLambertMaterial({transparent: true, opacity: 0.2});
 
     ifcAPI = new WEBIFC.IfcAPI();
@@ -351,6 +351,12 @@ export class Model {
             firstOperand,
             secondOperand,
         );
+    }
+
+    boolean(value: boolean) {
+        const bool = new WEBIFC.IFC4X3.IfcBoolean(false);
+        bool.value = value;
+        return bool;
     }
 
     vector(values: THREE.Vector3, type: keyof typeof this._types) {

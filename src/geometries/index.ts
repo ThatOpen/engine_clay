@@ -1,3 +1,3 @@
 export * from "./Extrusion";
-export * from "./Breps";
+export * from "./Brep";
 export * from "./Profiles";
