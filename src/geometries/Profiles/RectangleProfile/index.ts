@@ -1,51 +1,56 @@
 import * as THREE from "three";
-import * as WEBIFC from "web-ifc";
-import {Profile} from "../Profile";
-import {Model} from "../../../base";
-
+import { IFC4X3 as IFC } from "web-ifc";
+import { Profile } from "../Profile";
+import { Model } from "../../../base";
+import { IfcGetter } from "../../../base/ifc-getter";
 
 export class RectangleProfile extends Profile {
+  ifcData: IFC.IfcRectangleProfileDef;
 
-    ifcData: WEBIFC.IFC4X3.IfcRectangleProfileDef;
+  dimension = new THREE.Vector3(1, 1, 0);
 
-    dimension = new THREE.Vector3(1, 1, 0);
+  direction = new THREE.Vector3(1, 0, 0);
 
-    direction = new THREE.Vector3(1, 0, 0);
+  position = new THREE.Vector3(0, 0, 0);
 
-    position = new THREE.Vector3(0, 0, 0);
+  constructor(model: Model) {
+    super(model);
 
-    constructor(model: Model) {
-        super(model);
+    const placement = new IFC.IfcAxis2Placement2D(
+      IfcGetter.point(this.position),
+      IfcGetter.direction(this.direction)
+    );
 
-        this.ifcData = model.createIfcEntity<typeof WEBIFC.IFC4X3.IfcRectangleProfileDef>(
-            WEBIFC.IFCRECTANGLEPROFILEDEF,
-            WEBIFC.IFC4X3.IfcProfileTypeEnum.AREA,
-            this.model.label("Rectangular profile"),
-            this.model.axis2Placement2D(this.position, this.direction),
-            this.model.positiveLength(this.dimension.x),
-            this.model.positiveLength(this.dimension.y),
-        );
+    this.ifcData = new IFC.IfcRectangleProfileDef(
+      IFC.IfcProfileTypeEnum.AREA,
+      null,
+      placement,
+      new IFC.IfcPositiveLengthMeasure(this.dimension.x),
+      new IFC.IfcPositiveLengthMeasure(this.dimension.y)
+    );
 
-        this.model.set(this.ifcData);
-    }
+    this.model.set(this.ifcData);
+  }
 
-    update() {
+  update() {
+    this.ifcData.XDim.value = this.dimension.x;
+    this.ifcData.YDim.value = this.dimension.y;
 
-        this.ifcData.XDim.value = this.dimension.x;
-        this.ifcData.YDim.value = this.dimension.y;
+    const placement = this.model.get(this.ifcData.Position);
 
-        const placement = this.model.get(this.ifcData.Position);
+    const location = this.model.get(
+      placement.Location
+    ) as IFC.IfcCartesianPoint;
 
-        const location = this.model.get(placement.Location) as WEBIFC.IFC4X3.IfcCartesianPoint;
-        location.Coordinates[0].value = this.position.y;
-        location.Coordinates[1].value = -this.position.x;
-        this.model.set(location);
+    location.Coordinates[0].value = this.position.y;
+    location.Coordinates[1].value = -this.position.x;
+    this.model.set(location);
 
-        const ifcDirection = this.model.get(placement.RefDirection);
-        ifcDirection.DirectionRatios[0].value = this.direction.y;
-        ifcDirection.DirectionRatios[1].value = -this.direction.x;
-        this.model.set(ifcDirection);
+    const ifcDirection = this.model.get(placement.RefDirection);
+    ifcDirection.DirectionRatios[0].value = this.direction.y;
+    ifcDirection.DirectionRatios[1].value = -this.direction.x;
+    this.model.set(ifcDirection);
 
-        this.model.set(this.ifcData);
-    }
+    this.model.set(this.ifcData);
+  }
 }

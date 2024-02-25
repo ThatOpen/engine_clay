@@ -1,75 +1,80 @@
-import * as WEBIFC from "web-ifc";
+import { IFC4X3 as IFC } from "web-ifc";
 import * as THREE from "three";
-import {Model} from "../../base";
-import {Profile} from "../Profiles/Profile";
+import { Model } from "../../base";
+import { Profile } from "../Profiles/Profile";
 import { ClayGeometry } from "../Geometry";
+import { IfcGetter } from "../../base/ifc-getter";
 
 export class Extrusion<T extends Profile> extends ClayGeometry {
+  ifcData: IFC.IfcExtrudedAreaSolid | IFC.IfcBooleanClippingResult;
 
-    ifcData: WEBIFC.IFC4X3.IfcExtrudedAreaSolid | WEBIFC.IFC4X3.IfcBooleanClippingResult;
+  core: IFC.IfcExtrudedAreaSolid;
 
-    core: WEBIFC.IFC4X3.IfcExtrudedAreaSolid;
+  mesh: THREE.InstancedMesh;
 
-    mesh: THREE.InstancedMesh;
+  depth = 1;
 
-    depth = 1;
+  profile: T;
 
-    profile: T;
+  position = new THREE.Vector3(0, 0, 0);
 
-    position = new THREE.Vector3(0, 0, 0);
+  rotation = new THREE.Vector3(0, 0, 0);
 
-    rotation = new THREE.Vector3(0, 0, 0);
+  direction = new THREE.Vector3(0, 1, 0);
 
-    direction = new THREE.Vector3(0, 1, 0);
+  constructor(model: Model, profile: T) {
+    super(model);
+    this.profile = profile;
 
-    constructor(model: Model, profile: T) {
-        super(model);
-        this.profile = profile;
+    this.mesh = this.newThreeMesh();
 
-        this.mesh = model.newThreeMesh();
+    const placement = new IFC.IfcAxis2Placement3D(
+      IfcGetter.point(this.position),
+      IfcGetter.direction(this.rotation),
+      null
+    );
 
-        const placement = this.model.axis2Placement3D(this.position, this.rotation);
-        const direction = this.model.direction(this.direction);
-        const depth = this.model.positiveLength(this.depth);
+    const direction = IfcGetter.direction(this.direction);
 
-        this.core = this.model.createIfcEntity<typeof WEBIFC.IFC4X3.IfcExtrudedAreaSolid>(
-            WEBIFC.IFCEXTRUDEDAREASOLID,
-            profile.ifcData,
-            placement,
-            direction,
-            depth,
-        );
+    this.core = new IFC.IfcExtrudedAreaSolid(
+      profile.ifcData,
+      placement,
+      direction,
+      new IFC.IfcPositiveLengthMeasure(this.depth)
+    );
 
-        this.ifcData = this.core;
+    this.ifcData = this.core;
 
-        this.update();
-    }
+    this.update();
+  }
 
-    update() {
+  update() {
+    const placement = this.model.get(this.core.Position);
 
-        const placement = this.model.get(this.core.Position);
+    const location = this.model.get(
+      placement.Location
+    ) as IFC.IfcCartesianPoint;
 
-        const location = this.model.get(placement.Location) as WEBIFC.IFC4X3.IfcCartesianPoint;
-        location.Coordinates[0].value = this.position.z;
-        location.Coordinates[1].value = this.position.x;
-        location.Coordinates[2].value = this.position.y;
-        this.model.set(location);
+    location.Coordinates[0].value = this.position.z;
+    location.Coordinates[1].value = this.position.x;
+    location.Coordinates[2].value = this.position.y;
+    this.model.set(location);
 
-        const rotation = this.model.get(placement.Axis);
-        rotation.DirectionRatios[0].value = this.rotation.z;
-        rotation.DirectionRatios[1].value = this.rotation.x;
-        rotation.DirectionRatios[2].value = this.rotation.y;
-        this.model.set(rotation);
+    const rotation = this.model.get(placement.Axis);
+    rotation.DirectionRatios[0].value = this.rotation.z;
+    rotation.DirectionRatios[1].value = this.rotation.x;
+    rotation.DirectionRatios[2].value = this.rotation.y;
+    this.model.set(rotation);
 
-        const direction = this.model.get(this.core.ExtrudedDirection);
-        direction.DirectionRatios[0].value = this.direction.z;
-        direction.DirectionRatios[1].value = this.direction.x;
-        direction.DirectionRatios[2].value = this.direction.y;
-        this.model.set(direction);
+    const direction = this.model.get(this.core.ExtrudedDirection);
+    direction.DirectionRatios[0].value = this.direction.z;
+    direction.DirectionRatios[1].value = this.direction.x;
+    direction.DirectionRatios[2].value = this.direction.y;
+    this.model.set(direction);
 
-        this.core.Depth.value = this.depth;
+    this.core.Depth.value = this.depth;
 
-        this.model.set(this.core);
-        this.model.setMesh(this.ifcData.expressID, this.mesh);
-    }
+    this.model.set(this.core);
+    this.setMesh(this.ifcData.expressID, this.mesh);
+  }
 }

@@ -1,48 +1,53 @@
-import * as WEBIFC from "web-ifc";
+import { IFC4X3 as IFC } from "web-ifc";
 import * as THREE from "three";
-import {v4 as uuidv4} from "uuid";
-import {InstancedMesh} from "three";
-import {Model} from "../../../base";
-import {Family} from "../../Family";
+import { v4 as uuidv4 } from "uuid";
+import { InstancedMesh } from "three";
+import { Model } from "../../../base";
+import { Family } from "../../Family";
 import { Brep } from "../../../geometries";
+import { IfcGetter } from "../../../base/ifc-getter";
 
 export class Furniture extends Family {
-    ifcData: WEBIFC.IFC4X3.IfcFurnishingElement;
+  ifcData: IFC.IfcFurnishingElement;
 
-    geometries: { body: Brep };
+  geometries: { body: Brep };
 
-    get mesh(): InstancedMesh {
-        return this.geometries.body.mesh;
-    }
+  get mesh(): InstancedMesh {
+    return this.geometries.body.mesh;
+  }
 
-    constructor(model: Model, geometry: THREE.BufferGeometry) {
-        super(model);
+  constructor(model: Model, geometry: THREE.BufferGeometry) {
+    super(model);
 
-        this.geometries = {body: new Brep(model, geometry)};
+    this.geometries = { body: new Brep(model, geometry) };
 
-        const {body} = this.geometries;
-        const representation = this.model.shapeRepresentation("Body", "SweptSolid", [body.ifcData]);
-        const shape = this.model.productDefinitionShape([representation]);
+    const { body } = this.geometries;
 
-        const label = "Simple slab";
+    const representation = IfcGetter.shapeRepresentation(this.model);
+    representation.Items = [body.ifcData];
+    const placement = IfcGetter.localPlacement();
+    const shape = new IFC.IfcProductDefinitionShape(null, null, [
+      representation,
+    ]);
 
-        this.ifcData = model.createIfcEntity<typeof WEBIFC.IFC4X3.IfcFurnishingElement>(
-            WEBIFC.IFCFURNISHINGELEMENT,
-            this.model.guid(uuidv4()),
-            null,
-            this.model.label(label),
-            null,
-            this.model.label(label),
-            this.model.localPlacement(),
-            shape,
-            this.model.identifier(label),
-        );
+    const label = "Simple slab";
 
-        this.update();
-    }
+    this.ifcData = new IFC.IfcFurnishingElement(
+      new IFC.IfcGloballyUniqueId(uuidv4()),
+      null,
+      new IFC.IfcLabel(label),
+      null,
+      new IFC.IfcLabel(label),
+      placement,
+      shape,
+      new IFC.IfcIdentifier(label)
+    );
 
-    update(): void {
-        const {body} = this.geometries;
-        body.update();
-    }
+    this.update();
+  }
+
+  update(): void {
+    const { body } = this.geometries;
+    body.update();
+  }
 }

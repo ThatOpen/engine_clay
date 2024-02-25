@@ -1,14 +1,14 @@
 import * as WEBIFC from "web-ifc";
-import {Model} from "./model";
+import { Model } from "./model";
 
 export abstract class ClayObject {
-    model: Model;
+  model: Model;
 
-    abstract ifcData: WEBIFC.IfcLineObject;
-    
-    abstract update(): void;
+  abstract ifcData: WEBIFC.IfcLineObject;
 
-    protected constructor(model: Model) {
-        this.model = model;
-    }
+  abstract update(): void;
+
+  protected constructor(model: Model) {
+    this.model = model;
+  }
 }
