@@ -31,6 +31,30 @@ export class Opening extends Family {
     this.geometries.body.profile.dimension = value;
   }
 
+  get xDirection() {
+    return this.geometries.body.xDirection;
+  }
+
+  set xDirection(value: THREE.Vector3) {
+    this.geometries.body.xDirection = value;
+  }
+
+  get zDirection() {
+    return this.geometries.body.zDirection;
+  }
+
+  set zDirection(value: THREE.Vector3) {
+    this.geometries.body.zDirection = value;
+  }
+
+  get zRotation() {
+    return this.geometries.body.zRotation;
+  }
+
+  set zRotation(value: number) {
+    this.geometries.body.zRotation = value;
+  }
+
   get direction() {
     return this.geometries.body.direction;
   }

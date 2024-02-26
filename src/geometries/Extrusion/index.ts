@@ -18,9 +18,27 @@ export class Extrusion<T extends Profile> extends ClayGeometry {
 
   position = new THREE.Vector3(0, 0, 0);
 
-  rotation = new THREE.Vector3(0, 0, 0);
+  zDirection = new THREE.Vector3(0, 0, 0);
+
+  xDirection = new THREE.Vector3(0, 0, 1);
 
   direction = new THREE.Vector3(0, 1, 0);
+
+  get zRotation() {
+    const { x, z } = this.xDirection;
+    const result = Math.atan2(x, z);
+    if (result >= 0) {
+      return result;
+    }
+    return 2 * Math.PI + result;
+  }
+
+  set zRotation(value: number) {
+    const matrix = new THREE.Matrix4();
+    matrix.makeRotationY(value);
+    const { elements } = matrix;
+    this.xDirection.set(elements[8], elements[9], elements[10]);
+  }
 
   constructor(model: Model, profile: T) {
     super(model);
@@ -30,8 +48,8 @@ export class Extrusion<T extends Profile> extends ClayGeometry {
 
     const placement = new IFC.IfcAxis2Placement3D(
       IfcGetter.point(this.position),
-      IfcGetter.direction(this.rotation),
-      null
+      IfcGetter.direction(this.zDirection),
+      IfcGetter.direction(this.xDirection)
     );
 
     const direction = IfcGetter.direction(this.direction);
@@ -56,15 +74,21 @@ export class Extrusion<T extends Profile> extends ClayGeometry {
     ) as IFC.IfcCartesianPoint;
 
     location.Coordinates[0].value = this.position.z;
-    location.Coordinates[1].value = this.position.x;
+    location.Coordinates[1].value = -this.position.x;
     location.Coordinates[2].value = this.position.y;
     this.model.set(location);
 
-    const rotation = this.model.get(placement.Axis);
-    rotation.DirectionRatios[0].value = this.rotation.z;
-    rotation.DirectionRatios[1].value = this.rotation.x;
-    rotation.DirectionRatios[2].value = this.rotation.y;
-    this.model.set(rotation);
+    const zDirection = this.model.get(placement.Axis);
+    zDirection.DirectionRatios[0].value = this.zDirection.z;
+    zDirection.DirectionRatios[1].value = this.zDirection.x;
+    zDirection.DirectionRatios[2].value = this.zDirection.y;
+    this.model.set(zDirection);
+
+    const xDirection = this.model.get(placement.RefDirection);
+    xDirection.DirectionRatios[0].value = this.xDirection.z;
+    xDirection.DirectionRatios[1].value = this.xDirection.x;
+    xDirection.DirectionRatios[2].value = this.xDirection.y;
+    this.model.set(xDirection);
 
     const direction = this.model.get(this.core.ExtrudedDirection);
     direction.DirectionRatios[0].value = this.direction.z;

@@ -106,6 +106,8 @@
   wall.geometries.body.addSubtraction(opening.geometries.body);
   wall.geometries.body.addSubtraction(opening2.geometries.body);
 
+  wall.addOpening(opening);
+
   // Set up GUI
 
   const gui = new dat.GUI();
@@ -118,11 +120,11 @@
     wall.update();
   });
 
-  gui.add(wall.endPoint, "x").name("Start X").min(-5).max(5).step(0.1).onChange(() => {
+  gui.add(wall.endPoint, "x").name("End X").min(-5).max(5).step(0.1).onChange(() => {
     wall.update();
   });
 
-  gui.add(wall.endPoint, "y").name("Start Y").min(-5).max(5).step(0.1).onChange(() => {
+  gui.add(wall.endPoint, "y").name("End Y").min(-5).max(5).step(0.1).onChange(() => {
     wall.update();
   });
 
@@ -131,6 +133,17 @@
   });
 
   gui.add(wall, "height").name("Height").min(1).max(4).step(0.05).onChange(() => {
+    wall.update();
+  });
+
+  gui.add(opening.position, "x").name("Opening 1 X Position").min(0).max(Math.PI * 2).step( Math.PI / 180).onChange(() => {
+    opening.update();
+    wall.updateOpening(opening);
+    wall.update();
+  });
+
+  gui.add(opening2.position, "x").name("Opening 2 X Position").min(0).max(Math.PI * 2).step( Math.PI / 180).onChange(() => {
+    opening2.update();
     wall.update();
   });
 
