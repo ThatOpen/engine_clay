@@ -95,7 +95,6 @@ export class Vertices extends Primitive {
       this._positionBuffer.setXYZ(index, x, y, z);
       this._colorBuffer.setXYZ(index, r, g, b);
     }
-    this._buffers.updateCount(this.idMap.size);
     this.mesh.geometry.computeBoundingSphere();
     this.mesh.geometry.computeBoundingBox();
     return ids;
@@ -152,7 +151,6 @@ export class Vertices extends Primitive {
       this.idMap.remove(id);
     }
     this.select(false, ids);
-    this._buffers.updateCount(this.idMap.size);
   }
 
   addAttribute(attribute: THREE.BufferAttribute) {

@@ -112,8 +112,6 @@ export class Lines extends Primitive {
 
       this.list[id] = { id, start: startID, end: endID };
     }
-    const allVerticesCount = this.idMap.size * 2;
-    this._buffers.updateCount(allVerticesCount);
     this.mesh.geometry.computeBoundingSphere();
     this.mesh.geometry.computeBoundingBox();
     return createdIDs;
@@ -272,7 +270,6 @@ export class Lines extends Primitive {
       buffer.setXYZ(indices[i], x, y, z);
     }
 
-    buffer.count -= 2;
   }
 
   private transformLines(matrix: THREE.Matrix4, indices: Iterable<number>) {

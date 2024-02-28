@@ -225,7 +225,7 @@ export class Faces extends Primitive {
     }
 
     const idsArray: number[] = [];
-    const oldIndex = this._index.array as number[];
+    const oldIndex = this._index.array as Uint8Array;
     for (const index of oldIndex) {
       const id = this.vertices.idMap.getId(index);
       idsArray.push(id);
@@ -428,7 +428,6 @@ export class Faces extends Primitive {
       this.mesh.geometry.setAttribute("color", colorAttribute);
       this.updateColor();
     }
-    this._colorBuffer.count = positionBuffer.count;
   }
 
   private updateColor(ids = this.ids as Iterable<number>) {

@@ -24,9 +24,9 @@
   "author": "agviegas",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/ThatOpen/engine_fragment/issues"
+    "url": "https://github.com/ThatOpen/engine_clay/issues"
   },
-  "homepage": "https://github.com/ThatOpen/engine_fragment",
+  "homepage": "https://github.com/ThatOpen/engine_clay",
   "dependencies": {
     "earcut": "^2.2.4",
     "three-mesh-bvh": "0.7.0",
