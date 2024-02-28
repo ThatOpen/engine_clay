@@ -75,7 +75,13 @@
 		[2.6, 0, 2.8],
 	]);
 
-	// Create a cube
+      faces.add(
+        [8, 9, 10, 11],
+        [
+          [12, 13, 14, 15],
+          [16, 17, 18, 19],
+        ],
+      );
 
 	faces.add([0, 1, 2, 3]);
 	faces.add([4, 5, 6, 7]);
@@ -116,18 +122,25 @@
 		faces.selectPoints(true, selection);
 	}
 
-	function setSelectedFaces() {
-		const selection = [];
-		for (let i = settings.faceSelectionStart; i < settings.faceSelectionEnd; i++) {
-			selection.push(i);
-		}
-		faces.select(false);
-		faces.select(true, selection);
-	}
+      const control = new TransformControls(
+        world.camera,
+        world.renderer.domElement,
+      );
+      const helper = new THREE.Object3D();
+      let transform = new THREE.Matrix4();
+      world.scene.add(helper);
+      control.attach(helper);
+      world.scene.add(control);
 
-	function deleteSelectedFaces() {
-		faces.remove();
-	}
+      control.addEventListener(
+        "dragging-changed",
+        (event) => (world.controls.enabled = !event.value),
+      );
+      control.addEventListener("change", () => {
+        helper.updateMatrix();
+        const temp = helper.matrix.clone();
+        // console.log(temp.decompose());
+      });
 
 	function deleteSelectedPoints() {
 		faces.removePoints();

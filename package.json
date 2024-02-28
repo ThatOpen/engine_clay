@@ -1,25 +1,49 @@
 {
   "name": "openbim-clay",
-  "main": "index.js",
   "version": "0.0.5",
-  "author": "antonio gonzalez viegas, quim moya",
-  "license": "MIT",
-  "packageManager": "yarn@3.2.1",
+  "description": "3D BIM Modelling API",
+  "main": "src/index.js",
   "scripts": {
     "test": "jest",
-    "build": "yarn clean && tsc && yarn build-examples",
+    "build": "tsc && yarn build-examples",
     "build-examples": "rollup -c resources/rollup.config.mjs",
-    "clean": "node resources/cleaner.mjs",
-    "publish-repo": "cpy package.json dist && cd dist && npm publish",
+    "publish-repo": "tsc && cpy package.json dist && cd dist && npm publish",
     "publish-repo-alpha": "cpy package.json dist && cd dist && npm publish --tag alpha"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ThatOpen/engine_clay.git"
+  },
+  "keywords": [
+    "ifc",
+    "geometry",
+    "threejs",
+    "bim",
+    "3d"
+  ],
+  "author": "agviegas",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/ThatOpen/engine_fragment/issues"
+  },
+  "homepage": "https://github.com/ThatOpen/engine_fragment",
+  "dependencies": {
+    "earcut": "^2.2.4",
+    "three-mesh-bvh": "0.7.0",
+    "uuid": "^9.0.1"
+  },
+  "peerDependencies": {
+    "three": "^0.160.1",
+    "web-ifc": "^0.0.51"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "25.0.0",
     "@rollup/plugin-node-resolve": "15.1.0",
-    "@types/earcut": "^2.1.1",
+    "@types/earcut": "2.1.4",
     "@types/jest": "27.0.0",
     "@types/node": "^14.14.31",
-    "@types/three": "0.152.1",
+    "@types/three": "^0.160.0",
+    "@types/uuid": "9.0.8",
     "@typescript-eslint/eslint-plugin": "^4.27.0",
     "@typescript-eslint/parser": "^4.27.0",
     "cpy-cli": "^3.1.1",
@@ -28,15 +52,18 @@
     "eslint-config-prettier": "^8.3.0",
     "eslint-plugin-import": "^2.23.4",
     "eslint-plugin-prettier": "^3.4.0",
-    "jest": "27.0.4",
+    "jest": "^27.0.4",
     "prettier": "^2.3.1",
-    "rollup": "3.2.3",
+    "rollup": "^3.2.3",
+    "three": "^0.160.1",
     "ts-jest": "^27.0.3",
     "ts-node": "^10.0.0",
-    "typescript": "^4.3.2"
+    "typescript": "^4.3.2",
+    "web-ifc": "0.0.51"
   },
-  "dependencies": {
-    "earcut": "^2.2.4",
-    "three": "0.152.2"
+  "browser": {
+    "crypto": false,
+    "fs": false,
+    "path": false
   }
 }

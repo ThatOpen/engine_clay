@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { CSS2DObject } from "three/examples/jsm/renderers/CSS2DRenderer";
-import { Lines, Vertices } from "../../primitives";
+import { Lines } from "../Lines";
+import { Vertices } from "../Vertices";
 import { Event } from "../../utils/event";
 import { Raycaster } from "../../utils";
 

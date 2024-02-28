@@ -4,13 +4,10 @@ import commonjs from "@rollup/plugin-commonjs";
 
 // This creates the bundle used by the examples
 export default {
-	input: "dist/index.js",
+	input: "dist/src/index.js",
 	output: {
-		file: "./resources/openbim-components.js",
+		file: "./resources/openbim-clay.js",
 		format: "esm",
-		paths: {
-			three: "https://unpkg.com/three@0.152.2/build/three.module.js",
-		},
 	},
 	external: ["three"], // so it's not included
 	plugins: [
