@@ -18,7 +18,7 @@ export class Brep extends ClayGeometry {
   set baseGeometry(geometry: THREE.BufferGeometry) {
     this.disposePreviousBrep();
     this._baseGeometry = geometry;
-    this.core = this.getBrep();
+    this.regenerateBrep();
 
     if (this.firstClipping !== null) {
       const firstBool = this.clippings.get(this.firstClipping);
@@ -29,13 +29,18 @@ export class Brep extends ClayGeometry {
       bool.FirstOperand = this.core;
       this.model.set(bool);
     }
+
     this.update();
   }
 
   constructor(model: Model, geometry: THREE.BufferGeometry) {
     super(model);
     this._baseGeometry = geometry;
-    this.core = this.getBrep();
+
+    const ifcClosedShell = new IFC.IfcClosedShell([]);
+    this.core = new IFC.IfcFacetedBrep(ifcClosedShell);
+    this.regenerateBrep();
+
     this.ifcData = this.core;
     this.update();
   }
@@ -44,15 +49,15 @@ export class Brep extends ClayGeometry {
     this.model.set(this.core);
   }
 
-  private getBrep() {
+  private regenerateBrep() {
     const position = this._baseGeometry.getAttribute("position");
     const index = this._baseGeometry.getIndex();
-
-    const ifcClosedShell = new IFC.IfcClosedShell([]);
 
     if (position && index) {
       const positions = position.array as Float32Array;
       const indices = index.array as Uint16Array;
+
+      const ifcClosedShell = this.model.get(this.core.Outer);
 
       for (let i = 0; i < indices.length; i += 3) {
         const vertex1 = new THREE.Vector3().fromArray(
@@ -73,9 +78,9 @@ export class Brep extends ClayGeometry {
 
         ifcClosedShell.CfsFaces.push(ifcFace);
       }
-    }
 
-    return new IFC.IfcFacetedBrep(ifcClosedShell);
+      this.model.set(ifcClosedShell);
+    }
   }
 
   private triangleToIFCFace(triangle: THREE.Vector3[]) {
@@ -86,8 +91,8 @@ export class Brep extends ClayGeometry {
   }
 
   private disposePreviousBrep() {
-    const outer = this.model.get(this.core.Outer);
-    for (const faceRef of outer.CfsFaces) {
+    const ifcClosedShell = this.model.get(this.core.Outer);
+    for (const faceRef of ifcClosedShell.CfsFaces) {
       const face = this.model.get(faceRef);
       for (const faceBoundRef of face.Bounds) {
         const faceBound = this.model.get(faceBoundRef) as IFC.IfcFaceBound;
@@ -99,7 +104,9 @@ export class Brep extends ClayGeometry {
         this.model.delete(polyLoop);
         this.model.delete(faceBound);
       }
+      this.model.delete(face);
     }
-    this.model.delete(outer);
+    ifcClosedShell.CfsFaces = [];
+    this.model.set(ifcClosedShell);
   }
 }
