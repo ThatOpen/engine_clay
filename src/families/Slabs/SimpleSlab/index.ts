@@ -3,7 +3,7 @@ import { IFC4X3 as IFC } from "web-ifc";
 import { Model } from "../../../base";
 import { Family } from "../../Family";
 import { Extrusion, RectangleProfile } from "../../../geometries";
-import { IfcGetter } from "../../../base/ifc-getter";
+import { IfcUtils } from "../../../utils/ifc-utils";
 
 export class SimpleSlab extends Family {
   ifcData: IFC.IfcSlab;
@@ -18,10 +18,6 @@ export class SimpleSlab extends Family {
     this.geometries.body.depth = value;
   }
 
-  get mesh() {
-    return this.geometries.body.mesh;
-  }
-
   constructor(model: Model) {
     super(model);
 
@@ -33,9 +29,9 @@ export class SimpleSlab extends Family {
     body.profile.dimension.x = 5;
     body.profile.dimension.y = 10;
 
-    const representation = IfcGetter.shapeRepresentation(this.model);
+    const representation = IfcUtils.shapeRepresentation(this.model);
     representation.Items = [body.ifcData];
-    const placement = IfcGetter.localPlacement();
+    const placement = IfcUtils.localPlacement();
     const shape = new IFC.IfcProductDefinitionShape(null, null, [
       representation,
     ]);
@@ -61,5 +57,6 @@ export class SimpleSlab extends Family {
     const { body } = this.geometries;
     body.profile.update();
     body.update();
+    this.updateElement();
   }
 }

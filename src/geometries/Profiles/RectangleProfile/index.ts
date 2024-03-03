@@ -2,14 +2,14 @@ import * as THREE from "three";
 import { IFC4X3 as IFC } from "web-ifc";
 import { Profile } from "../Profile";
 import { Model } from "../../../base";
-import { IfcGetter } from "../../../base/ifc-getter";
+import { IfcUtils } from "../../../utils/ifc-utils";
 
 export class RectangleProfile extends Profile {
   ifcData: IFC.IfcRectangleProfileDef;
 
   dimension = new THREE.Vector3(1, 1, 0);
 
-  direction = new THREE.Vector3(1, 0, 0);
+  rotation = new THREE.Euler(0, 0, 0);
 
   position = new THREE.Vector3(0, 0, 0);
 
@@ -17,8 +17,8 @@ export class RectangleProfile extends Profile {
     super(model);
 
     const placement = new IFC.IfcAxis2Placement2D(
-      IfcGetter.point(this.position),
-      IfcGetter.direction(this.direction)
+      IfcUtils.point(this.position),
+      IfcUtils.direction(new THREE.Vector3(1, 0, 0))
     );
 
     this.ifcData = new IFC.IfcRectangleProfileDef(
@@ -38,18 +38,12 @@ export class RectangleProfile extends Profile {
 
     const placement = this.model.get(this.ifcData.Position);
 
-    const location = this.model.get(
-      placement.Location
-    ) as IFC.IfcCartesianPoint;
-
-    location.Coordinates[0].value = this.position.y;
-    location.Coordinates[1].value = -this.position.x;
-    this.model.set(location);
-
-    const ifcDirection = this.model.get(placement.RefDirection);
-    ifcDirection.DirectionRatios[0].value = this.direction.y;
-    ifcDirection.DirectionRatios[1].value = -this.direction.x;
-    this.model.set(ifcDirection);
+    IfcUtils.setAxis2Placement(
+      this.model,
+      placement,
+      this.position,
+      this.rotation
+    );
 
     this.model.set(this.ifcData);
   }

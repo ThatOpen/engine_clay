@@ -98,15 +98,21 @@
   const opening = new CLAY.Opening(model);
   scene.add(opening.mesh);
 
-  const opening2 = new CLAY.Opening(model);
-  opening2.position.x += 2;
-  opening2.update();
-  scene.add(opening2.mesh);
+  // const opening2 = new CLAY.Opening(model);
+  // opening2.position.x += 2;
+  // opening2.update();
+  // scene.add(opening2.mesh);
 
-  wall.geometries.body.addSubtraction(opening.geometries.body);
-  wall.geometries.body.addSubtraction(opening2.geometries.body);
+  // wall.geometries.body.addSubtraction(opening.geometries.body);
+  // wall.geometries.body.addSubtraction(opening2.geometries.body);
 
   wall.addOpening(opening);
+  wall.update();
+
+  window.addEventListener("keydown", () => {
+    wall.removeOpening(opening);
+    wall.update();
+  })
 
   // Set up GUI
 
@@ -136,14 +142,13 @@
     wall.update();
   });
 
-  gui.add(opening.position, "x").name("Opening 1 X Position").min(0).max(Math.PI * 2).step( Math.PI / 180).onChange(() => {
-    opening.update();
-    wall.updateOpening(opening);
+  gui.add(opening.position, "x").name("Opening X Position").min(-5).max(5).step(0.1).onChange(() => {
+    wall.setOpening(opening);
     wall.update();
   });
 
-  gui.add(opening2.position, "x").name("Opening 2 X Position").min(0).max(Math.PI * 2).step( Math.PI / 180).onChange(() => {
-    opening2.update();
+  gui.add(opening.position, "y").name("Opening Y Position").min(-5).max(5).step(0.1).onChange(() => {
+    wall.setOpening(opening);
     wall.update();
   });
 

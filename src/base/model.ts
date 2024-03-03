@@ -55,4 +55,14 @@ export class Model {
     }
     return item;
   }
+
+  update() {
+    if (this._modelID === undefined) {
+      throw new Error("Malformed model!");
+    }
+    const model = this.ifcAPI.SaveModel(this._modelID);
+    this.ifcAPI.CloseModel(this._modelID);
+    this._modelID++;
+    this.ifcAPI.OpenModel(model);
+  }
 }

@@ -2,14 +2,12 @@ import { IFC4X3 as IFC } from "web-ifc";
 import * as THREE from "three";
 import { ClayGeometry } from "../Geometry";
 import { Model } from "../../base";
-import { IfcGetter } from "../../base/ifc-getter";
+import { IfcUtils } from "../../utils/ifc-utils";
 
 export class Brep extends ClayGeometry {
   ifcData: IFC.IfcFacetedBrep | IFC.IfcBooleanClippingResult;
 
   core: IFC.IfcFacetedBrep;
-
-  mesh: THREE.InstancedMesh;
 
   private _baseGeometry: THREE.BufferGeometry;
 
@@ -36,7 +34,6 @@ export class Brep extends ClayGeometry {
 
   constructor(model: Model, geometry: THREE.BufferGeometry) {
     super(model);
-    this.mesh = this.newThreeMesh();
     this._baseGeometry = geometry;
     this.core = this.getBrep();
     this.ifcData = this.core;
@@ -45,7 +42,6 @@ export class Brep extends ClayGeometry {
 
   update() {
     this.model.set(this.core);
-    this.setMesh(this.ifcData.expressID, this.mesh);
   }
 
   private getBrep() {
@@ -83,7 +79,7 @@ export class Brep extends ClayGeometry {
   }
 
   private triangleToIFCFace(triangle: THREE.Vector3[]) {
-    const points = triangle.map((vertex) => IfcGetter.point(vertex));
+    const points = triangle.map((vertex) => IfcUtils.point(vertex));
     const polyLoop = new IFC.IfcPolyLoop(points);
     const faceBound = new IFC.IfcFaceBound(polyLoop, new IFC.IfcBoolean("T"));
     return new IFC.IfcFace([faceBound]);

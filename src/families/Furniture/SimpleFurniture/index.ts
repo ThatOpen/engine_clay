@@ -1,20 +1,15 @@
 import { IFC4X3 as IFC } from "web-ifc";
 import * as THREE from "three";
 import { v4 as uuidv4 } from "uuid";
-import { InstancedMesh } from "three";
 import { Model } from "../../../base";
 import { Family } from "../../Family";
 import { Brep } from "../../../geometries";
-import { IfcGetter } from "../../../base/ifc-getter";
+import { IfcUtils } from "../../../utils/ifc-utils";
 
 export class Furniture extends Family {
   ifcData: IFC.IfcFurnishingElement;
 
   geometries: { body: Brep };
-
-  get mesh(): InstancedMesh {
-    return this.geometries.body.mesh;
-  }
 
   constructor(model: Model, geometry: THREE.BufferGeometry) {
     super(model);
@@ -23,9 +18,9 @@ export class Furniture extends Family {
 
     const { body } = this.geometries;
 
-    const representation = IfcGetter.shapeRepresentation(this.model);
+    const representation = IfcUtils.shapeRepresentation(this.model);
     representation.Items = [body.ifcData];
-    const placement = IfcGetter.localPlacement();
+    const placement = IfcUtils.localPlacement();
     const shape = new IFC.IfcProductDefinitionShape(null, null, [
       representation,
     ]);
@@ -49,5 +44,6 @@ export class Furniture extends Family {
   update(): void {
     const { body } = this.geometries;
     body.update();
+    this.updateElement();
   }
 }

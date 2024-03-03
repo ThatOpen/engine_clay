@@ -4,8 +4,8 @@ import { v4 as uuidv4 } from "uuid";
 import { Model } from "../../../base";
 import { Extrusion, RectangleProfile } from "../../../geometries";
 import { Family } from "../../Family";
-import { IfcGetter } from "../../../base/ifc-getter";
 import { Opening } from "../../Opening";
+import { IfcUtils } from "../../../utils/ifc-utils";
 
 export class SimpleWall extends Family {
   ifcData: IFC.IfcWall;
@@ -22,21 +22,16 @@ export class SimpleWall extends Family {
 
   private _openings = new Map<number, { opening: Opening; distance: number }>();
 
-  get mesh() {
-    return this.geometries.body.mesh;
-  }
-
   get length() {
     return this.startPoint.distanceTo(this.endPoint);
   }
 
   get midPoint() {
-    const vector = new THREE.Vector3(
+    return new THREE.Vector3(
       (this.startPoint.x + this.endPoint.x) / 2,
       (this.startPoint.y + this.endPoint.y) / 2,
       (this.startPoint.z + this.endPoint.z) / 2
     );
-    return vector;
   }
 
   get direction() {
@@ -54,9 +49,9 @@ export class SimpleWall extends Family {
 
     const { body } = this.geometries;
 
-    const representation = IfcGetter.shapeRepresentation(this.model);
+    const representation = IfcUtils.shapeRepresentation(this.model);
     representation.Items = [body.ifcData];
-    const placement = IfcGetter.localPlacement();
+    const placement = IfcUtils.localPlacement();
     const shape = new IFC.IfcProductDefinitionShape(null, null, [
       representation,
     ]);
@@ -84,41 +79,52 @@ export class SimpleWall extends Family {
     const profile = this.geometries.body.profile;
     profile.dimension.x = this.length;
     profile.dimension.y = this.width;
-    profile.position = this.midPoint;
-    profile.direction = this.direction;
     profile.update();
 
     const { body } = this.geometries;
     body.depth = this.height;
     body.update();
+
+    const dir = this.direction;
+    this.rotation.z = Math.atan2(dir.y, dir.x);
+    this.position = this.midPoint;
+
+    this.updateElement();
   }
 
   addOpening(opening: Opening) {
-    const wallPlane = new THREE.Plane();
-    const tempPoint = this.startPoint.clone();
-    tempPoint.z += 1;
-    wallPlane.setFromCoplanarPoints(tempPoint, this.startPoint, this.endPoint);
-
-    const newPosition = new THREE.Vector3();
-    const position = opening.position;
-    wallPlane.projectPoint(position, newPosition);
-    opening.position.z = newPosition.y;
-    opening.position.x = newPosition.x;
-    opening.update();
-
-    const distance = newPosition.distanceTo(this.startPoint);
-    const id = opening.ifcData.expressID;
-
-    this._openings.set(id, { opening, distance });
+    super.addOpening(opening);
+    this.setOpening(opening);
   }
 
   removeOpening(opening: Opening) {
+    super.removeOpening(opening);
     this._openings.delete(opening.ifcData.expressID);
   }
 
-  updateOpening(opening: Opening) {
-    this.removeOpening(opening);
-    this.addOpening(opening);
+  setOpening(opening: Opening) {
+    const wallPlane = new THREE.Plane();
+
+    const tempPoint = this.startPoint.clone();
+    tempPoint.z += 1;
+    wallPlane.setFromCoplanarPoints(tempPoint, this.startPoint, this.endPoint);
+    const newPosition = new THREE.Vector3();
+    wallPlane.projectPoint(opening.position, newPosition);
+
+    opening.position.copy(newPosition);
+    opening.update();
+
+    // The distance is signed, so that it also supports openings that are
+    // before the startPoint by using the dot product
+    let distance = newPosition.distanceTo(this.startPoint);
+    const vector = new THREE.Vector3();
+    vector.subVectors(newPosition, this.startPoint);
+    const dotProduct = vector.dot(this.direction);
+    distance *= dotProduct > 0 ? 1 : -1;
+
+    const id = opening.ifcData.expressID;
+
+    this._openings.set(id, { opening, distance });
   }
 
   private updateAllOpenings() {
@@ -126,11 +132,11 @@ export class SimpleWall extends Family {
     const dir = this.direction;
     for (const [_id, { opening, distance }] of this._openings) {
       const pos = dir.clone().multiplyScalar(distance).add(start);
-      opening.position.x = pos.x;
-      opening.position.z = pos.y;
 
-      opening.xDirection.x = dir.x;
-      opening.xDirection.z = -dir.y;
+      // Align opening to wall
+      opening.position.x = pos.x;
+      opening.position.y = pos.y;
+      opening.rotation.z = this.rotation.z;
 
       opening.update();
     }

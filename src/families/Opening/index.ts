@@ -4,24 +4,12 @@ import { v4 as uuidv4 } from "uuid";
 import { Model } from "../../base";
 import { Extrusion, RectangleProfile } from "../../geometries";
 import { Family } from "../Family";
-import { IfcGetter } from "../../base/ifc-getter";
+import { IfcUtils } from "../../utils/ifc-utils";
 
 export class Opening extends Family {
   ifcData: IFC.IfcOpeningElement;
 
   geometries: { body: Extrusion<RectangleProfile> };
-
-  get mesh() {
-    return this.geometries.body.mesh;
-  }
-
-  get position() {
-    return this.geometries.body.position;
-  }
-
-  set position(value: THREE.Vector3) {
-    this.geometries.body.position = value;
-  }
 
   get baseDimension() {
     return this.geometries.body.profile.dimension;
@@ -29,30 +17,6 @@ export class Opening extends Family {
 
   set baseDimension(value: THREE.Vector3) {
     this.geometries.body.profile.dimension = value;
-  }
-
-  get xDirection() {
-    return this.geometries.body.xDirection;
-  }
-
-  set xDirection(value: THREE.Vector3) {
-    this.geometries.body.xDirection = value;
-  }
-
-  get zDirection() {
-    return this.geometries.body.zDirection;
-  }
-
-  set zDirection(value: THREE.Vector3) {
-    this.geometries.body.zDirection = value;
-  }
-
-  get zRotation() {
-    return this.geometries.body.zRotation;
-  }
-
-  set zRotation(value: number) {
-    this.geometries.body.zRotation = value;
   }
 
   get direction() {
@@ -78,11 +42,11 @@ export class Opening extends Family {
     this.geometries = { body: new Extrusion(model, profile) };
 
     const { body } = this.geometries;
-    body.mesh.material = model.materialT;
+    this.mesh.material = model.materialT;
 
-    const representation = IfcGetter.shapeRepresentation(this.model);
+    const representation = IfcUtils.shapeRepresentation(this.model);
     representation.Items = [body.ifcData];
-    const placement = IfcGetter.localPlacement();
+    const placement = IfcUtils.localPlacement();
     const shape = new IFC.IfcProductDefinitionShape(null, null, [
       representation,
     ]);
@@ -108,5 +72,6 @@ export class Opening extends Family {
     const { body } = this.geometries;
     body.profile.update();
     body.update();
+    this.updateElement();
   }
 }
