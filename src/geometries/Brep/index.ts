@@ -33,9 +33,9 @@ export class Brep extends ClayGeometry {
     this.update();
   }
 
-  constructor(model: Model, geometry: THREE.BufferGeometry) {
+  constructor(model: Model) {
     super(model);
-    this._baseGeometry = geometry;
+    this._baseGeometry = new THREE.BoxGeometry();
 
     const ifcClosedShell = new IFC.IfcClosedShell([]);
     this.core = new IFC.IfcFacetedBrep(ifcClosedShell);

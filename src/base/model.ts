@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import * as WEBIFC from "web-ifc";
+import { IfcLineObject } from "web-ifc";
 
 export class Model {
   material = new THREE.MeshLambertMaterial();
@@ -42,7 +43,14 @@ export class Model {
     this.ifcAPI.WriteLine(this.modelID, item);
   }
 
-  delete(item: WEBIFC.IfcLineObject) {
+  delete(item: WEBIFC.IfcLineObject | WEBIFC.Handle<IfcLineObject> | null) {
+    if (item === null) {
+      return;
+    }
+    if (item instanceof WEBIFC.Handle) {
+      this.ifcAPI.DeleteLine(this.modelID, item.value);
+      return;
+    }
     this.ifcAPI.DeleteLine(this.modelID, item.expressID);
   }
 

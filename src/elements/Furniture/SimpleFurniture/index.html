@@ -93,7 +93,7 @@
   await model.init();
 
   const geometry = new THREE.TorusKnotGeometry();
-  const furniture = new CLAY.Furniture(model, geometry);
+  const furniture = new CLAY.SimpleFurniture(model);
   scene.add(furniture.mesh);
 
   const opening = new CLAY.Opening(model);
@@ -126,6 +126,8 @@
       furniture.update();
     }
   }
+
+  actions.changeGeometries();
 
   gui.add(actions, "changeGeometries").name("Change geometry");
 

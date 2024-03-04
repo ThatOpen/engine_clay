@@ -1,20 +1,19 @@
 import { IFC4X3 as IFC } from "web-ifc";
-import * as THREE from "three";
 import { v4 as uuidv4 } from "uuid";
 import { Model } from "../../../base";
 import { Element } from "../../Element";
 import { Brep } from "../../../geometries";
 import { IfcUtils } from "../../../utils/ifc-utils";
 
-export class Furniture extends Element {
+export class SimpleFurniture extends Element {
   ifcData: IFC.IfcFurnishingElement;
 
   geometries: { body: Brep };
 
-  constructor(model: Model, geometry: THREE.BufferGeometry) {
+  constructor(model: Model) {
     super(model);
 
-    this.geometries = { body: new Brep(model, geometry) };
+    this.geometries = { body: new Brep(model) };
 
     const { body } = this.geometries;
 
@@ -25,17 +24,15 @@ export class Furniture extends Element {
       representation,
     ]);
 
-    const label = "Simple slab";
-
     this.ifcData = new IFC.IfcFurnishingElement(
       new IFC.IfcGloballyUniqueId(uuidv4()),
       null,
-      new IFC.IfcLabel(label),
       null,
-      new IFC.IfcLabel(label),
+      null,
+      null,
       placement,
       shape,
-      new IFC.IfcIdentifier(label)
+      null
     );
 
     this.update();
