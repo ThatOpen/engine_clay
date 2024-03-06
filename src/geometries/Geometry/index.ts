@@ -2,7 +2,7 @@ import { IFC4X3 as IFC, IfcLineObject } from "web-ifc";
 import { ClayObject } from "../../base";
 
 export abstract class ClayGeometry extends ClayObject {
-  abstract ifcData:
+  abstract attributes:
     | IFC.IfcGeometricRepresentationItem
     | IFC.IfcBooleanClippingResult;
 
@@ -20,8 +20,10 @@ export abstract class ClayGeometry extends ClayObject {
     }
   >();
 
+  delete() {}
+
   addSubtraction(geometry: ClayGeometry) {
-    const item = geometry.ifcData;
+    const item = geometry.attributes;
 
     if (this.clippings.has(item.expressID)) {
       return;
@@ -31,7 +33,7 @@ export abstract class ClayGeometry extends ClayObject {
     // (might be another bool operation)
     const bool = new IFC.IfcBooleanClippingResult(
       IFC.IfcBooleanOperator.DIFFERENCE,
-      this.ifcData,
+      this.attributes,
       item
     );
 
@@ -57,7 +59,7 @@ export abstract class ClayGeometry extends ClayObject {
     this.clippings.set(item.expressID, { bool, previous, next: null });
 
     // Make this bool the current geometry
-    this.ifcData = bool;
+    this.attributes = bool;
     this.update();
   }
 
@@ -71,7 +73,7 @@ export abstract class ClayGeometry extends ClayObject {
 
     if (previous === null && next === null) {
       // This was the only bool in the list
-      this.ifcData = this.core;
+      this.attributes = this.core;
       this.firstClipping = null;
       this.lastClipping = null;
     } else if (previous !== null && next === null) {
@@ -81,7 +83,7 @@ export abstract class ClayGeometry extends ClayObject {
         throw new Error("Malformed bool structure!");
       }
       newLast.next = null;
-      this.ifcData = newLast.bool;
+      this.attributes = newLast.bool;
     } else if (previous === null && next !== null) {
       // The deleted bool was the first one in the list
       const newFirst = this.clippings.get(next);

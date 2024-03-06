@@ -1,62 +1,32 @@
 import { v4 as uuidv4 } from "uuid";
-import { IFC4X3 as IFC } from "web-ifc";
+import { IFC4X3, IFC4X3 as IFC } from "web-ifc";
 import { Model } from "../../../base";
-import { Element } from "../../Element";
-import { Extrusion, RectangleProfile } from "../../../geometries";
-import { IfcUtils } from "../../../utils/ifc-utils";
+import { DynamicElementType } from "../../Elements";
+import { SimpleSlab } from "./src";
 
-export class SimpleSlab extends Element {
-  ifcData: IFC.IfcSlab;
+export * from "./src";
 
-  geometries: { body: Extrusion<RectangleProfile> };
-
-  get thickness() {
-    return this.geometries.body.depth;
-  }
-
-  set thickness(value: number) {
-    this.geometries.body.depth = value;
-  }
+export class SimpleSlabType extends DynamicElementType<SimpleSlab> {
+  attributes: IFC4X3.IfcSlabType;
 
   constructor(model: Model) {
     super(model);
 
-    const profile = new RectangleProfile(model);
-    this.geometries = { body: new Extrusion(model, profile) };
-
-    const { body } = this.geometries;
-    body.depth = 0.3;
-    body.profile.dimension.x = 5;
-    body.profile.dimension.y = 10;
-
-    const representation = IfcUtils.shapeRepresentation(this.model);
-    representation.Items = [body.ifcData];
-    const placement = IfcUtils.localPlacement();
-    const shape = new IFC.IfcProductDefinitionShape(null, null, [
-      representation,
-    ]);
-
-    const label = "Simple slab";
-
-    this.ifcData = new IFC.IfcSlab(
+    this.attributes = new IFC.IfcSlabType(
       new IFC.IfcGloballyUniqueId(uuidv4()),
       null,
-      new IFC.IfcLabel(label),
       null,
-      new IFC.IfcLabel(label),
-      placement,
-      shape,
-      new IFC.IfcIdentifier(label),
-      null
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      IFC.IfcSlabTypeEnum.FLOOR
     );
-
-    this.update();
   }
 
-  update(): void {
-    const { body } = this.geometries;
-    body.profile.update();
-    body.update();
-    this.updateElement();
+  protected createElement() {
+    return new SimpleSlab(this.model, this);
   }
 }

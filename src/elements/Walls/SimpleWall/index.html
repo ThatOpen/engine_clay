@@ -92,51 +92,55 @@
   model.ifcAPI.SetWasmPath("https://unpkg.com/web-ifc@0.0.50/", true);
   await model.init();
 
-  const wall = new CLAY.SimpleWall(model);
-  scene.add(wall.mesh);
+  const simpleWallType = new CLAY.SimpleWallType(model);
+  const wall = simpleWallType.addInstance();
+  scene.add(...wall.meshes);
 
-  const opening = new CLAY.Opening(model);
-  scene.add(opening.mesh);
+  const simpleOpeningType = new CLAY.SimpleOpeningType(model);
+  const opening = simpleOpeningType.addInstance();
+  scene.add(...opening.meshes);
+  console.log(simpleOpeningType);
 
   wall.addOpening(opening);
-  wall.update();
+  wall.update(true);
+
 
   // Set up GUI
 
   const gui = new dat.GUI();
 
   gui.add(wall.startPoint, "x").name("Start X").min(-5).max(5).step(0.1).onChange(() => {
-    wall.update();
+    wall.update(true);
   });
 
   gui.add(wall.startPoint, "y").name("Start Y").min(-5).max(5).step(0.1).onChange(() => {
-    wall.update();
+    wall.update(true);
   });
 
   gui.add(wall.endPoint, "x").name("End X").min(-5).max(5).step(0.1).onChange(() => {
-    wall.update();
+    wall.update(true);
   });
 
   gui.add(wall.endPoint, "y").name("End Y").min(-5).max(5).step(0.1).onChange(() => {
-    wall.update();
-  });
-
-  gui.add(wall, "width").name("Width").min(0.1).max(0.5).step(0.05).onChange(() => {
-    wall.update();
+    wall.update(true);
   });
 
   gui.add(wall, "height").name("Height").min(1).max(4).step(0.05).onChange(() => {
-    wall.update();
+    wall.update(true);
   });
 
-  gui.add(opening.position, "x").name("Opening X Position").min(-5).max(5).step(0.1).onChange(() => {
-    wall.setOpening(opening);
-    wall.update();
+  gui.add(simpleWallType, "width").name("Width").min(0.1).max(0.5).step(0.05).onChange(() => {
+    simpleWallType.update(true);
   });
 
-  gui.add(opening.position, "y").name("Opening Y Position").min(-5).max(5).step(0.1).onChange(() => {
-    wall.setOpening(opening);
-    wall.update();
-  });
+  // gui.add(opening.position, "x").name("Opening X Position").min(-5).max(5).step(0.1).onChange(() => {
+  //   wall.setOpening(opening);
+  //   wall.update();
+  // });
+  //
+  // gui.add(opening.position, "y").name("Opening Y Position").min(-5).max(5).step(0.1).onChange(() => {
+  //   wall.setOpening(opening);
+  //   wall.update();
+  // });
 
 </script>
