@@ -1,5 +1,6 @@
 import * as FRAGS from "bim-fragment";
 import { IFC4X3 as IFC } from "web-ifc";
+import * as THREE from "three";
 import { ClayObject } from "../../../base";
 import { ClayGeometry } from "../../../geometries/Geometry";
 import { Element } from "../Element";
@@ -18,4 +19,12 @@ export abstract class ElementType<
   abstract addInstance(): T;
 
   abstract deleteInstance(id: number): void;
+
+  protected newFragment() {
+    const geometry = new THREE.BufferGeometry();
+    geometry.setIndex([]);
+    const fragment = new FRAGS.Fragment(geometry, this.model.material, 0);
+    fragment.mesh.frustumCulled = false;
+    return fragment;
+  }
 }

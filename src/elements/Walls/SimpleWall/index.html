@@ -104,6 +104,11 @@
   wall.addOpening(opening);
   wall.update(true);
 
+  window.addEventListener("keydown", () => {
+    wall.removeOpening(opening);
+    wall.update(true);
+  })
+
 
   // Set up GUI
 
@@ -133,14 +138,14 @@
     simpleWallType.update(true);
   });
 
-  // gui.add(opening.position, "x").name("Opening X Position").min(-5).max(5).step(0.1).onChange(() => {
-  //   wall.setOpening(opening);
-  //   wall.update();
-  // });
-  //
-  // gui.add(opening.position, "y").name("Opening Y Position").min(-5).max(5).step(0.1).onChange(() => {
-  //   wall.setOpening(opening);
-  //   wall.update();
-  // });
+  gui.add(opening.position, "x").name("Opening X Position").min(-5).max(5).step(0.1).onChange(() => {
+    wall.setOpening(opening);
+    wall.update(true);
+  });
+
+  gui.add(opening.position, "y").name("Opening Y Position").min(-5).max(5).step(0.1).onChange(() => {
+    wall.setOpening(opening);
+    wall.update(true);
+  });
 
 </script>

@@ -8,6 +8,7 @@ import { Element } from "../../../Elements";
 import { Extrusion, RectangleProfile } from "../../../../geometries";
 import { SimpleWallType } from "../index";
 import { SimpleOpening } from "../../../Openings";
+import { ClayGeometry } from "../../../../geometries/Geometry";
 
 export class SimpleWall extends Element {
   attributes: IFC.IfcWall;
@@ -97,11 +98,13 @@ export class SimpleWall extends Element {
   addOpening(opening: SimpleOpening) {
     super.addOpening(opening);
     this.setOpening(opening);
+    this.updateGeometryID();
   }
 
   removeOpening(opening: SimpleOpening) {
     super.removeOpening(opening);
     this._openings.delete(opening.attributes.expressID);
+    this.updateGeometryID();
   }
 
   setOpening(opening: SimpleOpening) {
@@ -142,5 +145,26 @@ export class SimpleWall extends Element {
 
       opening.update();
     }
+  }
+
+  private updateGeometryID() {
+    const modelID = this.model.modelID;
+    const id = this.attributes.expressID;
+    this.model.ifcAPI.StreamMeshes(modelID, [id], (ifcMesh) => {
+      const newGeometry = ifcMesh.geometries.get(0);
+      const newGeomID = newGeometry.geometryExpressID;
+      const oldGeomID = this.geometries.values().next().value;
+
+      this.geometries.clear();
+      this.geometries.add(newGeomID);
+
+      const frag = this.type.fragments.get(oldGeomID) as FRAGS.Fragment;
+      this.type.fragments.delete(oldGeomID);
+      this.type.fragments.set(newGeomID, frag);
+
+      const geometry = this.type.geometries.get(oldGeomID) as ClayGeometry;
+      this.type.geometries.delete(oldGeomID);
+      this.type.geometries.set(newGeomID, geometry);
+    });
   }
 }

@@ -7,8 +7,6 @@ import { ClayObject, Model } from "../../../base";
 import { ElementType } from "../ElementType";
 import { IfcUtils } from "../../../utils/ifc-utils";
 import { SimpleOpening } from "../../Openings";
-// import { Opening } from "../Opening";
-// import { IfcUtils } from "../../utils/ifc-utils";
 
 export abstract class Element extends ClayObject {
   abstract attributes: IFC.IfcElement;
