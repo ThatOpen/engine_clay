@@ -5,7 +5,7 @@ import { Model } from "../../base";
 import { IfcUtils } from "../../utils/ifc-utils";
 
 export class Brep extends ClayGeometry {
-  ifcData: IFC.IfcFacetedBrep | IFC.IfcBooleanClippingResult;
+  attributes: IFC.IfcFacetedBrep | IFC.IfcBooleanClippingResult;
 
   core: IFC.IfcFacetedBrep;
 
@@ -41,7 +41,7 @@ export class Brep extends ClayGeometry {
     this.core = new IFC.IfcFacetedBrep(ifcClosedShell);
     this.regenerateBrep();
 
-    this.ifcData = this.core;
+    this.attributes = this.core;
     this.update();
   }
 

@@ -33,7 +33,7 @@
     "uuid": "^9.0.1"
   },
   "peerDependencies": {
-    "bim-fragment": "1.4.1",
+    "bim-fragment": "1.4.2",
     "three": "^0.160.1",
     "web-ifc": "^0.0.51"
   },
@@ -47,7 +47,7 @@
     "@types/uuid": "9.0.8",
     "@typescript-eslint/eslint-plugin": "^4.27.0",
     "@typescript-eslint/parser": "^4.27.0",
-    "bim-fragment": "1.4.1",
+    "bim-fragment": "1.4.2",
     "cpy-cli": "^3.1.1",
     "eslint": "^7.28.0",
     "eslint-config-airbnb-base": "^14.2.1",

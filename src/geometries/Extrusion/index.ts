@@ -7,7 +7,7 @@ import { MathUtils } from "../../utils/math-utils";
 import { IfcUtils } from "../../utils/ifc-utils";
 
 export class Extrusion<T extends Profile> extends ClayGeometry {
-  ifcData: IFC.IfcExtrudedAreaSolid | IFC.IfcBooleanClippingResult;
+  attributes: IFC.IfcExtrudedAreaSolid | IFC.IfcBooleanClippingResult;
 
   core: IFC.IfcExtrudedAreaSolid;
 
@@ -36,13 +36,13 @@ export class Extrusion<T extends Profile> extends ClayGeometry {
     const direction = IfcUtils.direction(this.direction);
 
     this.core = new IFC.IfcExtrudedAreaSolid(
-      profile.ifcData,
+      profile.attributes,
       placement,
       direction,
       new IFC.IfcPositiveLengthMeasure(this.depth)
     );
 
-    this.ifcData = this.core;
+    this.attributes = this.core;
 
     this.update();
   }

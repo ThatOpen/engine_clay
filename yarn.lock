@@ -1773,16 +1773,16 @@ __metadata:
   languageName: node
   linkType: hard
 
-"bim-fragment@npm:1.4.1":
-  version: 1.4.1
-  resolution: "bim-fragment@npm:1.4.1"
+"bim-fragment@npm:1.4.2":
+  version: 1.4.2
+  resolution: "bim-fragment@npm:1.4.2"
   dependencies:
     flatbuffers: ^23.3.3
     three-mesh-bvh: 0.7.0
     unzipit: 1.4.3
   peerDependencies:
     three: ^0.160.1
-  checksum: 7a1fa3dba068819c8b8f0224a0de342d8a4424448f991c3f8f52064e7269ff8ba0627e9f25548adcc866c4490438e5e5b03d5d31a82f02b7b76ae0e35d1bdf62
+  checksum: e86705f4fa75243b51c09d9219fdc652f4397e69879fd856927a3c58762b2e535d5e050bb970ad318776d39ae1b5c22a32303dc2b6658d1cf124d63c97581684
   languageName: node
   linkType: hard
 
@@ -5642,7 +5642,7 @@ __metadata:
     "@types/uuid": 9.0.8
     "@typescript-eslint/eslint-plugin": ^4.27.0
     "@typescript-eslint/parser": ^4.27.0
-    bim-fragment: 1.4.1
+    bim-fragment: 1.4.2
     cpy-cli: ^3.1.1
     earcut: ^2.2.4
     eslint: ^7.28.0
@@ -5661,7 +5661,7 @@ __metadata:
     uuid: ^9.0.1
     web-ifc: 0.0.51
   peerDependencies:
-    bim-fragment: 1.4.1
+    bim-fragment: 1.4.2
     three: ^0.160.1
     web-ifc: ^0.0.51
   languageName: unknown

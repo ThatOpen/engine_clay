@@ -5,7 +5,7 @@ import { Model } from "../../../base";
 import { IfcUtils } from "../../../utils/ifc-utils";
 
 export class RectangleProfile extends Profile {
-  ifcData: IFC.IfcRectangleProfileDef;
+  attributes: IFC.IfcRectangleProfileDef;
 
   dimension = new THREE.Vector3(1, 1, 0);
 
@@ -21,7 +21,7 @@ export class RectangleProfile extends Profile {
       IfcUtils.direction(new THREE.Vector3(1, 0, 0))
     );
 
-    this.ifcData = new IFC.IfcRectangleProfileDef(
+    this.attributes = new IFC.IfcRectangleProfileDef(
       IFC.IfcProfileTypeEnum.AREA,
       null,
       placement,
@@ -29,14 +29,14 @@ export class RectangleProfile extends Profile {
       new IFC.IfcPositiveLengthMeasure(this.dimension.y)
     );
 
-    this.model.set(this.ifcData);
+    this.model.set(this.attributes);
   }
 
   update() {
-    this.ifcData.XDim.value = this.dimension.x;
-    this.ifcData.YDim.value = this.dimension.y;
+    this.attributes.XDim.value = this.dimension.x;
+    this.attributes.YDim.value = this.dimension.y;
 
-    const placement = this.model.get(this.ifcData.Position);
+    const placement = this.model.get(this.attributes.Position);
 
     IfcUtils.setAxis2Placement(
       this.model,
@@ -45,6 +45,6 @@ export class RectangleProfile extends Profile {
       this.rotation
     );
 
-    this.model.set(this.ifcData);
+    this.model.set(this.attributes);
   }
 }

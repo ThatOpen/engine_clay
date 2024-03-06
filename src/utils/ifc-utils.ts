@@ -35,13 +35,16 @@ export class IfcUtils {
     );
   }
 
-  static shapeRepresentation(model: Model) {
-    return new IFC.IfcShapeRepresentation(
-      model.context,
-      new IFC.IfcLabel("Body"),
-      new IFC.IfcLabel("SweptSolid"),
-      []
-    );
+  static productDefinitionShape(
+    model: Model,
+    items: IFC.IfcRepresentationItem[]
+  ) {
+    const representation = this.shape(model, items);
+    return new IFC.IfcProductDefinitionShape(null, null, [representation]);
+  }
+
+  static shape(model: Model, items: IFC.IfcRepresentationItem[]) {
+    return new IFC.IfcShapeRepresentation(model.context, null, null, items);
   }
 
   static setAxis2Placement(

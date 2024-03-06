@@ -11,7 +11,7 @@ import { IfcUtils } from "../../utils/ifc-utils";
 // IFCSHAPEREPRESENTATION
 
 export class RepresentationMap<T extends ClayGeometry[]> extends ClayObject {
-  ifcData: IFC.IfcRepresentationMap;
+  attributes: IFC.IfcRepresentationMap;
 
   geometries: T;
 
@@ -24,8 +24,8 @@ export class RepresentationMap<T extends ClayGeometry[]> extends ClayObject {
     super(model);
     this.geometries = geometries;
 
-    const representation = IfcUtils.shapeRepresentation(this.model);
-    representation.Items = geometries.map((geom) => geom.ifcData);
+    const items = geometries.map((geom) => geom.attributes);
+    const representation = IfcUtils.shape(this.model, items);
 
     const placement = new IFC.IfcAxis2Placement3D(
       IfcUtils.point(new THREE.Vector3()),
@@ -33,7 +33,7 @@ export class RepresentationMap<T extends ClayGeometry[]> extends ClayObject {
       null
     );
 
-    this.ifcData = new IFC.IfcRepresentationMap(placement, representation);
+    this.attributes = new IFC.IfcRepresentationMap(placement, representation);
     this.update();
   }
 
@@ -49,7 +49,7 @@ export class RepresentationMap<T extends ClayGeometry[]> extends ClayObject {
       IfcUtils.direction(zDir)
     );
 
-    const item = new IFC.IfcMappedItem(this.ifcData, operator);
+    const item = new IFC.IfcMappedItem(this.attributes, operator);
     this.model.set(item);
 
     const transform = transformation.clone();
@@ -110,7 +110,7 @@ export class RepresentationMap<T extends ClayGeometry[]> extends ClayObject {
   }
 
   update(): void {
-    this.model.set(this.ifcData);
+    this.model.set(this.attributes);
   }
 
   private getItem(id: number) {

@@ -43,15 +43,32 @@ export class Model {
     this.ifcAPI.WriteLine(this.modelID, item);
   }
 
-  delete(item: WEBIFC.IfcLineObject | WEBIFC.Handle<IfcLineObject> | null) {
+  delete(
+    item: WEBIFC.IfcLineObject | WEBIFC.Handle<IfcLineObject> | null,
+    recursive = false
+  ) {
     if (item === null) {
       return;
     }
+
+    let foundItem: WEBIFC.IfcLineObject;
     if (item instanceof WEBIFC.Handle) {
-      this.ifcAPI.DeleteLine(this.modelID, item.value);
-      return;
+      foundItem = this.ifcAPI.GetLine(this.modelID, item.value);
+    } else {
+      foundItem = item;
     }
-    this.ifcAPI.DeleteLine(this.modelID, item.expressID);
+
+    if (recursive) {
+      for (const key in foundItem) {
+        // @ts-ignore
+        const value = foundItem[key];
+        if (value instanceof WEBIFC.Handle) {
+          this.delete(value);
+        }
+      }
+    }
+
+    this.ifcAPI.DeleteLine(this.modelID, foundItem.expressID);
   }
 
   get<T extends WEBIFC.IfcLineObject>(item: WEBIFC.Handle<T> | T | null) {
