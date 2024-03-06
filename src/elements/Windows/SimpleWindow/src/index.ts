@@ -16,9 +16,11 @@ export class SimpleWindow extends Element {
 
     const placement = IfcUtils.localPlacement();
 
-    this.geometries.add(type.body.attributes.expressID);
+    for(const [id] of type.geometries) {
+      this.geometries.add(id);
+    }
 
-    this.attributes = new IFC.IfcFurnishingElement(
+    this.attributes = new IFC.IfcWindow(
       new IFC.IfcGloballyUniqueId(uuidv4()),
       null,
       null,
@@ -26,9 +28,14 @@ export class SimpleWindow extends Element {
       null,
       placement,
       type.shape,
+      null,
+      null,
+      null,
+      null,
+      null,
       null
     );
 
-    this.update();
+    this.model.set(this.attributes);
   }
 }

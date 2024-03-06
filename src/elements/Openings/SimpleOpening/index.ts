@@ -48,6 +48,8 @@ export class SimpleOpeningType extends StaticElementType<SimpleOpening> {
       null,
       null
     );
+
+    this.model.set(this.attributes);
   }
 
   update(updateGeometry: boolean = false) {

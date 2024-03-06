@@ -74,7 +74,7 @@
 
   const scene = components.scene.get();
 
-  components.camera.controls.setLookAt(12, 6, 8, 0, 0, -10);
+  components.camera.controls.setLookAt(3, 3, 3, 0, 0, 0);
 
   components.scene.setup();
 
@@ -92,42 +92,39 @@
   model.ifcAPI.SetWasmPath("https://unpkg.com/web-ifc@0.0.50/", true);
   await model.init();
 
-  const geometry = new THREE.TorusKnotGeometry();
-  const furniture = new CLAY.Furniture(model, geometry);
-  scene.add(furniture.mesh);
+  const windowType = new CLAY.SimpleWindowType(model);
+  const windowInstance = windowType.addInstance();
+  windowInstance.update(true);
 
-  const opening = new CLAY.Opening(model);
-  opening.baseDimension.x = 2;
-  opening.baseDimension.y = 2;
-  opening.update();
-  scene.add(opening.mesh);
-
-  furniture.addOpening(opening);
-  furniture.update();
-
-  // Set up GUI
+  scene.add(...windowInstance.meshes);
 
   const gui = new dat.GUI();
 
-  const geometries = [
-    new THREE.TorusGeometry(),
-    new THREE.TorusKnotGeometry(),
-  ];
+  gui.add(windowType, "frameWidth").name("Frame width").min(0.01).max(0.1).step(0.01).onChange(() => {
+    windowType.update(true);
+  });
 
-  let index = 0;
+  gui.add(windowType, "length").name("Length").min(0.2).max(1).step(0.01).onChange(() => {
+    windowType.update(true);
+  });
 
-  const actions = {
-    changeGeometries: () => {
-      const geometry = geometries[index++];
-      if(index > geometries.length - 1) {
-        index = 0;
-      }
-      furniture.geometries.body.baseGeometry = geometry;
-      furniture.update();
-    }
-  }
+  gui.add(windowType, "width").name("Width").min(0.2).max(1).step(0.01).onChange(() => {
+    windowType.update(true);
+  });
 
-  gui.add(actions, "changeGeometries").name("Change geometry");
+  gui.add(windowType, "height").name("Height").min(0.2).max(1).step(0.01).onChange(() => {
+    windowType.update(true);
+  });
+
+
+  window.addEventListener("keydown", () => {
+    const exported = model.ifcAPI.SaveModel(model.modelID);
+    const file = new File([new Blob([exported])], "a");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(file);
+    a.download = "example.ifc";
+    a.click();
+  })
 
 
 </script>
