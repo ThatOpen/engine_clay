@@ -42,6 +42,8 @@
           "openbim-clay": "../../../../resources/openbim-clay.js",
           "web-ifc": "https://unpkg.com/web-ifc@0.0.51/web-ifc-api.js",
           "stats.js/src/Stats.js": "https://unpkg.com/stats-js@1.0.1/src/Stats.js",
+          "three/addons/utils/BufferGeometryUtils.js": "https://unpkg.com/three@0.160.0/examples/jsm/utils/BufferGeometryUtils.js",
+          "three/examples/jsm/loaders/GLTFLoader": "https://unpkg.com/three@0.160.0/examples/jsm/loaders/GLTFLoader.js",
           "three/examples/jsm/libs/lil-gui.module.min": "https://unpkg.com/three@0.160.1/examples/jsm/libs/lil-gui.module.min.js",
           "three/examples/jsm/controls/TransformControls": "https://unpkg.com/three@0.135.0/examples/jsm/controls/TransformControls.js"
         }
@@ -58,6 +60,9 @@
   import Stats from "stats.js/src/Stats.js";
   import * as dat from "three/examples/jsm/libs/lil-gui.module.min";
   import { TransformControls } from "three/examples/jsm/controls/TransformControls";
+  import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
+  import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
+
 
   const container = document.getElementById("container");
 
@@ -93,43 +98,43 @@
   await model.init();
 
   const geometry = new THREE.TorusKnotGeometry();
-  const furniture = new CLAY.SimpleFurniture(model);
-  scene.add(furniture.mesh);
+  const furnitureType = new CLAY.SimpleFurnitureType(model);
+  const furniture = furnitureType.addInstance();
+  scene.add(...furniture.meshes);
 
-  const opening = new CLAY.Opening(model);
-  opening.baseDimension.x = 2;
-  opening.baseDimension.y = 2;
-  opening.update();
-  scene.add(opening.mesh);
+  const loader = new GLTFLoader();
+  const rawGltf = await loader.loadAsync('../../../../resources/door.glb');
+  const doorMesh = rawGltf.scene.children[0];
 
-  furniture.addOpening(opening);
-  furniture.update();
-
-  // Set up GUI
-
-  const gui = new dat.GUI();
-
-  const geometries = [
-    new THREE.TorusGeometry(),
-    new THREE.TorusKnotGeometry(),
-  ];
-
-  let index = 0;
-
-  const actions = {
-    changeGeometries: () => {
-      const geometry = geometries[index++];
-      if(index > geometries.length - 1) {
-        index = 0;
-      }
-      furniture.geometries.body.baseGeometry = geometry;
-      furniture.update();
+  doorMesh.rotation.x = Math.PI / 2;
+  const geometries = [];
+  function getGeometry(mesh) {
+    if(mesh.geometry) {
+      mesh.updateMatrixWorld(true);
+      mesh.geometry.applyMatrix4(mesh.matrixWorld);
+      geometries.push(mesh.geometry);
+    }
+    for(const child of mesh.children) {
+      getGeometry(child);
     }
   }
 
-  actions.changeGeometries();
+  getGeometry(doorMesh);
 
-  gui.add(actions, "changeGeometries").name("Change geometry");
+  const merged = BufferGeometryUtils.mergeGeometries(geometries);
+
+  furnitureType.body.baseGeometry = merged;
+  console.log(doorMesh);
+  furnitureType.update(true);
+
+  window.addEventListener("keydown", () => {
+    const exported = model.ifcAPI.SaveModel(model.modelID);
+    const file = new File([new Blob([exported])], "a");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(file);
+    a.download = "example.ifc";
+    a.click();
+  })
 
 
 </script>

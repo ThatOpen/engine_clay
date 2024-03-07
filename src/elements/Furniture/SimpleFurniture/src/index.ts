@@ -29,6 +29,6 @@ export class SimpleFurniture extends Element {
       null
     );
 
-    this.update();
+    this.model.set(this.attributes);
   }
 }

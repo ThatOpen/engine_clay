@@ -13,18 +13,16 @@ export class SimpleFurnitureType extends StaticElementType<SimpleFurniture> {
 
   shape: IFC.IfcProductDefinitionShape;
 
-  get body() {
-    const geoms = this.geometries.values();
-    return geoms.next().value as Brep;
-  }
+  body: Brep;
 
   constructor(model: Model) {
     super(model);
 
-    const body = new Brep(model);
-    const id = body.attributes.expressID;
-    this.geometries.set(id, body);
-    this.shape = IfcUtils.productDefinitionShape(model, [body.attributes]);
+
+    this.body = new Brep(model);
+    const id = this.body.attributes.expressID;
+    this.geometries.set(id, this.body);
+    this.shape = IfcUtils.productDefinitionShape(model, [this.body.attributes]);
 
     const fragment = this.newFragment();
     this.fragments.set(id, fragment);
