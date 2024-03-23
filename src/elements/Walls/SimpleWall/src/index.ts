@@ -5,7 +5,7 @@ import { IFC4X3 as IFC } from "web-ifc";
 import { Model } from "../../../../base";
 import { IfcUtils } from "../../../../utils/ifc-utils";
 import { Element } from "../../../Elements";
-import { Extrusion, RectangleProfile } from "../../../../geometries";
+import { Extrusion, HalfSpace, RectangleProfile } from "../../../../geometries";
 import { SimpleWallType } from "../index";
 import { SimpleOpening } from "../../../Openings";
 import { ClayGeometry } from "../../../../geometries/Geometry";
@@ -92,7 +92,103 @@ export class SimpleWall extends Element {
     this.rotation.z = Math.atan2(dir.y, dir.x);
     this.position = this.midPoint;
 
+    const shape = this.model.get(this.attributes.Representation);
+    const reps = this.model.get(shape.Representations[0]);
+    reps.Items = [this.body.attributes];
+    this.model.set(reps);
+    this.updateGeometryID();
     super.update(updateGeometry);
+  }
+
+  extend(wall: SimpleWall, isEnd = true) {
+    const zDirection = new THREE.Vector3(0, 0, 1);
+
+    const normalVector = wall.direction.cross(zDirection);
+
+    const correctNormalVector = new THREE.Vector3(
+      normalVector.x,
+      normalVector.z,
+      normalVector.y * -1
+    );
+
+    const coplanarPoint = new THREE.Vector3(
+      wall.startPoint.x,
+      wall.startPoint.z,
+      wall.startPoint.y * -1
+    );
+
+    const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(
+      correctNormalVector,
+      coplanarPoint
+    );
+
+    const correctDirection = new THREE.Vector3(
+      this.direction.x * -1,
+      this.direction.z,
+      this.direction.y
+    );
+
+    if (isEnd) {
+      correctDirection.multiplyScalar(-1);
+    }
+
+    const origin = isEnd ? this.endPoint : this.startPoint;
+    const sign = isEnd ? -1 : 1;
+
+    console.log("aqui", origin);
+
+    const rayOriginPoint = new THREE.Vector3(
+      origin.x,
+      origin.z,
+      origin.y * sign
+    );
+
+    const rayAxisWall1 = new THREE.Ray(rayOriginPoint, correctDirection);
+
+    const intersectionPoint = rayAxisWall1.intersectPlane(
+      plane,
+      new THREE.Vector3()
+    );
+
+    if (intersectionPoint) {
+      const correctIntersectionPoint = new THREE.Vector3(
+        intersectionPoint?.x,
+        intersectionPoint?.z * -1,
+        intersectionPoint?.y
+      );
+      if (isEnd) {
+        this.endPoint = correctIntersectionPoint.multiplyScalar(1.1);
+      } else {
+        this.startPoint = correctIntersectionPoint.multiplyScalar(1.1);
+      }
+
+      this.update(true);
+      console.log("correctIntersectionPoint", correctIntersectionPoint);
+    }
+  }
+
+  addCorner(wall: SimpleWall) {
+    const halfSpace1Wall1 = new HalfSpace(this.model);
+    halfSpace1Wall1.rotation = wall.rotation;
+    halfSpace1Wall1.update();
+
+    const halfSpace2Wall1 = new HalfSpace(this.model);
+    halfSpace2Wall1.rotation = wall.rotation;
+    halfSpace2Wall1.update();
+
+    const halfSpace1Wall2 = new HalfSpace(this.model);
+    halfSpace1Wall2.rotation = this.body.rotation;
+    halfSpace1Wall2.update();
+
+    const halfSpace2Wall2 = new HalfSpace(this.model);
+    halfSpace2Wall2.rotation = this.body.rotation;
+    halfSpace2Wall2.update();
+
+    this.extend(wall, true);
+
+    // wall.body.addSubtraction(halfSpace1Wall2);
+    // wall.update(true);
+    // this.updateGeometryID();
   }
 
   addOpening(opening: SimpleOpening) {

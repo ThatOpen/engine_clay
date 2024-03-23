@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -94,58 +94,193 @@
 
   const simpleWallType = new CLAY.SimpleWallType(model);
   const wall = simpleWallType.addInstance();
+
+  const wall2 = simpleWallType.addInstance();
+
   scene.add(...wall.meshes);
 
   const simpleOpeningType = new CLAY.SimpleOpeningType(model);
   const opening = simpleOpeningType.addInstance();
-  scene.add(...opening.meshes);
-  console.log(simpleOpeningType);
+  // scene.add(...opening.meshes);
+  // console.log(simpleOpeningType);
 
-  wall.addOpening(opening);
+  // wall.addOpening(opening);
+  // wall.update(true);
+  wall.startPoint.x = 0;
+  wall.startPoint.y = 0;
+  wall.endPoint.x = -10;
+  wall.endPoint.y = 10;
   wall.update(true);
+
+  wall2.startPoint.x = 10;
+  wall2.startPoint.y = 20;
+  wall2.endPoint.x = -30;
+  wall2.endPoint.y = 20;
+  wall2.update(true);
+  scene.add(...wall2.meshes);
+
+  const normalVector = new THREE.Vector3(0, 0, 1).cross(wall2.direction);
+
+  const correctNormalVector = new THREE.Vector3(
+    normalVector.x,
+    normalVector.z,
+    normalVector.y * -1
+  );
+
+  const coplanarPoint = new THREE.Vector3(
+    wall2.startPoint.x,
+    wall2.startPoint.z,
+    wall2.startPoint.y * -1
+  );
+
+  const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(
+    correctNormalVector,
+    coplanarPoint
+  );
+
+  let helper = new THREE.PlaneHelper(plane, 20, 0x00ff00);
+
+  // scene.add(helper);
+
+  const origin = true ? wall.endPoint : wall.startPoint;
+  const sign = true ? -1 : 1;
+
+  const correctDirection = new THREE.Vector3(
+    wall.direction.x * -1,
+    wall.direction.z,
+    wall.direction.y
+  );
+
+  if (true) {
+    correctDirection.multiplyScalar(-1);
+  }
+
+  const rayOriginPoint = new THREE.Vector3(origin.x, origin.z, origin.y * sign);
+
+  const rayAxisWall1 = new THREE.Ray(rayOriginPoint, correctDirection);
+
+  const arrow = new THREE.ArrowHelper(
+    rayAxisWall1.direction,
+    rayAxisWall1.origin,
+    100,
+    0xff0000
+  );
+  scene.add(arrow);
+
+  //
+  const halfSpace1 = new CLAY.HalfSpace(model);
+  halfSpace1.position.x = 12.87;
+  halfSpace1.rotation.y = Math.PI / 4;
+  halfSpace1.rotation.x = Math.PI / 2;
+  halfSpace1.update();
+
+  wall.body.addSubtraction(halfSpace1);
+
+  const halfSpace2 = new CLAY.HalfSpace(model);
+
+  halfSpace2.position.x = 9.9;
+  halfSpace2.rotation.y = Math.PI / 4;
+  halfSpace2.rotation.x = -Math.PI / 2;
+  halfSpace2.update();
+
+  wall2.body.addSubtraction(halfSpace2);
+
+  wall2.update(true);
+
+  wall.update(true);
+  // wall2.update(true);
+
+  wall.addCorner(wall2);
+  // wall.update(true);
 
   window.addEventListener("keydown", () => {
     wall.removeOpening(opening);
     wall.update(true);
-  })
-
+  });
 
   // Set up GUI
 
   const gui = new dat.GUI();
 
-  gui.add(wall.startPoint, "x").name("Start X").min(-5).max(5).step(0.1).onChange(() => {
-    wall.update(true);
-  });
+  gui
+    .add(wall.startPoint, "x")
+    .name("Start X")
+    .min(-5)
+    .max(5)
+    .step(0.1)
+    .onChange(() => {
+      wall.update(true);
+    });
 
-  gui.add(wall.startPoint, "y").name("Start Y").min(-5).max(5).step(0.1).onChange(() => {
-    wall.update(true);
-  });
+  gui
+    .add(wall.startPoint, "y")
+    .name("Start Y")
+    .min(-5)
+    .max(5)
+    .step(0.1)
+    .onChange(() => {
+      wall.update(true);
+    });
 
-  gui.add(wall.endPoint, "x").name("End X").min(-5).max(5).step(0.1).onChange(() => {
-    wall.update(true);
-  });
+  gui
+    .add(wall.endPoint, "x")
+    .name("End X")
+    .min(-5)
+    .max(5)
+    .step(0.1)
+    .onChange(() => {
+      wall.update(true);
+    });
 
-  gui.add(wall.endPoint, "y").name("End Y").min(-5).max(5).step(0.1).onChange(() => {
-    wall.update(true);
-  });
+  gui
+    .add(wall.endPoint, "y")
+    .name("End Y")
+    .min(-5)
+    .max(5)
+    .step(0.1)
+    .onChange(() => {
+      wall.update(true);
+    });
 
-  gui.add(wall, "height").name("Height").min(1).max(4).step(0.05).onChange(() => {
-    wall.update(true);
-  });
+  gui
+    .add(wall, "height")
+    .name("Height")
+    .min(1)
+    .max(4)
+    .step(0.05)
+    .onChange(() => {
+      wall.update(true);
+    });
 
-  gui.add(simpleWallType, "width").name("Width").min(0.1).max(0.5).step(0.05).onChange(() => {
-    simpleWallType.update(true);
-  });
+  gui
+    .add(simpleWallType, "width")
+    .name("Width")
+    .min(0.1)
+    .max(0.5)
+    .step(0.05)
+    .onChange(() => {
+      simpleWallType.update(true);
+    });
 
-  gui.add(opening.position, "x").name("Opening X Position").min(-5).max(5).step(0.1).onChange(() => {
-    wall.setOpening(opening);
-    wall.update(true);
-  });
+  gui
+    .add(opening.position, "x")
+    .name("Opening X Position")
+    .min(-5)
+    .max(5)
+    .step(0.1)
+    .onChange(() => {
+      wall.setOpening(opening);
+      wall.update(true);
+    });
 
-  gui.add(opening.position, "y").name("Opening Y Position").min(-5).max(5).step(0.1).onChange(() => {
-    wall.setOpening(opening);
-    wall.update(true);
-  });
-
+  gui
+    .add(opening.position, "y")
+    .name("Opening Y Position")
+    .min(-5)
+    .max(5)
+    .step(0.1)
+    .onChange(() => {
+      wall.setOpening(opening);
+      wall.update(true);
+    });
 </script>

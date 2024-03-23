@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -83,9 +83,9 @@
   const customEffects = components.renderer.postproduction.customEffects;
   customEffects.excludedMeshes.push(grid.get());
 
-    // IFC API
+  // IFC API
 
-    const model = new CLAY.Model();
+  const model = new CLAY.Model();
   model.ifcAPI.SetWasmPath("https://unpkg.com/web-ifc@0.0.50/", true);
   await model.init();
 
