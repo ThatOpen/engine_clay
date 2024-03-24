@@ -93,8 +93,8 @@
   await model.init();
 
   const simpleWallType = new CLAY.SimpleWallType(model);
-  const wall = simpleWallType.addInstance();
 
+  const wall = simpleWallType.addInstance();
   const wall2 = simpleWallType.addInstance();
 
   scene.add(...wall.meshes);
@@ -108,56 +108,20 @@
   // wall.addOpening(opening);
   // wall.update(true);
 
-  wall.startPoint.x = -13;
-  wall.startPoint.y = 2;
-  wall.endPoint.x = -10;
+  wall.startPoint.x = -5;
+  wall.startPoint.y = 0;
+  wall.endPoint.x = 0;
   wall.endPoint.y = 10;
   wall.update(true);
 
-  wall2.startPoint.x = 10;
+  wall2.startPoint.x = 30;
   wall2.startPoint.y = 20;
   wall2.endPoint.x = -30;
   wall2.endPoint.y = 20;
   wall2.update(true);
 
-  wall.addCorner(wall2);
-  //
-  // const halfSpace1 = new CLAY.HalfSpace(model);
-
-  // // halfSpace1.position.x = 12.87;
-  // // halfSpace1.position.x = 12.6;
-  // // halfSpace1.position.x = 12.6;
-  // halfSpace1.rotation.y = Math.PI / 4;
-  // halfSpace1.rotation.x = Math.PI / 2;
-  // halfSpace1.update();
-
-  // wall.body.addSubtraction(halfSpace1);
-
-  // const halfSpace2 = new CLAY.HalfSpace(model);
-
-  // console.log("aaqui", Math.abs(wall2.position.x) - simpleWallType.width / 2);
-
-  // // halfSpace2.position.x = Math.abs(wall2.position.x) - simpleWallType.width / 2;
-  // // halfSpace2.position.x = 10.14;
-  // halfSpace2.rotation.y = Math.PI / 4;
-  // halfSpace2.rotation.x = -Math.PI / 2;
-  // halfSpace2.update();
-
-  // wall2.body.addSubtraction(halfSpace2);
-
-  // wall2.update(true);
-
-  // wall.update(true);
-
-  // console.log("halfSpace1.position", halfSpace1.position);
-  // console.log("halfSpace2.position", halfSpace2.position);
-
-  // console.log("wall.position", wall.position);
-  // console.log("simpleWallType.width", simpleWallType.width);
-  // console.log("wall.midPoint", wall.midPoint);
-
-  // console.log("wall2.position", wall2.position);
-  // console.log("wall2.midPoint", wall2.midPoint);
+  wall.addCorner(wall2, true); //at the end point => true
+  wall.update(true);
 
   window.addEventListener("keydown", () => {
     wall.removeOpening(opening);
