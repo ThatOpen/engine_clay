@@ -92,12 +92,10 @@
   model.ifcAPI.SetWasmPath("https://unpkg.com/web-ifc@0.0.50/", true);
   await model.init();
 
-  const simpleWallType1 = new CLAY.SimpleWallType(model);
-  const simpleWallType2 = new CLAY.SimpleWallType(model);
+  const simpleWallType = new CLAY.SimpleWallType(model);
 
-  const wall = simpleWallType1.addInstance();
-
-  const wall2 = simpleWallType2.addInstance();
+  const wall = simpleWallType.addInstance();
+  const wall2 = simpleWallType.addInstance();
 
   scene.add(...wall.meshes);
   scene.add(...wall2.meshes);
@@ -110,7 +108,7 @@
   // wall.addOpening(opening);
   // wall.update(true);
 
-  wall.startPoint.x = 5;
+  wall.startPoint.x = -5;
   wall.startPoint.y = 0;
   wall.endPoint.x = 0;
   wall.endPoint.y = 10;
@@ -122,7 +120,8 @@
   wall2.endPoint.y = 20;
   wall2.update(true);
 
-  wall.addCorner(wall2, true);
+  wall.addCorner(wall2, true); //at the end point => true
+  wall.update(true);
 
   window.addEventListener("keydown", () => {
     wall.removeOpening(opening);
