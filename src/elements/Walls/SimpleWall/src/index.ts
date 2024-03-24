@@ -155,20 +155,6 @@ export class SimpleWall extends Element {
         intersectionPoint?.y
       );
 
-      // const distanceToEndPoint = correctIntersectionPoint.distanceTo(
-      //   wall.endPoint
-      // );
-      // const distanceToStartPoint = correctIntersectionPoint.distanceTo(
-      //   wall.startPoint
-      // );
-
-      // if (distanceToEndPoint < distanceToStartPoint) {
-      //   wall.endPoint = correctIntersectionPoint.multiplyScalar(1.1);
-      // } else {
-      //   wall.startPoint = correctIntersectionPoint.multiplyScalar(1.1);
-      // }
-      // wall.endPoint = correctIntersectionPoint;
-
       if (isEnd) {
         this.endPoint = correctIntersectionPoint;
       } else {
@@ -184,11 +170,21 @@ export class SimpleWall extends Element {
     return null;
   }
 
-  addCorner(wall: SimpleWall) {
-    const intersectionPoint = this.extend(wall, true);
+  addCorner(wall: SimpleWall, atTheEndPoint = true) {
+    const intersectionPoint = this.extend(wall, atTheEndPoint);
     if (!intersectionPoint) return;
 
     const angle = wall.rotation.z - this.rotation.z;
+
+    const angle2 = Math.asin(
+      this.direction.dot(wall.direction) /
+        (this.direction.length() * wall.direction.length())
+    );
+
+    let sign = 1;
+    if ((angle2 < 0 && atTheEndPoint) || (angle2 > 0 && !atTheEndPoint)) {
+      sign = -1;
+    }
 
     const width1 = this.type.width;
     const width2 = this.type.width;
@@ -196,25 +192,21 @@ export class SimpleWall extends Element {
     const distance2 = wall.midPoint.distanceTo(intersectionPoint);
 
     const halfSpace1 = new HalfSpace(this.model);
-
     halfSpace1.position.x = distance1 - width1 / (2 * Math.sin(angle));
     halfSpace1.rotation.y = angle;
     halfSpace1.rotation.x = Math.PI / 2;
     halfSpace1.update();
 
     const halfSpace2 = new HalfSpace(this.model);
-    halfSpace2.position.x = -1 * distance2 + width2 / (2 * Math.sin(angle));
+    halfSpace2.position.x = sign * distance2 + width2 / (2 * Math.sin(angle));
     halfSpace2.rotation.y = angle;
     halfSpace2.rotation.x = -Math.PI / 2;
     halfSpace2.update();
-
-    // wall.endPoint = intersectionPoint;
 
     this.body.addSubtraction(halfSpace1);
     wall.body.addSubtraction(halfSpace2);
     wall.update(true);
     this.update(true);
-    // wall.addCorner(this);
   }
 
   addOpening(opening: SimpleOpening) {
