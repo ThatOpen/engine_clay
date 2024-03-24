@@ -14,7 +14,7 @@ export class SimpleWallType extends DynamicElementType<SimpleWall> {
   constructor(model: Model) {
     super(model);
 
-    this.attributes = new IFC.IfcSlabType(
+    this.attributes = new IFC.IfcWallType(
       new IFC.IfcGloballyUniqueId(uuidv4()),
       null,
       null,
@@ -24,7 +24,7 @@ export class SimpleWallType extends DynamicElementType<SimpleWall> {
       null,
       null,
       null,
-      IFC.IfcSlabTypeEnum.FLOOR
+      IFC.IfcWallTypeEnum.STANDARD
     );
   }
 

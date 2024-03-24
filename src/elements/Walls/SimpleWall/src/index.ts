@@ -5,7 +5,7 @@ import { IFC4X3 as IFC } from "web-ifc";
 import { Model } from "../../../../base";
 import { IfcUtils } from "../../../../utils/ifc-utils";
 import { Element } from "../../../Elements";
-import { Extrusion, RectangleProfile } from "../../../../geometries";
+import { Extrusion, HalfSpace, RectangleProfile } from "../../../../geometries";
 import { SimpleWallType } from "../index";
 import { SimpleOpening } from "../../../Openings";
 import { ClayGeometry } from "../../../../geometries/Geometry";
@@ -26,6 +26,11 @@ export class SimpleWall extends Element {
   private _openings = new Map<
     number,
     { opening: SimpleOpening; distance: number }
+  >();
+
+  private _corners = new Map<
+    number,
+    { wall: SimpleWall; atTheEndPoint: boolean }
   >();
 
   get length() {
@@ -92,7 +97,123 @@ export class SimpleWall extends Element {
     this.rotation.z = Math.atan2(dir.y, dir.x);
     this.position = this.midPoint;
 
+    const shape = this.model.get(this.attributes.Representation);
+    const reps = this.model.get(shape.Representations[0]);
+    reps.Items = [this.body.attributes];
+    this.model.set(reps);
+    this.updateGeometryID();
     super.update(updateGeometry);
+    // this.updateAllCorners();
+  }
+
+  extend(wall: SimpleWall, atTheEndPoint = true) {
+    const zDirection = new THREE.Vector3(0, 0, 1);
+    const normalVector = wall.direction.cross(zDirection);
+    const correctedNormalVector = new THREE.Vector3(
+      normalVector.x,
+      normalVector.z,
+      normalVector.y * -1
+    );
+
+    const coplanarPoint = new THREE.Vector3(
+      wall.startPoint.x,
+      wall.startPoint.z,
+      wall.startPoint.y * -1
+    );
+
+    const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(
+      correctedNormalVector,
+      coplanarPoint
+    );
+
+    const correctedDirection = new THREE.Vector3(
+      this.direction.x * -1,
+      this.direction.z,
+      this.direction.y
+    );
+
+    if (atTheEndPoint) {
+      correctedDirection.negate();
+    }
+
+    const origin = atTheEndPoint ? this.endPoint : this.startPoint;
+    const sign = atTheEndPoint ? -1 : 1;
+
+    const rayOriginPoint = new THREE.Vector3(
+      origin.x,
+      origin.z,
+      origin.y * sign
+    );
+
+    const rayAxisWall1 = new THREE.Ray(rayOriginPoint, correctedDirection);
+
+    const intersectionPoint = rayAxisWall1.intersectPlane(
+      plane,
+      new THREE.Vector3()
+    );
+
+    if (intersectionPoint) {
+      const correctedIntersectionPoint = new THREE.Vector3(
+        intersectionPoint?.x,
+        intersectionPoint?.z * -1,
+        intersectionPoint?.y
+      );
+
+      if (atTheEndPoint) {
+        this.endPoint = correctedIntersectionPoint;
+      } else {
+        this.startPoint = correctedIntersectionPoint;
+      }
+
+      wall.update(true);
+
+      return correctedIntersectionPoint;
+    }
+    return null;
+  }
+
+  addCorner(wall: SimpleWall, atTheEndPoint = true) {
+    const intersectionPoint = this.extend(wall, atTheEndPoint);
+    if (!intersectionPoint) return;
+
+    const angle = wall.rotation.z - this.rotation.z;
+
+    const theta =
+      this.direction.dot(wall.direction) /
+      (this.direction.length() * wall.direction.length());
+
+    let sign = 1;
+    if (
+      (Math.asin(theta) < 0 && atTheEndPoint) ||
+      (Math.asin(theta) > 0 && !atTheEndPoint)
+    ) {
+      sign = -1;
+    }
+
+    const width1 = this.type.width;
+    const width2 = wall.type.width;
+    const distance1 = this.midPoint.distanceTo(intersectionPoint);
+    const distance2 = wall.midPoint.distanceTo(intersectionPoint);
+
+    const hsInteriorWall2 = new HalfSpace(this.model);
+    hsInteriorWall2.position.x = distance1 - width2 / (2 * Math.sin(angle));
+    hsInteriorWall2.rotation.y = angle;
+    hsInteriorWall2.rotation.x = Math.PI / 2;
+    hsInteriorWall2.update();
+
+    const hsExteriorWall1 = new HalfSpace(this.model);
+    hsExteriorWall1.position.x =
+      sign * distance2 + width1 / (2 * Math.sin(angle));
+    hsExteriorWall1.rotation.y = angle;
+    hsExteriorWall1.rotation.x = -Math.PI / 2;
+    hsExteriorWall1.update();
+
+    this.body.addSubtraction(hsInteriorWall2);
+    wall.body.addSubtraction(hsExteriorWall1);
+    wall.update(true);
+
+    const id = wall.attributes.expressID;
+    this._corners.set(id, { wall, atTheEndPoint });
   }
 
   addOpening(opening: SimpleOpening) {

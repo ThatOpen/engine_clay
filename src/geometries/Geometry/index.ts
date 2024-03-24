@@ -59,6 +59,7 @@ export abstract class ClayGeometry extends ClayObject {
     this.clippings.set(item.expressID, { bool, previous, next: null });
 
     // Make this bool the current geometry
+
     this.attributes = bool;
     this.update();
   }
