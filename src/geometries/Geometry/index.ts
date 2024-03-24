@@ -37,8 +37,6 @@ export abstract class ClayGeometry extends ClayObject {
       item
     );
 
-    console.log(bool);
-
     this.model.set(bool);
 
     // If it's the first clipping, reference it

@@ -129,13 +129,11 @@ export class SimpleWall extends Element {
     );
 
     if (isEnd) {
-      correctDirection.multiplyScalar(-1);
+      correctDirection.negate();
     }
 
     const origin = isEnd ? this.endPoint : this.startPoint;
     const sign = isEnd ? -1 : 1;
-
-    console.log("aqui", origin);
 
     const rayOriginPoint = new THREE.Vector3(
       origin.x,
@@ -156,39 +154,67 @@ export class SimpleWall extends Element {
         intersectionPoint?.z * -1,
         intersectionPoint?.y
       );
+
+      // const distanceToEndPoint = correctIntersectionPoint.distanceTo(
+      //   wall.endPoint
+      // );
+      // const distanceToStartPoint = correctIntersectionPoint.distanceTo(
+      //   wall.startPoint
+      // );
+
+      // if (distanceToEndPoint < distanceToStartPoint) {
+      //   wall.endPoint = correctIntersectionPoint.multiplyScalar(1.1);
+      // } else {
+      //   wall.startPoint = correctIntersectionPoint.multiplyScalar(1.1);
+      // }
+      // wall.endPoint = correctIntersectionPoint;
+
       if (isEnd) {
-        this.endPoint = correctIntersectionPoint.multiplyScalar(1.1);
+        this.endPoint = correctIntersectionPoint;
       } else {
-        this.startPoint = correctIntersectionPoint.multiplyScalar(1.1);
+        this.startPoint = correctIntersectionPoint;
       }
 
       this.update(true);
+      wall.update(true);
+
       console.log("correctIntersectionPoint", correctIntersectionPoint);
+      return correctIntersectionPoint;
     }
+    return null;
   }
 
   addCorner(wall: SimpleWall) {
-    const halfSpace1Wall1 = new HalfSpace(this.model);
-    halfSpace1Wall1.rotation = wall.rotation;
-    halfSpace1Wall1.update();
+    const intersectionPoint = this.extend(wall, true);
+    if (!intersectionPoint) return;
 
-    const halfSpace2Wall1 = new HalfSpace(this.model);
-    halfSpace2Wall1.rotation = wall.rotation;
-    halfSpace2Wall1.update();
+    const angle = wall.rotation.z - this.rotation.z;
 
-    const halfSpace1Wall2 = new HalfSpace(this.model);
-    halfSpace1Wall2.rotation = this.body.rotation;
-    halfSpace1Wall2.update();
+    const width1 = this.type.width;
+    const width2 = this.type.width;
+    const distance1 = this.midPoint.distanceTo(intersectionPoint);
+    const distance2 = wall.midPoint.distanceTo(intersectionPoint);
 
-    const halfSpace2Wall2 = new HalfSpace(this.model);
-    halfSpace2Wall2.rotation = this.body.rotation;
-    halfSpace2Wall2.update();
+    const halfSpace1 = new HalfSpace(this.model);
 
-    this.extend(wall, true);
+    halfSpace1.position.x = distance1 - width1 / (2 * Math.sin(angle));
+    halfSpace1.rotation.y = angle;
+    halfSpace1.rotation.x = Math.PI / 2;
+    halfSpace1.update();
 
-    // wall.body.addSubtraction(halfSpace1Wall2);
-    // wall.update(true);
-    // this.updateGeometryID();
+    const halfSpace2 = new HalfSpace(this.model);
+    halfSpace2.position.x = -1 * distance2 + width2 / (2 * Math.sin(angle));
+    halfSpace2.rotation.y = angle;
+    halfSpace2.rotation.x = -Math.PI / 2;
+    halfSpace2.update();
+
+    // wall.endPoint = intersectionPoint;
+
+    this.body.addSubtraction(halfSpace1);
+    wall.body.addSubtraction(halfSpace2);
+    wall.update(true);
+    this.update(true);
+    // wall.addCorner(this);
   }
 
   addOpening(opening: SimpleOpening) {

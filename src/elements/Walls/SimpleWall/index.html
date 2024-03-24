@@ -98,6 +98,7 @@
   const wall2 = simpleWallType.addInstance();
 
   scene.add(...wall.meshes);
+  scene.add(...wall2.meshes);
 
   const simpleOpeningType = new CLAY.SimpleOpeningType(model);
   const opening = simpleOpeningType.addInstance();
@@ -106,8 +107,9 @@
 
   // wall.addOpening(opening);
   // wall.update(true);
-  wall.startPoint.x = 0;
-  wall.startPoint.y = 0;
+
+  wall.startPoint.x = -13;
+  wall.startPoint.y = 2;
   wall.endPoint.x = -10;
   wall.endPoint.y = 10;
   wall.update(true);
@@ -117,81 +119,45 @@
   wall2.endPoint.x = -30;
   wall2.endPoint.y = 20;
   wall2.update(true);
-  scene.add(...wall2.meshes);
-
-  const normalVector = new THREE.Vector3(0, 0, 1).cross(wall2.direction);
-
-  const correctNormalVector = new THREE.Vector3(
-    normalVector.x,
-    normalVector.z,
-    normalVector.y * -1
-  );
-
-  const coplanarPoint = new THREE.Vector3(
-    wall2.startPoint.x,
-    wall2.startPoint.z,
-    wall2.startPoint.y * -1
-  );
-
-  const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(
-    correctNormalVector,
-    coplanarPoint
-  );
-
-  let helper = new THREE.PlaneHelper(plane, 20, 0x00ff00);
-
-  // scene.add(helper);
-
-  const origin = true ? wall.endPoint : wall.startPoint;
-  const sign = true ? -1 : 1;
-
-  const correctDirection = new THREE.Vector3(
-    wall.direction.x * -1,
-    wall.direction.z,
-    wall.direction.y
-  );
-
-  if (true) {
-    correctDirection.multiplyScalar(-1);
-  }
-
-  const rayOriginPoint = new THREE.Vector3(origin.x, origin.z, origin.y * sign);
-
-  const rayAxisWall1 = new THREE.Ray(rayOriginPoint, correctDirection);
-
-  const arrow = new THREE.ArrowHelper(
-    rayAxisWall1.direction,
-    rayAxisWall1.origin,
-    100,
-    0xff0000
-  );
-  scene.add(arrow);
-
-  //
-  const halfSpace1 = new CLAY.HalfSpace(model);
-  halfSpace1.position.x = 12.87;
-  halfSpace1.rotation.y = Math.PI / 4;
-  halfSpace1.rotation.x = Math.PI / 2;
-  halfSpace1.update();
-
-  wall.body.addSubtraction(halfSpace1);
-
-  const halfSpace2 = new CLAY.HalfSpace(model);
-
-  halfSpace2.position.x = 9.9;
-  halfSpace2.rotation.y = Math.PI / 4;
-  halfSpace2.rotation.x = -Math.PI / 2;
-  halfSpace2.update();
-
-  wall2.body.addSubtraction(halfSpace2);
-
-  wall2.update(true);
-
-  wall.update(true);
-  // wall2.update(true);
 
   wall.addCorner(wall2);
+  //
+  // const halfSpace1 = new CLAY.HalfSpace(model);
+
+  // // halfSpace1.position.x = 12.87;
+  // // halfSpace1.position.x = 12.6;
+  // // halfSpace1.position.x = 12.6;
+  // halfSpace1.rotation.y = Math.PI / 4;
+  // halfSpace1.rotation.x = Math.PI / 2;
+  // halfSpace1.update();
+
+  // wall.body.addSubtraction(halfSpace1);
+
+  // const halfSpace2 = new CLAY.HalfSpace(model);
+
+  // console.log("aaqui", Math.abs(wall2.position.x) - simpleWallType.width / 2);
+
+  // // halfSpace2.position.x = Math.abs(wall2.position.x) - simpleWallType.width / 2;
+  // // halfSpace2.position.x = 10.14;
+  // halfSpace2.rotation.y = Math.PI / 4;
+  // halfSpace2.rotation.x = -Math.PI / 2;
+  // halfSpace2.update();
+
+  // wall2.body.addSubtraction(halfSpace2);
+
+  // wall2.update(true);
+
   // wall.update(true);
+
+  // console.log("halfSpace1.position", halfSpace1.position);
+  // console.log("halfSpace2.position", halfSpace2.position);
+
+  // console.log("wall.position", wall.position);
+  // console.log("simpleWallType.width", simpleWallType.width);
+  // console.log("wall.midPoint", wall.midPoint);
+
+  // console.log("wall2.position", wall2.position);
+  // console.log("wall2.midPoint", wall2.midPoint);
 
   window.addEventListener("keydown", () => {
     wall.removeOpening(opening);
