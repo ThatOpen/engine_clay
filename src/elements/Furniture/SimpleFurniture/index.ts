@@ -9,6 +9,8 @@ import { IfcUtils } from "../../../utils/ifc-utils";
 export * from "./src";
 
 export class SimpleFurnitureType extends StaticElementType<SimpleFurniture> {
+  import(): void {
+  }
   attributes: IFC.IfcFurnishingElementType;
 
   shape: IFC.IfcProductDefinitionShape;

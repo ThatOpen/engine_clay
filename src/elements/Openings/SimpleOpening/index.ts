@@ -9,6 +9,7 @@ import { IfcUtils } from "../../../utils/ifc-utils";
 export * from "./src";
 
 export class SimpleOpeningType extends StaticElementType<SimpleOpening> {
+  import(): void {}
   attributes: IFC4X3.IfcElementType;
 
   shape: IFC4X3.IfcProductDefinitionShape;

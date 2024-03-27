@@ -6,6 +6,8 @@ export abstract class ClayObject {
 
   abstract attributes: WEBIFC.IfcLineObject;
 
+  abstract import(model:Model, id:number) : void;
+
   abstract update(): void;
 
   protected constructor(model: Model) {

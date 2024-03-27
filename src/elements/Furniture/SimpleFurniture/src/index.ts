@@ -6,6 +6,7 @@ import { Element } from "../../../Elements/Element";
 import { SimpleFurnitureType } from "../index";
 
 export class SimpleFurniture extends Element {
+  import(): void {}
   attributes: IFC.IfcFurnishingElement;
 
   type: SimpleFurnitureType;

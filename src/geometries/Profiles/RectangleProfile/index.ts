@@ -5,6 +5,7 @@ import { Model } from "../../../base";
 import { IfcUtils } from "../../../utils/ifc-utils";
 
 export class RectangleProfile extends Profile {
+  import(): void {}
   attributes: IFC.IfcRectangleProfileDef;
 
   dimension = new THREE.Vector3(1, 1, 0);

@@ -11,6 +11,7 @@ import { IfcUtils } from "../../utils/ifc-utils";
 // IFCSHAPEREPRESENTATION
 
 export class RepresentationMap<T extends ClayGeometry[]> extends ClayObject {
+  import(): void {}
   attributes: IFC.IfcRepresentationMap;
 
   geometries: T;

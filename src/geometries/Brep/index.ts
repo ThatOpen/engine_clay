@@ -5,6 +5,7 @@ import { Model } from "../../base";
 import { IfcUtils } from "../../utils/ifc-utils";
 
 export class Brep extends ClayGeometry {
+  import(): void {}
   attributes: IFC.IfcFacetedBrep | IFC.IfcBooleanClippingResult;
 
   core: IFC.IfcFacetedBrep;

@@ -6,6 +6,8 @@ import { Element } from "../../../Elements/Element";
 import { SimpleWindowType } from "../index";
 
 export class SimpleWindow extends Element {
+  import(): void {
+  }
   attributes: IFC.IfcFurnishingElement;
 
   type: SimpleWindowType;

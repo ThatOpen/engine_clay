@@ -1,17 +1,22 @@
 import * as THREE from "three";
 import * as WEBIFC from "web-ifc";
 import { IfcLineObject } from "web-ifc";
+import { ElementType } from "../elements/Elements/ElementType";
 
 export class Model {
   material = new THREE.MeshLambertMaterial();
 
+  typeMap = new Map<string, ElementType>();
+
   materialT = new THREE.MeshLambertMaterial({
     transparent: true,
     opacity: 0.2,
+
   });
 
   ifcAPI = new WEBIFC.IfcAPI();
 
+  
   private _context?: WEBIFC.IFC4X3.IfcRepresentationContext;
 
   private _modelID?: number;
@@ -71,14 +76,29 @@ export class Model {
     this.ifcAPI.DeleteLine(this.modelID, foundItem.expressID);
   }
 
-  get<T extends WEBIFC.IfcLineObject>(item: WEBIFC.Handle<T> | T | null) {
+  get<T extends WEBIFC.IfcLineObject>(
+    item: WEBIFC.Handle<T> | T | number | null
+  ) {
     if (item === null) {
       throw new Error("Item not found!");
     }
     if (item instanceof WEBIFC.Handle) {
       return this.ifcAPI.GetLine(this.modelID, item.value) as T;
     }
+    if (typeof item === "number") {
+      return this.ifcAPI.GetLine(this.modelID, item) as T;
+    }
     return item;
+  }
+
+  import(data:Uint8Array)
+  {
+    if (this._modelID === undefined) {
+      throw new Error("Malformed model!");
+    }
+    this.ifcAPI.CloseModel(this._modelID);
+    this._modelID++;
+    this.ifcAPI.OpenModel(data);
   }
 
   update() {

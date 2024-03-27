@@ -7,6 +7,7 @@ import { SimpleSlabType } from "../index";
 import { Extrusion, RectangleProfile } from "../../../../geometries";
 
 export class SimpleSlab extends Element {
+  import(): void {}
   attributes: IFC.IfcSlab;
 
   type: SimpleSlabType;
@@ -26,7 +27,9 @@ export class SimpleSlab extends Element {
     this.geometries.add(id);
 
     const placement = IfcUtils.localPlacement();
-    const shape = IfcUtils.productDefinitionShape(model, [this.body.attributes]);
+    const shape = IfcUtils.productDefinitionShape(model, [
+      this.body.attributes,
+    ]);
 
     this.attributes = new IFC.IfcSlab(
       new IFC.IfcGloballyUniqueId(uuidv4()),
@@ -48,4 +51,42 @@ export class SimpleSlab extends Element {
     this.body.update();
     super.update(updateGeometry);
   }
+
+  // import(model: Model, id: number): SimpleSlab {
+  //   const slab = model.get(id) as IFC.IfcSlab;
+  //   const representations = model.get(slab.Representation);
+
+  //   let simpleSlab: SimpleSlab | undefined;
+
+  //   for (const represent of representations.Representations) {
+  //     const foundRep = model.get(represent);
+  //     const extrusion = this.model.get(
+  //       foundRep.Items[0]
+  //     ) as IFC.IfcExtrudedAreaSolid;
+
+  //     const slabDepth = model.get(
+  //       extrusion.Depth
+  //     ) as unknown as IFC.IfcPositiveLengthMeasure;
+
+  //     const keyForTypeMap = `s${slabDepth.value}`;
+
+  //     if (model.typeMap.has(keyForTypeMap)) {
+  //       const slabType = model.typeMap.get(keyForTypeMap) as SimpleSlabType;
+  //       simpleSlab = slabType.addInstance();
+  //     } else {
+  //       const slabType = new SimpleSlabType(model);
+  //       simpleSlab = slabType.addInstance();
+  //     }
+
+  //     simpleSlab.thickness = slabDepth.value;
+  //   }
+
+  //   if (simpleSlab === undefined) {
+  //     throw new Error("Unable to create SimpleSlab.");
+  //   }
+
+  //   return simpleSlab;
+  // }
 }
+
+// const slabWidth = this.model.get(extrusion) as unknown as IFC.IfcPositiveLengthMeasure;

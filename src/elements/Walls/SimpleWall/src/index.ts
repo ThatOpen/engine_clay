@@ -1,16 +1,17 @@
 import * as THREE from "three";
 import * as FRAGS from "bim-fragment";
 import { v4 as uuidv4 } from "uuid";
-import { IFC4X3 as IFC } from "web-ifc";
+import { IFC4X3 as IFC, IFC2X3 } from "web-ifc";
 import { Model } from "../../../../base";
 import { IfcUtils } from "../../../../utils/ifc-utils";
-import { Element } from "../../../Elements";
+import { Element } from "../../../Elements/Element";
 import { Extrusion, RectangleProfile } from "../../../../geometries";
 import { SimpleWallType } from "../index";
 import { SimpleOpening } from "../../../Openings";
 import { ClayGeometry } from "../../../../geometries/Geometry";
 
 export class SimpleWall extends Element {
+  import(): void {}
   attributes: IFC.IfcWall;
 
   type: SimpleWallType;
@@ -167,4 +168,19 @@ export class SimpleWall extends Element {
       this.type.geometries.set(newGeomID, geometry);
     });
   }
+
+  importProperties(model: Model, element: IFC2X3.IfcExtrudedAreaSolid) {
+    const profile = model.get(
+      element.SweptArea
+    ) as IFC2X3.IfcRectangleProfileDef;
+
+    if (profile !== undefined) {
+      const wallThickness = profile.YDim;
+      const wallLength = profile.XDim;
+      this.height = element.Depth.value;
+      this.body.depth = wallThickness.value;
+      this.endPoint.setX(this.startPoint.x + wallLength.value); 
+    }
+  }
+
 }

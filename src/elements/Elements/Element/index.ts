@@ -38,6 +38,28 @@ export abstract class Element extends ClayObject {
     this.type = type;
   }
 
+  // static import(importedModel: Model, id: number): Element | undefined {
+  //   const element = importedModel.get(id);
+
+  //   let importedElement;
+  //   if (element instanceof IFC.IfcWallStandardCase) {
+  //     const wallType = SimpleWallType.import(element, importedModel);
+
+  //     if (wallType) {
+  //       importedElement = wallType.addInstance();
+  //       const representations = importedModel.get(element.Representation);
+  //       for (const represent of representations.Representations) {
+  //         const foundRep = importedModel.get(represent);
+  //         const extrusion = importedModel.get(
+  //           foundRep.Items[0]
+  //         ) as IFC.IfcExtrudedAreaSolid;
+  //         importedElement.importProperties(importedModel, extrusion);
+  //       }
+  //     }
+  //   }
+  //   return importedElement;
+  // }
+
   update(updateGeometry = false) {
     this.updateIfcElement();
     const modelID = this.model.modelID;

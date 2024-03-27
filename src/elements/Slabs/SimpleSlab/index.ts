@@ -1,9 +1,8 @@
 import { v4 as uuidv4 } from "uuid";
 import { IFC4X3, IFC4X3 as IFC } from "web-ifc";
-import { Model } from "../../../base";
 import { DynamicElementType } from "../../Elements";
 import { SimpleSlab } from "./src";
-
+import { Model } from "../../../base";
 export * from "./src";
 
 export class SimpleSlabType extends DynamicElementType<SimpleSlab> {
@@ -29,4 +28,6 @@ export class SimpleSlabType extends DynamicElementType<SimpleSlab> {
   protected createElement() {
     return new SimpleSlab(this.model, this);
   }
+
+  import(): void {}
 }

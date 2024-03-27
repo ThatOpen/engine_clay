@@ -7,6 +7,7 @@ import { MathUtils } from "../../utils/math-utils";
 import { IfcUtils } from "../../utils/ifc-utils";
 
 export class Extrusion<T extends Profile> extends ClayGeometry {
+  import(): void {}
   attributes: IFC.IfcExtrudedAreaSolid | IFC.IfcBooleanClippingResult;
 
   core: IFC.IfcExtrudedAreaSolid;

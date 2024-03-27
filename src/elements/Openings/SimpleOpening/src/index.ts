@@ -6,6 +6,7 @@ import { Model } from "../../../../base";
 import { IfcUtils } from "../../../../utils/ifc-utils";
 
 export class SimpleOpening extends Element {
+  import(): void {}
   attributes: IFC.IfcOpeningElement;
 
   type: SimpleOpeningType;
