@@ -108,19 +108,19 @@
   // wall.addOpening(opening);
   // wall.update(true);
 
-  wall.startPoint.x = -5;
+  wall.startPoint.x = 0;
   wall.startPoint.y = 0;
   wall.endPoint.x = 0;
   wall.endPoint.y = 10;
   wall.update(true);
 
   wall2.startPoint.x = 30;
-  wall2.startPoint.y = 20;
-  wall2.endPoint.x = -30;
-  wall2.endPoint.y = 20;
+  wall2.startPoint.y = -20;
+  wall2.endPoint.x = 5;
+  wall2.endPoint.y = -20;
   wall2.update(true);
 
-  wall.addCorner(wall2, true); //at the end point => true
+  wall.addCorner(wall2, false); //at the end point => true
   wall.update(true);
 
   window.addEventListener("keydown", () => {
@@ -135,41 +135,41 @@
   gui
     .add(wall.startPoint, "x")
     .name("Start X")
-    .min(-5)
-    .max(5)
+    .min(-15)
+    .max(15)
     .step(0.1)
     .onChange(() => {
-      wall.update(true);
+      wall.update(true, true);
     });
 
   gui
     .add(wall.startPoint, "y")
     .name("Start Y")
-    .min(-5)
-    .max(5)
+    .min(-15)
+    .max(15)
     .step(0.1)
     .onChange(() => {
-      wall.update(true);
+      wall.update(true, true);
     });
 
   gui
     .add(wall.endPoint, "x")
     .name("End X")
-    .min(-5)
-    .max(5)
+    .min(-15)
+    .max(15)
     .step(0.1)
     .onChange(() => {
-      wall.update(true);
+      wall.update(true, true);
     });
 
   gui
     .add(wall.endPoint, "y")
     .name("End Y")
-    .min(-5)
-    .max(5)
+    .min(-15)
+    .max(15)
     .step(0.1)
     .onChange(() => {
-      wall.update(true);
+      wall.update(true, true);
     });
 
   gui
@@ -189,7 +189,7 @@
     .max(0.5)
     .step(0.05)
     .onChange(() => {
-      simpleWallType.update(true);
+      simpleWallType.update(true, true);
     });
 
   gui

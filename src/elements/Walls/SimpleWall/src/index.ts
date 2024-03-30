@@ -33,6 +33,11 @@ export class SimpleWall extends Element {
     { wall: SimpleWall; atTheEndPoint: boolean }
   >();
 
+  _halfSpaces = new Map<
+    number,
+    { halfSpace: HalfSpace; interior: boolean; exterior: boolean }
+  >();
+
   get length() {
     return this.startPoint.distanceTo(this.endPoint);
   }
@@ -82,7 +87,7 @@ export class SimpleWall extends Element {
     this.model.set(this.attributes);
   }
 
-  update(updateGeometry: boolean = false) {
+  update(updateGeometry: boolean = false, updateCorners = false) {
     this.updateAllOpenings();
 
     const profile = this.body.profile;
@@ -101,12 +106,15 @@ export class SimpleWall extends Element {
     const reps = this.model.get(shape.Representations[0]);
     reps.Items = [this.body.attributes];
     this.model.set(reps);
+
     this.updateGeometryID();
     super.update(updateGeometry);
-    // this.updateAllCorners();
+
+    if (updateCorners) this.updateAllCorners();
   }
 
   extend(wall: SimpleWall, atTheEndPoint = true) {
+    console.log("wall.endPoint", wall.endPoint);
     const zDirection = new THREE.Vector3(0, 0, 1);
     const normalVector = wall.direction.cross(zDirection);
     const correctedNormalVector = new THREE.Vector3(
@@ -146,7 +154,6 @@ export class SimpleWall extends Element {
     );
 
     const rayAxisWall1 = new THREE.Ray(rayOriginPoint, correctedDirection);
-
     const intersectionPoint = rayAxisWall1.intersectPlane(
       plane,
       new THREE.Vector3()
@@ -161,8 +168,16 @@ export class SimpleWall extends Element {
 
       if (atTheEndPoint) {
         this.endPoint = correctedIntersectionPoint;
+        const distance =
+          correctedIntersectionPoint.distanceTo(wall.endPoint) + 3;
+        const displacement = wall.direction.clone().multiplyScalar(distance);
+        wall.endPoint = wall.endPoint.add(displacement);
       } else {
-        this.startPoint = correctedIntersectionPoint;
+        // const distance2 =
+        //   correctedIntersectionPoint.distanceTo(wall.endPoint) * 1.1;
+        // const displacement2 = wall.direction.clone().multiplyScalar(distance2);
+        // wall.endPoint = wall.endPoint.add(displacement2);
+        wall.endPoint = correctedIntersectionPoint;
       }
 
       wall.update(true);
@@ -172,28 +187,87 @@ export class SimpleWall extends Element {
     return null;
   }
 
+  private updateAllCorners() {
+    for (const [_id, { wall, atTheEndPoint }] of this._corners) {
+      const intersectionPoint = this.extend(wall, atTheEndPoint);
+
+      console.log(intersectionPoint);
+      if (!intersectionPoint) return;
+
+      const angle = wall.rotation.z - this.rotation.z;
+
+      const width1 = this.type.width;
+      const width2 = wall.type.width;
+
+      const distance1 = this.midPoint.distanceTo(intersectionPoint);
+      const distance2 = wall.midPoint.distanceTo(intersectionPoint);
+
+      const distance3 = wall.startPoint.distanceTo(wall.midPoint);
+      const distance4 = wall.startPoint.distanceTo(intersectionPoint);
+
+      let sign = -1;
+      if (atTheEndPoint && distance3 < distance4) {
+        sign = 1;
+      } else if (!atTheEndPoint && distance3 < distance4) {
+        sign = 1;
+      } else if (!atTheEndPoint && distance3 > distance4) {
+        sign = -1;
+      }
+
+      console.log(sign);
+
+      for (const [_id, { halfSpace }] of wall._halfSpaces) {
+        halfSpace.position.x = distance1 - width2 / (2 * Math.sin(angle));
+        halfSpace.rotation.y = angle;
+        halfSpace.rotation.x = Math.PI / 2;
+        halfSpace.update();
+      }
+
+      for (const [_id, { halfSpace }] of this._halfSpaces) {
+        halfSpace.position.x =
+          sign * distance2 + width1 / (2 * Math.sin(angle));
+        halfSpace.rotation.y = angle;
+        halfSpace.rotation.x = -Math.PI / 2;
+        halfSpace.update();
+      }
+
+      wall.update(true);
+    }
+    this.update(true);
+  }
+
   addCorner(wall: SimpleWall, atTheEndPoint = true) {
     const intersectionPoint = this.extend(wall, atTheEndPoint);
+
     if (!intersectionPoint) return;
+
+    if (!atTheEndPoint) {
+      // const distance = intersectionPoint.distanceTo(this.startPoint) + 1.1;
+      // const displacement = this.direction.clone().multiplyScalar(distance);
+      this.startPoint = intersectionPoint;
+    }
 
     const angle = wall.rotation.z - this.rotation.z;
 
-    const theta =
-      this.direction.dot(wall.direction) /
-      (this.direction.length() * wall.direction.length());
+    const width1 = this.type.width;
+    const width2 = wall.type.width;
 
-    let sign = 1;
-    if (
-      (Math.asin(theta) < 0 && atTheEndPoint) ||
-      (Math.asin(theta) > 0 && !atTheEndPoint)
-    ) {
+    const distance1 = this.midPoint.distanceTo(intersectionPoint);
+    const distance2 = wall.midPoint.distanceTo(intersectionPoint);
+
+    const distance3 = wall.startPoint.distanceTo(wall.midPoint);
+    const distance4 = wall.startPoint.distanceTo(intersectionPoint);
+
+    let sign = -1;
+    if (atTheEndPoint && distance3 < distance4) {
+      sign = 1;
+    } else if (!atTheEndPoint && distance3 < distance4) {
+      sign = 1;
+    } else if (!atTheEndPoint && distance3 > distance4) {
       sign = -1;
     }
 
-    const width1 = this.type.width;
-    const width2 = wall.type.width;
-    const distance1 = this.midPoint.distanceTo(intersectionPoint);
-    const distance2 = wall.midPoint.distanceTo(intersectionPoint);
+    console.log(sign);
 
     const hsInteriorWall2 = new HalfSpace(this.model);
     hsInteriorWall2.position.x = distance1 - width2 / (2 * Math.sin(angle));
@@ -212,8 +286,29 @@ export class SimpleWall extends Element {
     wall.body.addSubtraction(hsExteriorWall1);
     wall.update(true);
 
-    const id = wall.attributes.expressID;
-    this._corners.set(id, { wall, atTheEndPoint });
+    this._corners.set(wall.attributes.expressID, {
+      wall,
+      atTheEndPoint,
+    });
+    wall._corners.set(this.attributes.expressID, {
+      wall: this,
+      atTheEndPoint: !atTheEndPoint,
+    });
+
+    const hsInteriorWall2Id = hsInteriorWall2.attributes.expressID;
+    const hsExteriorWall1Id = hsExteriorWall1.attributes.expressID;
+
+    wall._halfSpaces.set(hsInteriorWall2Id, {
+      halfSpace: hsInteriorWall2,
+      interior: true,
+      exterior: false,
+    });
+
+    this._halfSpaces.set(hsExteriorWall1Id, {
+      halfSpace: hsExteriorWall1,
+      interior: false,
+      exterior: true,
+    });
   }
 
   addOpening(opening: SimpleOpening) {
