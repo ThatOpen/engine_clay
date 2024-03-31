@@ -108,8 +108,8 @@
   // wall.addOpening(opening);
   // wall.update(true);
 
-  wall.startPoint.x = -20;
-  wall.startPoint.y = -10;
+  wall.startPoint.x = 0;
+  wall.startPoint.y = -15;
   wall.endPoint.x = 0;
   wall.endPoint.y = 20;
   wall.update(true);
@@ -189,7 +189,8 @@
     .max(0.5)
     .step(0.05)
     .onChange(() => {
-      simpleWallType.update(true, true);
+      simpleWallType.update(true);
+      wall.update(false, true);
     });
 
   gui

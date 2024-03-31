@@ -139,21 +139,14 @@ export class SimpleWall extends Element {
     if (atTheEndPoint) correctedDirection.negate();
 
     const origin = atTheEndPoint ? this.startPoint : this.endPoint;
-    const sign = atTheEndPoint ? -1 : -1;
 
-    const rayOriginPoint = new THREE.Vector3(
-      origin.x,
-      origin.z,
-      origin.y * sign
-    );
+    const rayOriginPoint = new THREE.Vector3(origin.x, origin.z, origin.y * -1);
 
     const rayAxisWall1 = new THREE.Ray(rayOriginPoint, correctedDirection);
     const intersectionPoint = rayAxisWall1.intersectPlane(
       plane,
       new THREE.Vector3()
     );
-
-    console.log(intersectionPoint);
 
     if (intersectionPoint) {
       const correctedIntersectionPoint = new THREE.Vector3(
@@ -170,6 +163,48 @@ export class SimpleWall extends Element {
     return null;
   }
 
+  private calculateDistances(
+    wall: SimpleWall,
+    atTheEndPoint: boolean,
+    intersectionPoint: THREE.Vector3
+  ) {
+    const distance1 = this.midPoint.distanceTo(intersectionPoint);
+    const distance2 = wall.midPoint.distanceTo(intersectionPoint);
+
+    const distance3 = this.startPoint.distanceTo(this.midPoint);
+    const distance4 = this.startPoint.distanceTo(intersectionPoint);
+
+    const distance5 = wall.startPoint.distanceTo(wall.midPoint);
+    const distance6 = wall.startPoint.distanceTo(intersectionPoint);
+
+    let sign1 = 1;
+    let sign2 = 1;
+
+    if (distance3 <= distance4 && distance5 <= distance6) {
+      sign1 = atTheEndPoint ? 1 : -1;
+      sign2 = atTheEndPoint ? 1 : -1;
+    } else if (distance3 >= distance4 && distance5 >= distance6) {
+      sign1 = -1;
+      sign2 = -1;
+    } else if (distance3 >= distance4 && distance5 <= distance6) {
+      sign1 = 1;
+      sign2 = -1;
+    } else if (distance3 < distance4 && distance5 > distance6) {
+      sign1 = -1;
+      sign2 = 1;
+    }
+
+    const sign3 = atTheEndPoint ? 1 : -1;
+
+    return {
+      distance1,
+      distance2,
+      sign1,
+      sign2,
+      sign3,
+    };
+  }
+
   private updateAllCorners() {
     for (const [_id, { wall, atTheEndPoint }] of this._corners) {
       const intersectionPoint = this.extend(wall, atTheEndPoint);
@@ -180,88 +215,8 @@ export class SimpleWall extends Element {
       const width1 = this.type.width;
       const width2 = wall.type.width;
 
-      const distance1 = this.midPoint.distanceTo(intersectionPoint);
-      const distance2 = wall.midPoint.distanceTo(intersectionPoint);
-
-      const distance3 = this.startPoint.distanceTo(this.midPoint);
-      const distance4 = this.startPoint.distanceTo(intersectionPoint);
-
-      const distance5 = wall.startPoint.distanceTo(wall.midPoint);
-      const distance6 = wall.startPoint.distanceTo(intersectionPoint);
-
-      const angleDegrees = (angle * 180) / Math.PI;
-
-      let sign1 = -1;
-      let sign2 = 1;
-      let sign3 = 1;
-      if (
-        atTheEndPoint &&
-        distance3 <= distance4 &&
-        distance5 < distance6 &&
-        angleDegrees < 90
-      ) {
-        sign1 = 1;
-        sign2 = 1;
-      } else if (
-        !atTheEndPoint &&
-        distance3 <= distance4 &&
-        distance5 < distance6 &&
-        angleDegrees < 90
-      ) {
-        sign1 = -1;
-        sign2 = -1;
-      } else if (
-        distance3 <= distance4 &&
-        distance5 <= distance6 &&
-        angleDegrees > 90
-      ) {
-        sign1 = 1;
-        sign2 = 1;
-      } else if (
-        distance3 > distance4 &&
-        distance5 > distance6 &&
-        angleDegrees > 90
-      ) {
-        sign1 = -1;
-        sign2 = -1;
-      } else if (
-        distance3 === distance4 &&
-        distance5 === distance6 &&
-        angleDegrees === 90
-      ) {
-        sign1 = -1;
-        sign2 = -1;
-      } else if (
-        distance3 >= distance4 &&
-        distance5 >= distance6 &&
-        angleDegrees <= 90
-      ) {
-        sign1 = -1;
-        sign2 = -1;
-      } else if (
-        distance3 < distance4 &&
-        distance5 < distance6 &&
-        angleDegrees <= 90
-      ) {
-        sign1 = 1;
-        sign2 = 1;
-      } else if (
-        distance3 >= distance4 &&
-        distance5 <= distance6 &&
-        angleDegrees > 90
-      ) {
-        sign1 = 1;
-        sign2 = -1;
-      } else if (
-        distance3 >= distance4 &&
-        distance5 <= distance6 &&
-        angleDegrees <= 90
-      ) {
-        sign1 = 1;
-        sign2 = -1;
-      }
-
-      if (!atTheEndPoint) sign3 = -1;
+      const { distance1, distance2, sign1, sign2, sign3 } =
+        this.calculateDistances(wall, atTheEndPoint, intersectionPoint);
 
       for (const [_id, { halfSpace }] of wall._halfSpaces) {
         halfSpace.position.x =
@@ -294,94 +249,8 @@ export class SimpleWall extends Element {
     const width1 = this.type.width;
     const width2 = wall.type.width;
 
-    const distance1 = this.midPoint.distanceTo(intersectionPoint);
-    const distance2 = wall.midPoint.distanceTo(intersectionPoint);
-
-    const distance3 = this.startPoint.distanceTo(this.midPoint);
-    const distance4 = this.startPoint.distanceTo(intersectionPoint);
-
-    const distance5 = wall.startPoint.distanceTo(wall.midPoint);
-    const distance6 = wall.startPoint.distanceTo(intersectionPoint);
-
-    const angleDegrees = (angle * 180) / Math.PI;
-
-    console.log(angleDegrees);
-    console.log(distance3);
-    console.log(distance4);
-    console.log(distance5);
-    console.log(distance6);
-
-    let sign1 = -1;
-    let sign2 = 1;
-    let sign3 = 1;
-    if (
-      atTheEndPoint &&
-      distance3 <= distance4 &&
-      distance5 < distance6 &&
-      angleDegrees < 90
-    ) {
-      sign1 = 1;
-      sign2 = 1;
-    } else if (
-      !atTheEndPoint &&
-      distance3 <= distance4 &&
-      distance5 < distance6 &&
-      angleDegrees < 90
-    ) {
-      sign1 = -1;
-      sign2 = -1;
-    } else if (
-      distance3 <= distance4 &&
-      distance5 <= distance6 &&
-      angleDegrees > 90
-    ) {
-      sign1 = 1;
-      sign2 = 1;
-    } else if (
-      distance3 > distance4 &&
-      distance5 > distance6 &&
-      angleDegrees > 90
-    ) {
-      sign1 = -1;
-      sign2 = -1;
-    } else if (
-      distance3 === distance4 &&
-      distance5 === distance6 &&
-      angleDegrees === 90
-    ) {
-      sign1 = -1;
-      sign2 = -1;
-    } else if (
-      distance3 >= distance4 &&
-      distance5 >= distance6 &&
-      angleDegrees <= 90
-    ) {
-      sign1 = -1;
-      sign2 = -1;
-    } else if (
-      distance3 < distance4 &&
-      distance5 < distance6 &&
-      angleDegrees <= 90
-    ) {
-      sign1 = 1;
-      sign2 = 1;
-    } else if (
-      distance3 >= distance4 &&
-      distance5 <= distance6 &&
-      angleDegrees > 90
-    ) {
-      sign1 = 1;
-      sign2 = -1;
-    } else if (
-      distance3 >= distance4 &&
-      distance5 <= distance6 &&
-      angleDegrees <= 90
-    ) {
-      sign1 = 1;
-      sign2 = -1;
-    }
-
-    if (!atTheEndPoint) sign3 = -1;
+    const { distance1, distance2, sign1, sign2, sign3 } =
+      this.calculateDistances(wall, atTheEndPoint, intersectionPoint);
 
     const hsExteriorWall1 = new HalfSpace(this.model);
     hsExteriorWall1.position.x =
@@ -399,6 +268,7 @@ export class SimpleWall extends Element {
 
     this.body.addSubtraction(hsInteriorWall2);
     wall.body.addSubtraction(hsExteriorWall1);
+
     wall.update(true);
     this.update(true);
 
@@ -406,6 +276,7 @@ export class SimpleWall extends Element {
       wall,
       atTheEndPoint,
     });
+
     wall._corners.set(this.attributes.expressID, {
       wall: this,
       atTheEndPoint,
