@@ -8,7 +8,7 @@ export * from "./src";
 
 export class SimpleSlabType extends DynamicElementType<SimpleSlab> {
   attributes: IFC4X3.IfcSlabType;
-
+  
   constructor(model: Model) {
     super(model);
 

@@ -89,19 +89,20 @@
   model.ifcAPI.SetWasmPath("https://unpkg.com/web-ifc@0.0.50/", true);
   await model.init();
 
-  const slab = new CLAY.SimpleSlab(model);
-  scene.add(slab.mesh);
 
-  const opening = new CLAY.Opening(model);
-  scene.add(opening.mesh);
+  const simpleSlabType = new CLAY.SimpleSlabType(model);
+  const slab = simpleSlabType.addInstance();
 
-  const opening2 = new CLAY.Opening(model);
-  opening2.position.x += 2;
-  opening2.update();
-  scene.add(opening2.mesh);
+  slab.body.profile.addPoint(0,0,0);
+  slab.body.profile.addPoint(4,0,0);
+  slab.body.profile.addPoint(4,4,0);
+  slab.body.profile.addPoint(3,5,0);
+  slab.body.profile.addPoint(1,5,0);
+  slab.body.profile.addPoint(0,4,0);
 
-  slab.geometries.body.addSubtraction(opening.geometries.body);
-  slab.geometries.body.addSubtraction(opening2.geometries.body);
+  scene.add(...slab.meshes);
+
+  slab.update(true);
 
   const stats = new Stats();
   stats.showPanel(2);

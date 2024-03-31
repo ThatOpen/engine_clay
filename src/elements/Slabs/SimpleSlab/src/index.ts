@@ -4,23 +4,23 @@ import { Model } from "../../../../base";
 import { IfcUtils } from "../../../../utils/ifc-utils";
 import { Element } from "../../../Elements";
 import { SimpleSlabType } from "../index";
-import { Extrusion, RectangleProfile } from "../../../../geometries";
+import { Extrusion } from "../../../../geometries";
+import { ArbitraryClosedProfile } from "../../../../geometries/Profiles/ArbitraryClosedProfile";
 
 export class SimpleSlab extends Element {
   attributes: IFC.IfcSlab;
 
   type: SimpleSlabType;
 
-  body: Extrusion<RectangleProfile>;
+  body: Extrusion<ArbitraryClosedProfile>;
 
   thickness = 0.3;
 
   constructor(model: Model, type: SimpleSlabType) {
     super(model, type);
     this.type = type;
-
-    const profile = new RectangleProfile(model);
-    this.body = new Extrusion(model, profile);
+    
+    this.body = new Extrusion(model, new ArbitraryClosedProfile(model));
     const id = this.body.attributes.expressID;
     this.type.geometries.set(id, this.body);
     this.geometries.add(id);
@@ -40,7 +40,7 @@ export class SimpleSlab extends Element {
       null
     );
 
-    this.update();
+    this.model.set(this.attributes);
   }
 
   update(updateGeometry: boolean = false) {
