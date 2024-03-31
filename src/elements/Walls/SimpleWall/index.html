@@ -108,19 +108,19 @@
   // wall.addOpening(opening);
   // wall.update(true);
 
-  wall.startPoint.x = 0;
-  wall.startPoint.y = 0;
+  wall.startPoint.x = -20;
+  wall.startPoint.y = -10;
   wall.endPoint.x = 0;
-  wall.endPoint.y = 10;
+  wall.endPoint.y = 20;
   wall.update(true);
 
-  wall2.startPoint.x = 30;
-  wall2.startPoint.y = -20;
-  wall2.endPoint.x = 5;
-  wall2.endPoint.y = -20;
+  wall2.startPoint.x = 35;
+  wall2.startPoint.y = 15;
+  wall2.endPoint.x = -35;
+  wall2.endPoint.y = 15;
   wall2.update(true);
 
-  wall.addCorner(wall2, false); //at the end point => true
+  wall.addCorner(wall2, true); //at the end point => true
   wall.update(true);
 
   window.addEventListener("keydown", () => {
