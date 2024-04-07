@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from "uuid";
-import { IFC4X3 as IFC } from "web-ifc";
+import { IFC4X3 as IFC, IFC2X3 } from "web-ifc";
 import { Model } from "../../../../base";
 import { IfcUtils } from "../../../../utils/ifc-utils";
 import { Element } from "../../../Elements";
@@ -43,7 +43,7 @@ export class SimpleSlab extends Element {
       null
     );
 
-    this.update();
+    this.model.set(this.attributes);
   }
 
   update(updateGeometry: boolean = false) {
@@ -52,41 +52,88 @@ export class SimpleSlab extends Element {
     super.update(updateGeometry);
   }
 
-  // import(model: Model, id: number): SimpleSlab {
-  //   const slab = model.get(id) as IFC.IfcSlab;
-  //   const representations = model.get(slab.Representation);
+  importProperties(model: Model, element: IFC2X3.IfcExtrudedAreaSolid) {
+    const profile = model.get(
+      element.SweptArea
+    ) as IFC2X3.IfcRectangleProfileDef;
 
-  //   let simpleSlab: SimpleSlab | undefined;
+    if (profile !== undefined) {
+      this.body.depth = element.Depth.value;
+    }
+  }
 
+  // importProperties(model: Model, wall: IFC2X3.IfcWallStandardCase) {
+  //   const representations = model.get(wall.Representation);
   //   for (const represent of representations.Representations) {
   //     const foundRep = model.get(represent);
-  //     const extrusion = this.model.get(
+  //     const element = model.get(
   //       foundRep.Items[0]
-  //     ) as IFC.IfcExtrudedAreaSolid;
+  //     ) as IFC2X3.IfcExtrudedAreaSolid;
 
-  //     const slabDepth = model.get(
-  //       extrusion.Depth
-  //     ) as unknown as IFC.IfcPositiveLengthMeasure;
+  //     const profile = model.get(
+  //       element.SweptArea
+  //     ) as IFC2X3.IfcRectangleProfileDef;
 
-  //     const keyForTypeMap = `s${slabDepth.value}`;
+  //     const position = model.get(element.Position);
+  //     if (position && profile !== undefined) {
+  //       const location = model.get(position.Location);
+  //       if (location && location.Coordinates.length >= 3) {
+  //         const wallThickness = profile.YDim.value;
+  //         const wallLength = profile.XDim.value;
 
-  //     if (model.typeMap.has(keyForTypeMap)) {
-  //       const slabType = model.typeMap.get(keyForTypeMap) as SimpleSlabType;
-  //       simpleSlab = slabType.addInstance();
-  //     } else {
-  //       const slabType = new SimpleSlabType(model);
-  //       simpleSlab = slabType.addInstance();
+  //         const profilePosition = model.get(profile.Position);
+  //         const profileLocation = model.get(profilePosition.Location);
+
+  //         const startPoint = new THREE.Vector3(
+  //           profileLocation.Coordinates[0].value - wallLength / 2,
+  //           profileLocation.Coordinates[1].value - wallThickness / 2,
+  //           0
+  //         );
+  //         const endPoint = new THREE.Vector3(
+  //           startPoint.x + wallLength,
+  //           startPoint.y,
+  //           0
+  //         );
+
+  //         const placement = model.get(
+  //           wall.ObjectPlacement
+  //         ) as IFC2X3.IfcLocalPlacement;
+  //         const relPlacement = model.get(placement.RelativePlacement);
+
+  //         try {
+  //           const refDirection = model.get(relPlacement.RefDirection);
+  //           const angleRadians = Math.atan2(
+  //             refDirection.DirectionRatios[1],
+  //             refDirection.DirectionRatios[0]
+  //           );
+
+  //           const rotationMat = new THREE.Matrix4();
+  //           rotationMat.makeRotationZ(angleRadians);
+  //           startPoint.applyMatrix4(rotationMat);
+  //           endPoint.applyMatrix4(rotationMat);
+  //         } catch (error) {
+  //           console.error("Error applying transformation: ", error);
+  //         }
+
+  //         const relLocation = model.get(relPlacement.Location);
+  //         const relCoordinates = relLocation.Coordinates;
+
+  //         startPoint.x += relCoordinates[0].value;
+  //         startPoint.y += relCoordinates[1].value;
+
+  //         endPoint.x += relCoordinates[0].value;
+  //         endPoint.y += relCoordinates[1].value;
+
+  //         this.startPoint.setX(startPoint.x);
+  //         this.startPoint.setY(startPoint.y);
+  //         this.endPoint.setX(endPoint.x);
+  //         this.endPoint.setY(endPoint.y);
+  //         this.height = element.Depth.value;
+  //         this.body.depth = wallThickness;
+
+  //         this.update(true);
+  //       }
   //     }
-
-  //     simpleSlab.thickness = slabDepth.value;
   //   }
-
-  //   if (simpleSlab === undefined) {
-  //     throw new Error("Unable to create SimpleSlab.");
-  //   }
-
-  //   return simpleSlab;
   // }
 }
-
-// const slabWidth = this.model.get(extrusion) as unknown as IFC.IfcPositiveLengthMeasure;

@@ -11,7 +11,7 @@ export class SimpleWallType extends DynamicElementType<SimpleWall> {
   import(): void {}
 
   static import(
-    element: IFC2X3.IfcWallStandardCase,
+    element: any,
     importerModel: Model,
     model: Model
   ): SimpleWallType {

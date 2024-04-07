@@ -104,11 +104,41 @@
   
   importerModel.import(uint8);
 
-  const element = CLAY.Importer.import(importerModel, Number(186), model);
-  console.log(element);
-  console.log("Type of element.mesh:", typeof element);
-  console.log("element.mesh:", element);
+  // const walls2 = importerModel.ifcAPI.GetAllLinesIDsWithType(importerModel.id, WEBIFC.IFCWALLSTANDARDCASE);
 
-  scene.add(...element.meshes);
+  const walls = importerModel.ifcAPI.GetLineIDsWithType(importerModel._modelID, WEBIFC.IFCWALLSTANDARDCASE);
+
+  // for(const wall of walls)
+  // {
+  //   const element = CLAY.Importer.import(importerModel, wall, model);
+  //   scene.add(...element.meshes);    
+  // }
+
+  const element1 = CLAY.Importer.import(importerModel, Number(186), model);
+    scene.add(...element1.meshes);  
+    
+    const element2 = CLAY.Importer.import(importerModel, Number(294), model);
+    scene.add(...element2.meshes); 
+    
+    const element3 = CLAY.Importer.import(importerModel, Number(338), model);
+    scene.add(...element3.meshes);  
+
+
+  // const element = CLAY.Importer.import(importerModel, Number(186), model);
+  // // console.log(element);
+  // // console.log("Type of element.mesh:", typeof element);
+  // // console.log("element.mesh:", element);
+
+  // scene.add(...element.meshes);
+
+  // const element2 = CLAY.Importer.import(importerModel, Number(338), model);
+  // scene.add(...element2.meshes);
+
+
+  const elementSlab = CLAY.Importer.import(importerModel, Number(22551), model);
+  scene.add(...elementSlab.meshes);
+
+  const elementSlab2 = CLAY.Importer.import(importerModel, Number(22620), model);
+  scene.add(...elementSlab2.meshes);
 
 </script>
