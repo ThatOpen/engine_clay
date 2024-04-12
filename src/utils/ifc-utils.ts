@@ -69,11 +69,27 @@ export class IfcUtils {
       zDirection.DirectionRatios[2].value = dirZ.z;
       model.set(zDirection);
     }
-
     const xDirection = model.get(placement.RefDirection);
-    xDirection.DirectionRatios[0].value = dirX.x;
-    xDirection.DirectionRatios[1].value = dirX.y;
-    xDirection.DirectionRatios[2].value = dirX.z;
+    console.log(xDirection);
+    this.setArray(xDirection.DirectionRatios, [dirX.x, dirX.y, dirX.z]);
+    // xDirection.DirectionRatios[0].value = dirX.x;
+    // xDirection.DirectionRatios[1].value = dirX.y;
+    // xDirection.DirectionRatios[2].value = dirX.z;
     model.set(xDirection);
+  }
+
+  static setArray<T>(target: Array<{type: number, value: T} | T>, values: T[]): void {
+    for (let i = 0; i < target.length; i++) {
+      
+      const item = target[i] as {type?: number, value?: T};
+  
+      if (item && typeof item === 'object' && 'value' in item) {
+      
+        item.value = values[i];
+      } else {
+       
+        (target as T[])[i] = values[i];
+      }
+    }
   }
 }

@@ -1,5 +1,7 @@
 import { v4 as uuidv4 } from "uuid";
 import { IFC4X3 as IFC, IFC2X3 } from "web-ifc";
+import * as THREE from "three";
+import * as WEBIFC from "web-ifc";
 import { Model } from "../../../../base";
 import { IfcUtils } from "../../../../utils/ifc-utils";
 import { Element } from "../../../Elements";
@@ -52,88 +54,75 @@ export class SimpleSlab extends Element {
     super.update(updateGeometry);
   }
 
-  importProperties(model: Model, element: IFC2X3.IfcExtrudedAreaSolid) {
-    const profile = model.get(
-      element.SweptArea
-    ) as IFC2X3.IfcRectangleProfileDef;
+  importProperties(model: Model, slab: IFC2X3.IfcSlab) {
+    const representations = model.get(slab.Representation);
+    for (const represent of representations.Representations) {
+      const foundRep = model.get(represent);
+      const element = model.get(
+        foundRep.Items[0]
+      ) as IFC2X3.IfcExtrudedAreaSolid;
 
-    if (profile !== undefined) {
-      this.body.depth = element.Depth.value;
+      const relationshipIDs = model.ifcAPI.GetLineIDsWithType(
+        model.modelID,
+        WEBIFC.IFCRELCONTAINEDINSPATIALSTRUCTURE
+      );
+      let elevation = 0;
+
+      for (const id of relationshipIDs) {
+        const rel = model.get(id) as IFC2X3.IfcRelContainedInSpatialStructure;
+
+        const relatedElemnts = rel.RelatedElements;
+
+        for (const relElement of relatedElemnts) {
+          const relatedElement = model.get(relElement);
+
+          if (relatedElement.expressID === slab.expressID) {
+            const structure = model.get(
+              rel.RelatingStructure
+            ) as IFC2X3.IfcBuildingStorey;
+            if (structure && structure.Elevation) {
+              elevation = structure.Elevation.value;
+              break;
+            }
+          }
+        }
+      }
+
+      const profile = model.get(
+        element.SweptArea
+      ) as IFC2X3.IfcRectangleProfileDef;
+
+      const placement = model.get(
+        element.Position
+      ) as IFC2X3.IfcAxis2Placement3D;
+
+      const location = model.get(placement.Location);
+
+      let directionRatios = [1, 0, 0];
+      if (placement.RefDirection) {
+        const refDirection = model.get(placement.RefDirection);
+        directionRatios = refDirection.DirectionRatios;
+      }
+
+      const angleRadians = Math.atan2(directionRatios[1], directionRatios[0]);
+
+      const rotationMat = new THREE.Matrix4();
+      rotationMat.makeRotationZ(angleRadians);
+
+      this.body.position.x = location.Coordinates[0].value;
+      this.body.position.y = location.Coordinates[1].value;
+      this.body.position.z = elevation;
+
+      this.thickness = element.Depth.value;
+      this.body.update();
+      this.body.profile.dimension.x = profile.XDim.value;
+      this.body.profile.dimension.y = profile.YDim.value;
+
+      this.body.profile.dimension.applyMatrix4(rotationMat);
+
+      this.body.profile.update();
+
+      this.update(true);
     }
   }
-
-  // importProperties(model: Model, wall: IFC2X3.IfcWallStandardCase) {
-  //   const representations = model.get(wall.Representation);
-  //   for (const represent of representations.Representations) {
-  //     const foundRep = model.get(represent);
-  //     const element = model.get(
-  //       foundRep.Items[0]
-  //     ) as IFC2X3.IfcExtrudedAreaSolid;
-
-  //     const profile = model.get(
-  //       element.SweptArea
-  //     ) as IFC2X3.IfcRectangleProfileDef;
-
-  //     const position = model.get(element.Position);
-  //     if (position && profile !== undefined) {
-  //       const location = model.get(position.Location);
-  //       if (location && location.Coordinates.length >= 3) {
-  //         const wallThickness = profile.YDim.value;
-  //         const wallLength = profile.XDim.value;
-
-  //         const profilePosition = model.get(profile.Position);
-  //         const profileLocation = model.get(profilePosition.Location);
-
-  //         const startPoint = new THREE.Vector3(
-  //           profileLocation.Coordinates[0].value - wallLength / 2,
-  //           profileLocation.Coordinates[1].value - wallThickness / 2,
-  //           0
-  //         );
-  //         const endPoint = new THREE.Vector3(
-  //           startPoint.x + wallLength,
-  //           startPoint.y,
-  //           0
-  //         );
-
-  //         const placement = model.get(
-  //           wall.ObjectPlacement
-  //         ) as IFC2X3.IfcLocalPlacement;
-  //         const relPlacement = model.get(placement.RelativePlacement);
-
-  //         try {
-  //           const refDirection = model.get(relPlacement.RefDirection);
-  //           const angleRadians = Math.atan2(
-  //             refDirection.DirectionRatios[1],
-  //             refDirection.DirectionRatios[0]
-  //           );
-
-  //           const rotationMat = new THREE.Matrix4();
-  //           rotationMat.makeRotationZ(angleRadians);
-  //           startPoint.applyMatrix4(rotationMat);
-  //           endPoint.applyMatrix4(rotationMat);
-  //         } catch (error) {
-  //           console.error("Error applying transformation: ", error);
-  //         }
-
-  //         const relLocation = model.get(relPlacement.Location);
-  //         const relCoordinates = relLocation.Coordinates;
-
-  //         startPoint.x += relCoordinates[0].value;
-  //         startPoint.y += relCoordinates[1].value;
-
-  //         endPoint.x += relCoordinates[0].value;
-  //         endPoint.y += relCoordinates[1].value;
-
-  //         this.startPoint.setX(startPoint.x);
-  //         this.startPoint.setY(startPoint.y);
-  //         this.endPoint.setX(endPoint.x);
-  //         this.endPoint.setY(endPoint.y);
-  //         this.height = element.Depth.value;
-  //         this.body.depth = wallThickness;
-
-  //         this.update(true);
-  //       }
-  //     }
-  //   }
-  // }
 }

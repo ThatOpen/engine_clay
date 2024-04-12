@@ -3,6 +3,7 @@ import { IFC4X3, IFC4X3 as IFC, IFC2X3 } from "web-ifc";
 import { DynamicElementType } from "../../Elements";
 import { SimpleSlab } from "./src";
 import { Model } from "../../../base";
+
 export * from "./src";
 
 export class SimpleSlabType extends DynamicElementType<SimpleSlab> {
@@ -46,28 +47,22 @@ export class SimpleSlabType extends DynamicElementType<SimpleSlab> {
       ) as IFC2X3.IfcExtrudedAreaSolid;
 
       if (extrusion) {
-      
-        const slabDepth = model.get(
-                extrusion.Depth.value
-              );
-        
-              const keyForTypeMap = `s${slabDepth}`;
+        const slabDepth = model.get(extrusion.Depth.value);
 
-        
+        const keyForTypeMap = `s${slabDepth}`;
 
-          if (importerModel.typeMap.has(keyForTypeMap)) {
-            slabType = model.typeMap.get(keyForTypeMap) as SimpleSlabType;
-          } else {
-            slabType = new SimpleSlabType(model);
-          }
-        
+        if (importerModel.typeMap.has(keyForTypeMap)) {
+          slabType = model.typeMap.get(keyForTypeMap) as SimpleSlabType;
+        } else {
+          slabType = new SimpleSlabType(model);
+          model.typeMap.set(keyForTypeMap,slabType);
+        }
       }
     }
-  if (!slabType) {
-    throw new Error("Unable to determine wall type");
+    if (!slabType) {
+      throw new Error("Unable to determine wall type");
+    }
+
+    return slabType;
   }
-
-  return slabType;
 }
-}
-

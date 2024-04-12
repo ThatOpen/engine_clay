@@ -1,7 +1,11 @@
 import { IFC2X3 } from "web-ifc";
 import { Model } from "../../base/model";
 import { SimpleWallType } from "../../elements/Walls/SimpleWall";
-import { SimpleSlabType } from "../../elements";
+import {
+  SimpleFurniture,
+  SimpleFurnitureType,
+  SimpleSlabType,
+} from "../../elements";
 
 export class Importer {
   static import(importedModel: Model, id: number, model: Model): Element {
@@ -33,7 +37,26 @@ export class Importer {
           const extrusion = importedModel.get(
             foundRep.Items[0]
           ) as IFC2X3.IfcExtrudedAreaSolid;
-          importedElement.importProperties(importedModel, extrusion);
+          console.log(extrusion);
+          importedElement.importProperties(importedModel, element);
+        }
+      }
+    } else if (element instanceof IFC2X3.IfcFurnishingElement) {
+      const furnitureType = new SimpleFurnitureType(model);
+
+      importedElement = new SimpleFurniture(model, furnitureType);
+
+      const representations = importedModel.get(element.Representation);
+      for (const represent of representations.Representations) {
+        const foundRep = importedModel.get(represent);
+
+        if (
+          foundRep.Items[0] instanceof IFC2X3.IfcFacetedBrep ||
+          foundRep.Items[0] instanceof IFC2X3.IfcBooleanClippingResult
+        ) {
+          const brep = importedModel.get(foundRep.Items[0]);
+
+          console.log(brep);
         }
       }
     }

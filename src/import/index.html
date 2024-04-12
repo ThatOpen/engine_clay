@@ -108,20 +108,28 @@
 
   const walls = importerModel.ifcAPI.GetLineIDsWithType(importerModel._modelID, WEBIFC.IFCWALLSTANDARDCASE);
 
-  // for(const wall of walls)
-  // {
-  //   const element = CLAY.Importer.import(importerModel, wall, model);
-  //   scene.add(...element.meshes);    
-  // }
+  for(const wall of walls)
+  {
+    const element = CLAY.Importer.import(importerModel, wall, model);
+    scene.add(...element.meshes);    
+  }
 
-  const element1 = CLAY.Importer.import(importerModel, Number(186), model);
-    scene.add(...element1.meshes);  
+  const slabs = importerModel.ifcAPI.GetLineIDsWithType(importerModel._modelID, WEBIFC.IFCSLAB);
+
+  for(const slab of slabs)
+  {
+    const element = CLAY.Importer.import(importerModel, slab, model);
+    scene.add(...element.meshes);    
+  }
+
+  // const element1 = CLAY.Importer.import(importerModel, Number(186), model);
+  //   scene.add(...element1.meshes);  
     
-    const element2 = CLAY.Importer.import(importerModel, Number(294), model);
-    scene.add(...element2.meshes); 
+  //   const element2 = CLAY.Importer.import(importerModel, Number(294), model);
+  //   scene.add(...element2.meshes); 
     
-    const element3 = CLAY.Importer.import(importerModel, Number(338), model);
-    scene.add(...element3.meshes);  
+  //   const element3 = CLAY.Importer.import(importerModel, Number(338), model);
+  //   scene.add(...element3.meshes);  
 
 
   // const element = CLAY.Importer.import(importerModel, Number(186), model);
@@ -135,10 +143,10 @@
   // scene.add(...element2.meshes);
 
 
-  const elementSlab = CLAY.Importer.import(importerModel, Number(22551), model);
-  scene.add(...elementSlab.meshes);
+  // const elementSlab = CLAY.Importer.import(importerModel, Number(22551), model);
+  // scene.add(...elementSlab.meshes);
 
-  const elementSlab2 = CLAY.Importer.import(importerModel, Number(22620), model);
-  scene.add(...elementSlab2.meshes);
+  // const elementSlab2 = CLAY.Importer.import(importerModel, Number(22620), model);
+  // scene.add(...elementSlab2.meshes);
 
 </script>

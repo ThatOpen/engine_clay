@@ -169,106 +169,6 @@ export class SimpleWall extends Element {
     });
   }
 
-  // importProperties(model: Model, wall: IFC2X3.IfcWallStandardCase) {
-  //   const representations = model.get(wall.Representation);
-  //   for (const represent of representations.Representations) {
-  //     const foundRep = model.get(represent);
-  //     const element = model.get(
-  //       foundRep.Items[0]
-  //     ) as IFC2X3.IfcExtrudedAreaSolid;
-
-  //     const profile = model.get(
-  //       element.SweptArea
-  //     ) as IFC2X3.IfcRectangleProfileDef;
-
-  //     const position = model.get(element.Position);
-  //     if (position && profile !== undefined) {
-  //       const location = model.get(position.Location);
-  //       if (location && location.Coordinates.length >= 3) {
-  //         const wallThickness = profile.YDim.value;
-  //         const wallLength = profile.XDim.value;
-
-  //         // const startPoint = new THREE.Vector3(0, 0, 0);
-  //         // const endPoint = new THREE.Vector3(0, 0, 0);
-
-  //         // startPoint.x = -wallLength / 2;
-  //         // endPoint.x = wallLength / 2;
-
-  //         const profilePosition = model.get(profile.Position);
-  //         const profileLocation = model.get(profilePosition.Location);
-
-  //         const startPoint = new THREE.Vector3(
-  //           profileLocation.Coordinates[0].value,
-  //           profileLocation.Coordinates[1].value,
-  //           0
-  //         );
-  //         const endPoint = new THREE.Vector3(
-  //           startPoint.x + wallLength,
-  //           startPoint.y,
-  //           0
-  //         );
-
-  //         try {
-  //           const placement = model.get(
-  //             wall.ObjectPlacement
-  //           ) as IFC2X3.IfcLocalPlacement;
-
-  //           const relPlacement = model.get(placement.RelativePlacement);
-  //           const refDirection = model.get(relPlacement.RefDirection);
-  //           const angleRadians = Math.atan2(
-  //             refDirection.DirectionRatios[1],
-  //             refDirection.DirectionRatios[0]
-  //           );
-
-  //           console.log(angleRadians);
-
-  //           const relLocation = model.get(relPlacement.Location);
-
-  //           const relCoordinates = relLocation.Coordinates;
-
-  //           // startPoint.x += relCoordinates[0].value;
-  //           // startPoint.y += relCoordinates[1].value;
-  //           // startPoint.z += relCoordinates[2].value;
-
-  //           // endPoint.x += relCoordinates[0].value;
-  //           // endPoint.y += relCoordinates[1].value;
-  //           // endPoint.z += relCoordinates[2].value;
-  //           // const deltaX = endPoint.x - startPoint.x;
-  //           // const deltaY = endPoint.y - startPoint.y;
-
-  //           const rotationMat = new THREE.Matrix4();
-  //           rotationMat.makeRotationZ(angleRadians);
-
-  //           startPoint.applyMatrix4(rotationMat);
-  //           endPoint.applyMatrix4(rotationMat);
-
-  //           startPoint.x += relCoordinates[0].value;
-  //           startPoint.y += relCoordinates[1].value;
-
-  //           endPoint.x += relCoordinates[0].value;
-  //           endPoint.y += relCoordinates[1].value;
-
-  //           // endPoint.x = startPoint.x + deltaX;
-  //           // endPoint.y = startPoint.y + deltaY;
-  //         } catch {
-  //           console.log("");
-  //         }
-
-  //         this.startPoint.setX(startPoint.x);
-  //         this.startPoint.setY(startPoint.y);
-
-  //         this.endPoint.setX(endPoint.x);
-  //         this.endPoint.setY(endPoint.y);
-
-  //         this.height = element.Depth.value;
-  //         this.body.depth = wallThickness;
-
-  //         this.update(true);
-  //       }
-  //     }
-  //   }
-  // }
-
   importProperties(model: Model, wall: IFC2X3.IfcWallStandardCase) {
     const representations = model.get(wall.Representation);
     for (const represent of representations.Representations) {
@@ -308,16 +208,18 @@ export class SimpleWall extends Element {
           const relPlacement = model.get(placement.RelativePlacement);
 
           try {
-            const refDirection = model.get(relPlacement.RefDirection);
-            const angleRadians = Math.atan2(
-              refDirection.DirectionRatios[1],
-              refDirection.DirectionRatios[0]
-            );
+            if (relPlacement.RefDirection !== null) {
+              const refDirection = model.get(relPlacement.RefDirection);
+              const angleRadians = Math.atan2(
+                refDirection.DirectionRatios[1],
+                refDirection.DirectionRatios[0]
+              );
 
-            const rotationMat = new THREE.Matrix4();
-            rotationMat.makeRotationZ(angleRadians);
-            startPoint.applyMatrix4(rotationMat);
-            endPoint.applyMatrix4(rotationMat);
+              const rotationMat = new THREE.Matrix4();
+              rotationMat.makeRotationZ(angleRadians);
+              startPoint.applyMatrix4(rotationMat);
+              endPoint.applyMatrix4(rotationMat);
+            }
           } catch (error) {
             console.error("Error applying transformation: ", error);
           }
