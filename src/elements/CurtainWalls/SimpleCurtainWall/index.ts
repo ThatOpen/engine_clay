@@ -1,7 +1,6 @@
 import { IFC4X3, IFC4X3 as IFC } from "web-ifc";
 import { v4 as uuidv4 } from "uuid";
 import { Model } from "../../../base";
-// import { Extrusion, RectangleProfile } from "../../../geometries";
 import { IfcUtils } from "../../../utils/ifc-utils";
 import { StaticElementType } from "../../Elements";
 import { SimpleCurtainWall } from "./src";
@@ -38,51 +37,8 @@ export class SimpleCurtainWallType extends StaticElementType<SimpleCurtainWall> 
   constructor(model: Model) {
     super(model);
 
-    // const horizontalProfile = new RectangleProfile(model);
-    // const body1 = new Extrusion(model, horizontalProfile);
-    // const id1 = body1.attributes.expressID;
-    // const fragment = this.newFragment();
-    // this.fragments.set(id1, fragment);
-    // this.geometries.set(id1, body1);
-    // this.bottomFrame = body1;
-
-    // const body2 = new Extrusion(model, horizontalProfile);
-    // const id2 = body2.attributes.expressID;
-    // this.geometries.set(id2, body2);
-    // this.topFrame = body2;
-    // const fragment2 = this.newFragment();
-    // this.fragments.set(id2, fragment2);
-
-    // const verticalProfile = new RectangleProfile(model);
-    // const body3 = new Extrusion(model, verticalProfile);
-    // const id3 = body3.attributes.expressID;
-    // this.geometries.set(id3, body3);
-    // this.leftFrame = body3;
-    // const fragment3 = this.newFragment();
-    // this.fragments.set(id3, fragment3);
-    // body3.rotation.y = Math.PI / 2;
-    // body3.update();
-
-    // const body4 = new Extrusion(model, verticalProfile);
-    // const id4 = body4.attributes.expressID;
-    // this.geometries.set(id4, body4);
-    // this.rightFrame = body4;
-    // const fragment4 = this.newFragment();
-    // this.fragments.set(id4, fragment4);
-    // body4.rotation.y = Math.PI / 2;
-    // body4.update();
-
-
-
-    // this.shape = IfcUtils.productDefinitionShape(model, [
-    //   body1.attributes,
-    //   body2.attributes,
-    //   body3.attributes,
-    //   body4.attributes,
-    // ]);
-
-    const numberOfColumns = 2;
-    const numberOfRows = 6
+    const numberOfColumns = 10;
+    const numberOfRows = 3
 
     const sideAMembers: SimpleMember[] = [];
     const sideBMembers: SimpleMember[] = [];
@@ -91,15 +47,9 @@ export class SimpleCurtainWallType extends StaticElementType<SimpleCurtainWall> 
     const middleMembers: SimpleMember[] = [];
     const plates: SimplePlate[] = [];
 
-
-    // const sideBMember = new Array<Element>(numberOfRows);
-
-    // const topMembers = new Array<Element>(numberOfColumns);
-    // const bottomMembers = new Array<Element>(numberOfColumns)
-
     for (let i = 0; i < numberOfColumns; i++ ) { 
-        
         // generate horizontal member in middle
+
         const topMember = new SimpleMemberType(model).addInstance();
         const topMemberBody = topMember.body
         const topMemberId = topMemberBody.attributes.expressID;
@@ -113,8 +63,8 @@ export class SimpleCurtainWallType extends StaticElementType<SimpleCurtainWall> 
 
         topMember.body.rotation.x = Math.PI / -2;
         topMember.body.position.z = numberOfRows
+        topMember.body.position.y = i;
         topMember.body.update();
-
 
         this.fragments.set(topMemberId, topMemberFragment)
         this.geometries.set(topMemberId, topMemberBody)
@@ -123,6 +73,7 @@ export class SimpleCurtainWallType extends StaticElementType<SimpleCurtainWall> 
 
         
         // generate horizontal member in middle
+
         const bottomMember = new SimpleMemberType(model).addInstance();
         const bottomMemberBody = bottomMember.body
         const bottomMemberId = bottomMemberBody.attributes.expressID;
@@ -133,28 +84,32 @@ export class SimpleCurtainWallType extends StaticElementType<SimpleCurtainWall> 
         // if (i > 0) {
         //     sideBMember.body.position.z = i
         // }
-        bottomMember.body.rotation.x = Math.PI / -2;
-        bottomMember.body.update();
 
+        bottomMember.body.rotation.x = Math.PI / -2;
+        bottomMember.body.position.y = i;
+
+        bottomMember.body.update();
 
         this.fragments.set(bottomMemberId, bottomMemberFragment)
         this.geometries.set(bottomMemberId, bottomMemberBody)
 
         bottomMembers.push(bottomMember);
 
-
         for (let j = 0; j < numberOfRows; j++ ) { 
 
             // generate plates 
+
             const plate = new SimplePlateType(model).addInstance();
             const plateBody = plate.body
             const plateId = plateBody.attributes.expressID;
             const plateFragment = this.newFragment();
+            plate.body.position.y = i
 
             if (j > 0) {
                 plate.body.position.z = j
-                plate.body.update();
             }
+
+            plate.body.update();
             
             this.fragments.set(plateId, plateFragment)
             this.geometries.set(plateId, plateBody)
@@ -168,6 +123,8 @@ export class SimpleCurtainWallType extends StaticElementType<SimpleCurtainWall> 
             const middleMemberId = middleMemberBody.attributes.expressID;
             const middleMemberFragment = this.newFragment();
             
+            middleMember.body.position.y = i
+
             if (j > 0 ) {
                 middleMember.body.position.z = j
             }         
@@ -187,11 +144,14 @@ export class SimpleCurtainWallType extends StaticElementType<SimpleCurtainWall> 
             const sideAMemberFragment = this.newFragment();
 
             console.log(sideAMemberId)
+            sideAMember.body.position.y = i
 
             if (j > 0) {
                 sideAMember.body.position.z = j
-                sideAMember.body.update();
             }
+
+            sideAMember.body.update();
+
 
             this.fragments.set(sideAMemberId, sideAMemberFragment)
             this.geometries.set(sideAMemberId, sideAMemberBody)
@@ -204,8 +164,6 @@ export class SimpleCurtainWallType extends StaticElementType<SimpleCurtainWall> 
             const sideBMemberBody = sideBMember.body
             const sideBMemberId = sideBMemberBody.attributes.expressID;
             const sideBMemberFragment = this.newFragment();
-
-            console.log(sideAMemberId)
 
             sideBMember.body.position.y = numberOfColumns
 
@@ -223,36 +181,12 @@ export class SimpleCurtainWallType extends StaticElementType<SimpleCurtainWall> 
         }
     }
 
-
-    // // const member = new SimpleMemberType(model).addInstance();
-    
-    // const plate = new SimplePlateType(model).addInstance();
-
-    // // const memberBody = member.body
-    // const plateBody = plate.body
-
-    // // const memberId = memberBody.attributes.expressID;
-    // const plateId = plateBody.attributes.expressID;
-    // // console.log(plateId)
-
-    // // const memberFragment = this.newFragment();
-    // const plateFragment = this.newFragment();
-
-    // // this.fragments.set(memberId, memberFragment)
-    // this.fragments.set(plateId, plateFragment)
-
-    // // this.geometries.set(memberId, memberBody)
-    // this.geometries.set(plateId, plateBody)
-
-    console.log(sideAMembers)
-
     const sideAMembersAttributes = sideAMembers.map(member => member.body.attributes)
     const sideBMembersAttributes = sideBMembers.map(member => member.body.attributes)
     const bottomMembersAttributes = bottomMembers.map(member => member.body.attributes)
     const topMembersAttributes = topMembers.map(member => member.body.attributes)
     const platesAttributes = plates.map(member => member.body.attributes)
     const middleMembersAttributes = middleMembers.map(member => member.body.attributes)
-    // const items = [plateBody.attributes]
 
     const concatItems = sideAMembersAttributes.concat(sideBMembersAttributes).concat(bottomMembersAttributes).concat(topMembersAttributes).concat(platesAttributes).concat(middleMembersAttributes)
 
