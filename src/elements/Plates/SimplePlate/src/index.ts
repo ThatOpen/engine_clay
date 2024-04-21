@@ -18,12 +18,13 @@ export class SimplePlate extends Element {
         super(model, type)
         this.type = type
         
-        const placement = IfcUtils.localPlacement(new THREE.Vector3(1,1,1),new THREE.Vector3(1,1,1),new THREE.Vector3(1,1,1));
+        const placement = IfcUtils.localPlacement();
 
         const profile = new RectangleProfile(model);
         profile.dimension.x = 0.0833333333333333
-        profile.dimension.y = 1
-        profile.position = new THREE.Vector3(0,0.5,0)
+        profile.dimension.y = 1.9238
+        profile.dimension.z = 1
+        profile.position = new THREE.Vector3(0,0,0)
         profile.update();
 
         this.body = new Extrusion(model, profile);

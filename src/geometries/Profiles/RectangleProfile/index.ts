@@ -12,6 +12,8 @@ export class RectangleProfile extends Profile {
   rotation = new THREE.Euler(0, 0, 0);
 
   position = new THREE.Vector3(0, 0, 0);
+  
+  depth = 1;
 
   constructor(model: Model) {
     super(model);
