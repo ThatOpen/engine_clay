@@ -20,7 +20,10 @@ export class SimpleCurtainWall extends Element {
       this.geometries.add(id);
     }
 
-    this.attributes = new IFC.IfcWindow(
+    console.log('creating simplecurtainwall instance')
+    console.log(type.shape.Representations)
+
+    this.attributes = new IFC.IfcCurtainWall(
       new IFC.IfcGloballyUniqueId(uuidv4()),
       null,
       null,
@@ -30,12 +33,9 @@ export class SimpleCurtainWall extends Element {
       type.shape,
       null,
       null,
-      null,
-      null,
-      null,
-      null
     );
 
     this.model.set(this.attributes);
-  }
+    
+ }
 }

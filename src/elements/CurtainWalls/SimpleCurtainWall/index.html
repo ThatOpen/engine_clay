@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -92,46 +92,23 @@
   model.ifcAPI.SetWasmPath("https://unpkg.com/web-ifc@0.0.50/", true);
   await model.init();
 
-  const curtainWall = new CLAY.SimpleCurtainWallType(model).addInstance();
-  
-  curtainWall.update(true)
+  const curtainWallType = new CLAY.SimpleCurtainWallType(model);
+  // curtainWallType.length = 2;
+  // curtainWallType.height = 6;
+  // curtainWallType.numberOfColumns = 2;
+  // curtainWallType.numberOfRows = 2;
+  // curtainWallType.update(true)
 
-  scene.add(...curtainWall.meshes)
+  const curtainWall = curtainWallType.addInstance();
 
+  scene.add(...curtainWall.meshes);
 
-//   const windowType = new CLAY.SimpleWindowType(model);
-//   const windowInstance = windowType.addInstance();
-//   windowInstance.update(true);
-
-//   scene.add(...windowInstance.meshes);
-
-//   const gui = new dat.GUI();
-
-//   gui.add(windowType, "frameWidth").name("Frame width").min(0.01).max(0.1).step(0.01).onChange(() => {
-//     windowType.update(true);
-//   });
-
-//   gui.add(windowType, "length").name("Length").min(0.2).max(1).step(0.01).onChange(() => {
-//     windowType.update(true);
-//   });
-
-//   gui.add(windowType, "width").name("Width").min(0.2).max(1).step(0.01).onChange(() => {
-//     windowType.update(true);
-//   });
-
-//   gui.add(windowType, "height").name("Height").min(0.2).max(1).step(0.01).onChange(() => {
-//     windowType.update(true);
-//   });
-
-
-//   window.addEventListener("keydown", () => {
-//     const exported = model.ifcAPI.SaveModel(model.modelID);
-//     const file = new File([new Blob([exported])], "a");
-//     const a = document.createElement("a");
-//     a.href = URL.createObjectURL(file);
-//     a.download = "example.ifc";
-//     a.click();
-//   })
-
-
+  window.addEventListener("keydown", () => {
+    const exported = model.ifcAPI.SaveModel(model.modelID);
+    const file = new File([new Blob([exported])], "a");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(file);
+    a.download = "example.ifc";
+    a.click();
+  });
 </script>

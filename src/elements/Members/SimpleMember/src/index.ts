@@ -16,6 +16,10 @@ export class SimpleMember extends Element {
 
     type: SimpleMemberType
 
+    width = 0.0635;
+
+    depth = 0.127; 
+
     constructor(model: Model, type: SimpleMemberType) {
         super(model, type)
         this.type = type
@@ -23,8 +27,8 @@ export class SimpleMember extends Element {
         const placement = IfcUtils.localPlacement(location);
 
         const profile = new RectangleProfile(model);
-        profile.dimension.x = 0.127 //2.6 inches in meters
-        profile.dimension.y = 0.0635 //5 inches in meters
+        profile.dimension.x =  this.depth;
+        profile.dimension.y = this.width;
         profile.position = new THREE.Vector3(0,0,5)
         profile.update();
 
