@@ -16,12 +16,9 @@ export class SimpleCurtainWall extends Element {
 
     const placement = IfcUtils.localPlacement();
 
-    for(const [id] of type.geometries) {
+    for (const [id] of type.geometries) {
       this.geometries.add(id);
     }
-
-    console.log('creating simplecurtainwall instance')
-    console.log(type.shape.Representations)
 
     this.attributes = new IFC.IfcCurtainWall(
       new IFC.IfcGloballyUniqueId(uuidv4()),
@@ -32,10 +29,9 @@ export class SimpleCurtainWall extends Element {
       placement,
       type.shape,
       null,
-      null,
+      null
     );
 
     this.model.set(this.attributes);
-    
- }
+  }
 }

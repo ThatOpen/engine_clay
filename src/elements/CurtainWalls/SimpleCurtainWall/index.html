@@ -93,22 +93,81 @@
   await model.init();
 
   const curtainWallType = new CLAY.SimpleCurtainWallType(model);
-  // curtainWallType.length = 2;
-  // curtainWallType.height = 6;
-  // curtainWallType.numberOfColumns = 2;
-  // curtainWallType.numberOfRows = 2;
-  // curtainWallType.update(true)
+
+  // curtainWallType.height = 5;
+
+  // curtainWallType.numberOfColumns = 3;
+  // curtainWallType.numberOfRows = 3;
+
+  curtainWallType.startPoint.x = -10;
+  curtainWallType.startPoint.y = 0;
+  
+  curtainWallType.endPoint.x = 0;
+  curtainWallType.endPoint.y = 10;
+
+  curtainWallType.update(true);
 
   const curtainWall = curtainWallType.addInstance();
 
   scene.add(...curtainWall.meshes);
 
-  window.addEventListener("keydown", () => {
-    const exported = model.ifcAPI.SaveModel(model.modelID);
-    const file = new File([new Blob([exported])], "a");
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(file);
-    a.download = "example.ifc";
-    a.click();
+  const gui = new dat.GUI();
+
+
+
+  gui
+    .add(curtainWallType.startPoint, "x")
+    .name("Start X")
+    .min(-10)
+    .max(10)
+    .step(1)
+    .onChange(() => {
+      curtainWallType.update(true);
+    });
+
+  gui
+    .add(curtainWallType.startPoint, "y")
+    .name("Start Y")
+    .min(-10)
+    .max(10)
+    .step(1)
+    .onChange(() => {
+      curtainWallType.update(true);
+    });
+
+
+  gui
+    .add(curtainWallType.endPoint, "x")
+    .name("End X")
+    .min(-10)
+    .max(10)
+    .step(1)
+    .onChange(() => {
+      curtainWallType.update(true);
+    });
+
+  gui
+    .add(curtainWallType.endPoint, "y")
+    .name("End Y")
+    .min(-10)
+    .max(10)
+    .step(1)
+    .onChange(() => {
+      curtainWallType.update(true);
+    });
+
+  gui
+    .add(curtainWallType, "height")
+    .name("Height")
+    .min(1)
+    .max(10)
+    .step(1)
+    .onChange(() => {
+      curtainWallType.update(true);
+    });
+
+    gui.add(curtainWallType, "frameWidth").name("Frame Width").min(0.127).max(1).step(0.01).onChange(() => {
+      curtainWallType.update(true);
   });
+
 </script>
