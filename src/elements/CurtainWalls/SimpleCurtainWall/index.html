@@ -92,16 +92,11 @@
   model.ifcAPI.SetWasmPath("https://unpkg.com/web-ifc@0.0.50/", true);
   await model.init();
 
-  const curtainWallType = new CLAY.SimpleCurtainWallType(model);
-
-  // curtainWallType.height = 5;
-
-  // curtainWallType.numberOfColumns = 3;
-  // curtainWallType.numberOfRows = 3;
-
+  const curtainWallType = new CLAY.SimpleCurtainWallType(model, 5, 5);
+  
+  curtainWallType.height = 5
   curtainWallType.startPoint.x = -10;
   curtainWallType.startPoint.y = 0;
-  
   curtainWallType.endPoint.x = 0;
   curtainWallType.endPoint.y = 10;
 
@@ -112,8 +107,6 @@
   scene.add(...curtainWall.meshes);
 
   const gui = new dat.GUI();
-
-
 
   gui
     .add(curtainWallType.startPoint, "x")
