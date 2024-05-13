@@ -1,7 +1,6 @@
 import { v4 as uuidv4 } from "uuid";
 import { IFC4X3 as IFC, IFC2X3 } from "web-ifc";
 import * as THREE from "three";
-import * as WEBIFC from "web-ifc";
 import { Model } from "../../../../base";
 import { IfcUtils } from "../../../../utils/ifc-utils";
 import { Element } from "../../../Elements";
@@ -62,31 +61,7 @@ export class SimpleSlab extends Element {
         foundRep.Items[0]
       ) as IFC2X3.IfcExtrudedAreaSolid;
 
-      const relationshipIDs = model.ifcAPI.GetLineIDsWithType(
-        model.modelID,
-        WEBIFC.IFCRELCONTAINEDINSPATIALSTRUCTURE
-      );
-      let elevation = 0;
-
-      for (const id of relationshipIDs) {
-        const rel = model.get(id) as IFC2X3.IfcRelContainedInSpatialStructure;
-
-        const relatedElemnts = rel.RelatedElements;
-
-        for (const relElement of relatedElemnts) {
-          const relatedElement = model.get(relElement);
-
-          if (relatedElement.expressID === slab.expressID) {
-            const structure = model.get(
-              rel.RelatingStructure
-            ) as IFC2X3.IfcBuildingStorey;
-            if (structure && structure.Elevation) {
-              elevation = structure.Elevation.value;
-              break;
-            }
-          }
-        }
-      }
+      const elevation = Element.getElevation(model, slab.expressID);
 
       const profile = model.get(
         element.SweptArea

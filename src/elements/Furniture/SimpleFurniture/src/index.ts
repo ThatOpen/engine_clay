@@ -17,7 +17,7 @@ export class SimpleFurniture extends Element {
 
     const placement = IfcUtils.localPlacement();
 
-    this.geometries.add(type.body.attributes.expressID);
+    // this.geometries.add(type.body.attributes.expressID);
 
     this.attributes = new IFC.IfcFurnishingElement(
       new IFC.IfcGloballyUniqueId(uuidv4()),

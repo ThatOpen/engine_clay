@@ -110,4 +110,12 @@ export class Brep extends ClayGeometry {
     ifcClosedShell.CfsFaces = [];
     this.model.set(ifcClosedShell);
   }
+
+  importFromIfc(importedBrep: IFC.IfcFacetedBrep, importedModel: Model) {
+    this.model.delete(this.core.Outer);
+    const shell = importedModel.get(importedBrep.Outer);
+    this.model.set(shell);
+    this.core.Outer = shell;
+    this.model.set(this.core);
+  }
 }

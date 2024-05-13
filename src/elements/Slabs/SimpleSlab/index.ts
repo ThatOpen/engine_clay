@@ -55,7 +55,7 @@ export class SimpleSlabType extends DynamicElementType<SimpleSlab> {
           slabType = model.typeMap.get(keyForTypeMap) as SimpleSlabType;
         } else {
           slabType = new SimpleSlabType(model);
-          model.typeMap.set(keyForTypeMap,slabType);
+          model.typeMap.set(keyForTypeMap, slabType);
         }
       }
     }

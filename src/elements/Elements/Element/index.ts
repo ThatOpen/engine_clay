@@ -172,4 +172,34 @@ export abstract class Element extends ClayObject {
     geometry.setIndex(Array.from(index));
     return geometry as FRAGS.IndexedGeometry;
   }
+
+  static getElevation(model: Model, elementId: number): number {
+    let elevation = 0;
+
+    const relationshipIDs = model.ifcAPI.GetLineIDsWithType(
+      model.modelID,
+      WEBIFC.IFCRELCONTAINEDINSPATIALSTRUCTURE
+    );
+
+    for (const id of relationshipIDs) {
+      const rel = model.get(id) as IFC.IfcRelContainedInSpatialStructure;
+
+      const relatedElemnts = rel.RelatedElements;
+
+      for (const relElement of relatedElemnts) {
+        const relatedElement = model.get(relElement);
+
+        if (relatedElement.expressID === elementId) {
+          const structure = model.get(
+            rel.RelatingStructure
+          ) as IFC.IfcBuildingStorey;
+          if (structure && structure.Elevation) {
+            elevation = structure.Elevation.value;
+            break;
+          }
+        }
+      }
+    }
+    return elevation;
+  }
 }

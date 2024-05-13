@@ -9,8 +9,7 @@ import { SimpleWindow } from "./src";
 export * from "./src";
 
 export class SimpleWindowType extends StaticElementType<SimpleWindow> {
-  import(): void {
-  }
+  import(): void {}
   attributes: IFC4X3.IfcFurnishingElementType;
 
   shape: IFC4X3.IfcProductDefinitionShape;

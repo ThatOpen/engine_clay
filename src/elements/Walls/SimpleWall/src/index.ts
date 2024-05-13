@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import * as FRAGS from "bim-fragment";
 import { v4 as uuidv4 } from "uuid";
-import { IFC4X3 as IFC, IFC2X3 } from "web-ifc";
+import { IFC4X3 as IFC, IFC2X3, IFC4X3 } from "web-ifc";
 import { Model } from "../../../../base";
 import { IfcUtils } from "../../../../utils/ifc-utils";
 import { Element } from "../../../Elements/Element";
@@ -169,7 +169,10 @@ export class SimpleWall extends Element {
     });
   }
 
-  importProperties(model: Model, wall: IFC2X3.IfcWallStandardCase) {
+  importProperties(
+    model: Model,
+    wall: IFC2X3.IfcWallStandardCase | IFC4X3.IfcWallStandardCase
+  ) {
     const representations = model.get(wall.Representation);
     for (const represent of representations.Representations) {
       const foundRep = model.get(represent);
@@ -191,15 +194,17 @@ export class SimpleWall extends Element {
           const profilePosition = model.get(profile.Position);
           const profileLocation = model.get(profilePosition.Location);
 
+          const elevation = Element.getElevation(model, wall.expressID);
+
           const startPoint = new THREE.Vector3(
             profileLocation.Coordinates[0].value - wallLength / 2,
             profileLocation.Coordinates[1].value - wallThickness / 2,
-            0
+            elevation
           );
           const endPoint = new THREE.Vector3(
             startPoint.x + wallLength,
             startPoint.y,
-            0
+            elevation
           );
 
           const placement = model.get(
