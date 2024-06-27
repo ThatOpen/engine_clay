@@ -17,7 +17,7 @@
 [![NPM Package][npm]][npm-url]
 [![NPM Package][npm-downloads]][npm-url]
 
-Work in progress.
+Work in progress. It's not in beta neither alpha. Not meant to be used in production.
 
 This library is a 3D geometry and modelling engine that works natively with IFC. 
 
