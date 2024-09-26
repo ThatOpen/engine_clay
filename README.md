@@ -7,22 +7,18 @@
   |
   <a href="https://people.thatopen.com/">community</a>
   |
-  <a href="https://www.npmjs.com/package/openbim-clay">npm package</a>
+  <a href="https://www.npmjs.com/package/openbim-components">npm package</a>
 </p>
 
 ![cover](resources/cover.png)
 
-<h1>Clay <img src="https://thatopen.github.io/engine_components/resources/favicon.ico" width="32"/></h1>
+<h1>Clay<img src="https://thatopen.github.io/engine_components/resources/favicon.ico" width="32"/></h1>
 
 [![NPM Package][npm]][npm-url]
 [![NPM Package][npm-downloads]][npm-url]
 
-Work in progress. It's not in beta neither alpha. Not meant to be used in production.
+This library allows to create and edit IFC geometry and data, as well as create modellers for end users. 🚀
 
-This library is a 3D geometry and modelling engine that works natively with IFC. 
-
-
-
-[npm]: https://img.shields.io/npm/v/openbim-clay
-[npm-url]: https://www.npmjs.com/package/openbim-clay
-[npm-downloads]: https://img.shields.io/npm/dw/openbim-clay
+[npm]: https://img.shields.io/npm/v/@thatopen/clay
+[npm-url]: https://www.npmjs.com/package/@thatopen/clay
+[npm-downloads]: https://img.shields.io/npm/dw/@thatopen/clay

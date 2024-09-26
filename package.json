@@ -1,72 +1,35 @@
 {
-  "name": "openbim-clay",
-  "version": "0.0.5",
-  "description": "3D BIM Modelling API",
-  "main": "src/index.js",
+  "description": "BIM modelling library built on top of the IFC schema.",
+  "author": "That Open Company",
+  "contributors": [
+    "Antonio Gonzalez Viegas (https://github.com/agviegas)",
+    "Juan Hoyos (https://github.com/HoyosJuan)"
+  ],
   "scripts": {
-    "test": "jest",
-    "build": "tsc && yarn build-examples",
-    "build-examples": "rollup -c resources/rollup.config.mjs",
-    "publish-repo": "tsc && cpy package.json dist && cd dist && npm publish",
-    "publish-repo-alpha": "cpy package.json dist && cd dist && npm publish --tag alpha"
+    "dev": "vite --host",
+    "build-core": "yarn workspace @thatopen/fragments build",
+    "build-examples": "vite build --config ./vite.config-examples.ts",
+    "build": "yarn build-examples && yarn build-core",
+    "test": "echo 'test to be implemented!'",
+    "publish-repo": "yarn workspace @thatopen/fragments publish-repo",
+    "reset-release-please": "git commit --allow-empty -m \"chore: release 2.0.0\" -m \"Release-As: 2.0.0\""
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/ThatOpen/engine_clay#readme",
+  "bugs": {
+    "url": "https://github.com/ThatOpen/engine_clay/issues"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ThatOpen/engine_clay.git"
   },
-  "keywords": [
-    "ifc",
-    "geometry",
-    "threejs",
-    "bim",
-    "3d"
+  "workspaces": [
+    "./packages/*"
   ],
-  "author": "agviegas",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/ThatOpen/engine_clay/issues"
-  },
-  "homepage": "https://github.com/ThatOpen/engine_clay",
-  "dependencies": {
-    "earcut": "^2.2.4",
-    "three-mesh-bvh": "0.7.0",
-    "uuid": "^9.0.1"
-  },
-  "peerDependencies": {
-    "bim-fragment": "1.4.2",
-    "three": "^0.160.1",
-    "web-ifc": "^0.0.51"
-  },
   "devDependencies": {
-    "@rollup/plugin-commonjs": "25.0.0",
-    "@rollup/plugin-node-resolve": "15.1.0",
-    "@types/earcut": "2.1.4",
-    "@types/jest": "27.0.0",
-    "@types/node": "^14.14.31",
-    "@types/three": "^0.160.0",
-    "@types/uuid": "9.0.8",
-    "@typescript-eslint/eslint-plugin": "^4.27.0",
-    "@typescript-eslint/parser": "^4.27.0",
-    "bim-fragment": "1.4.2",
-    "cpy-cli": "^3.1.1",
-    "eslint": "^7.28.0",
-    "eslint-config-airbnb-base": "^14.2.1",
-    "eslint-config-prettier": "^8.3.0",
-    "eslint-plugin-import": "^2.23.4",
-    "eslint-plugin-prettier": "^3.4.0",
-    "jest": "^27.0.4",
-    "prettier": "^2.3.1",
-    "rollup": "^3.2.3",
-    "rollup-cache": "^2.0.0",
-    "three": "^0.160.1",
-    "ts-jest": "^27.0.3",
-    "ts-node": "^10.0.0",
-    "typescript": "^4.3.2",
-    "web-ifc": "0.0.51"
+    "stats.js": "^0.17.0",
+    "vite": "5.1.6",
+    "vite-plugin-dts": "3.7.3"
   },
-  "browser": {
-    "crypto": false,
-    "fs": false,
-    "path": false
-  }
+  "version": "2.2.0"
 }
