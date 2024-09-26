@@ -12,7 +12,7 @@ export class RectangleProfile extends Profile {
   rotation = new THREE.Euler(0, 0, 0);
 
   position = new THREE.Vector3(0, 0, 0);
-  
+
   depth = 1;
 
   constructor(model: Model) {
@@ -20,7 +20,7 @@ export class RectangleProfile extends Profile {
 
     const placement = new IFC.IfcAxis2Placement2D(
       IfcUtils.point(this.position),
-      IfcUtils.direction(new THREE.Vector3(1, 0, 0))
+      IfcUtils.direction(new THREE.Vector3(1, 0, 0)),
     );
 
     this.attributes = new IFC.IfcRectangleProfileDef(
@@ -28,7 +28,7 @@ export class RectangleProfile extends Profile {
       null,
       placement,
       new IFC.IfcPositiveLengthMeasure(this.dimension.x),
-      new IFC.IfcPositiveLengthMeasure(this.dimension.y)
+      new IFC.IfcPositiveLengthMeasure(this.dimension.y),
     );
 
     this.model.set(this.attributes);
@@ -40,16 +40,16 @@ export class RectangleProfile extends Profile {
 
     this.attributes.Position = new IFC.IfcAxis2Placement2D(
       IfcUtils.point(this.position),
-      IfcUtils.direction(new THREE.Vector3(1, 0, 0))
+      IfcUtils.direction(new THREE.Vector3(1, 0, 0)),
     );
-    
+
     const placement = this.model.get(this.attributes.Position);
 
     IfcUtils.setAxis2Placement(
       this.model,
       placement,
       this.position,
-      this.rotation
+      this.rotation,
     );
 
     this.model.set(this.attributes);

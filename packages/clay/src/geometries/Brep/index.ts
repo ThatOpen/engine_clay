@@ -62,15 +62,15 @@ export class Brep extends ClayGeometry {
       for (let i = 0; i < indices.length; i += 3) {
         const vertex1 = new THREE.Vector3().fromArray(
           positions,
-          indices[i] * 3
+          indices[i] * 3,
         );
         const vertex2 = new THREE.Vector3().fromArray(
           positions,
-          indices[i + 1] * 3
+          indices[i + 1] * 3,
         );
         const vertex3 = new THREE.Vector3().fromArray(
           positions,
-          indices[i + 2] * 3
+          indices[i + 2] * 3,
         );
 
         const triangle = [vertex1, vertex2, vertex3];

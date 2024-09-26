@@ -76,7 +76,7 @@ export abstract class Primitive {
 
   protected get _attributes() {
     return Object.values(
-      this.mesh.geometry.attributes
+      this.mesh.geometry.attributes,
     ) as THREE.BufferAttribute[];
   }
 }

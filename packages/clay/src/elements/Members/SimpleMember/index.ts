@@ -6,13 +6,13 @@ import { SimpleMember } from "./src";
 
 export class SimpleMemberType extends DynamicElementType<SimpleMember> {
   attributes: IFC.IfcMemberType;
-  
-  memberType: IFC.IfcMemberTypeEnum
+
+  memberType: IFC.IfcMemberTypeEnum;
 
   constructor(model: Model) {
     super(model);
 
-    this.memberType = IFC.IfcMemberTypeEnum.MULLION
+    this.memberType = IFC.IfcMemberTypeEnum.MULLION;
 
     this.attributes = new IFC.IfcMemberType(
       new IFC.IfcGloballyUniqueId(uuidv4()),

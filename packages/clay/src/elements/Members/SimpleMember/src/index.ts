@@ -1,11 +1,11 @@
 import { IFC4X3 as IFC } from "web-ifc";
+import { v4 as uuidv4 } from "uuid";
+import * as THREE from "three";
 import { Element } from "../../../Elements";
 import { Model } from "../../../../base";
 import { SimpleMemberType } from "..";
-import { v4 as uuidv4 } from "uuid";
 import { IfcUtils } from "../../../../utils/ifc-utils";
 import { Extrusion, RectangleProfile } from "../../../../geometries";
-import * as THREE from "three";
 
 export class SimpleMember extends Element {
   attributes: IFC.IfcMember;
@@ -44,7 +44,7 @@ export class SimpleMember extends Element {
       placement,
       IfcUtils.productDefinitionShape(model, [this.body.attributes]),
       null,
-      type.memberType
+      type.memberType,
     );
     this.model.set(this.attributes);
   }

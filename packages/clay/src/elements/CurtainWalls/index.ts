@@ -1,1 +1,1 @@
-export * from "./SimpleCurtainWall"
+export * from "./SimpleCurtainWall";

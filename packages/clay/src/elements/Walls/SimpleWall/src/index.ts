@@ -43,7 +43,7 @@ export class SimpleWall extends Element {
     return new THREE.Vector3(
       (this.startPoint.x + this.endPoint.x) / 2,
       (this.startPoint.y + this.endPoint.y) / 2,
-      (this.startPoint.z + this.endPoint.z) / 2
+      (this.startPoint.z + this.endPoint.z) / 2,
     );
   }
 
@@ -78,7 +78,7 @@ export class SimpleWall extends Element {
       placement,
       shape,
       null,
-      null
+      null,
     );
 
     this.model.set(this.attributes);
@@ -116,24 +116,24 @@ export class SimpleWall extends Element {
     const correctedNormalVector = new THREE.Vector3(
       normalVector.x,
       normalVector.z,
-      normalVector.y * -1
+      normalVector.y * -1,
     );
 
     const coplanarPoint = new THREE.Vector3(
       wall.startPoint.x,
       wall.startPoint.z,
-      wall.startPoint.y * -1
+      wall.startPoint.y * -1,
     );
 
     const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(
       correctedNormalVector,
-      coplanarPoint
+      coplanarPoint,
     );
 
     const correctedDirection = new THREE.Vector3(
       this.direction.x * -1,
       this.direction.z,
-      this.direction.y
+      this.direction.y,
     );
 
     if (atTheEndPoint) correctedDirection.negate();
@@ -145,14 +145,14 @@ export class SimpleWall extends Element {
     const rayAxisWall1 = new THREE.Ray(rayOriginPoint, correctedDirection);
     const intersectionPoint = rayAxisWall1.intersectPlane(
       plane,
-      new THREE.Vector3()
+      new THREE.Vector3(),
     );
 
     if (intersectionPoint) {
       const correctedIntersectionPoint = new THREE.Vector3(
         intersectionPoint?.x,
         intersectionPoint?.z * -1,
-        intersectionPoint?.y
+        intersectionPoint?.y,
       );
 
       wall.update(true);
@@ -166,7 +166,7 @@ export class SimpleWall extends Element {
   private calculateDistances(
     wall: SimpleWall,
     atTheEndPoint: boolean,
-    intersectionPoint: THREE.Vector3
+    intersectionPoint: THREE.Vector3,
   ) {
     const distance1 = this.midPoint.distanceTo(intersectionPoint);
     const distance2 = wall.midPoint.distanceTo(intersectionPoint);

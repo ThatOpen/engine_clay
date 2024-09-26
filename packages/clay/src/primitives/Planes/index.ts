@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { Faces, Lines } from "../../primitives";
+import { Faces, Lines } from "..";
 import { Raycaster } from "../../utils";
 
 export type PlaneTransformMode = "TRANSLATE" | "ROTATE" | "SCALE";

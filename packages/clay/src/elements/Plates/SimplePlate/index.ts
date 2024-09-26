@@ -6,13 +6,13 @@ import { SimplePlate } from "./src";
 
 export class SimplePlateType extends DynamicElementType<SimplePlate> {
   attributes: IFC.IfcPlateType;
-  
-  plateType: IFC.IfcPlateTypeEnum
+
+  plateType: IFC.IfcPlateTypeEnum;
 
   constructor(model: Model) {
     super(model);
 
-    this.plateType = IFC.IfcPlateTypeEnum.CURTAIN_PANEL
+    this.plateType = IFC.IfcPlateTypeEnum.CURTAIN_PANEL;
 
     this.attributes = new IFC.IfcPlateType(
       new IFC.IfcGloballyUniqueId(uuidv4()),

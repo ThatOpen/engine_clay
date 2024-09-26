@@ -29,7 +29,7 @@ export class SimpleCurtainWall extends Element {
       placement,
       type.shape,
       null,
-      null
+      null,
     );
 
     this.model.set(this.attributes);

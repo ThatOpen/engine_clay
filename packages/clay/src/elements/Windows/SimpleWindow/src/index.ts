@@ -16,7 +16,7 @@ export class SimpleWindow extends Element {
 
     const placement = IfcUtils.localPlacement();
 
-    for(const [id] of type.geometries) {
+    for (const [id] of type.geometries) {
       this.geometries.add(id);
     }
 
@@ -33,7 +33,7 @@ export class SimpleWindow extends Element {
       null,
       null,
       null,
-      null
+      null,
     );
 
     this.model.set(this.attributes);

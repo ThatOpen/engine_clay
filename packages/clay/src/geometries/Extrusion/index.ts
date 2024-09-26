@@ -30,7 +30,7 @@ export class Extrusion<T extends Profile> extends ClayGeometry {
     const placement = new IFC.IfcAxis2Placement3D(
       IfcUtils.point(this.position),
       IfcUtils.direction(dirZ),
-      IfcUtils.direction(dirX)
+      IfcUtils.direction(dirX),
     );
 
     const direction = IfcUtils.direction(this.direction);
@@ -39,7 +39,7 @@ export class Extrusion<T extends Profile> extends ClayGeometry {
       profile.attributes,
       placement,
       direction,
-      new IFC.IfcPositiveLengthMeasure(this.depth)
+      new IFC.IfcPositiveLengthMeasure(this.depth),
     );
 
     this.attributes = this.core;
@@ -54,7 +54,7 @@ export class Extrusion<T extends Profile> extends ClayGeometry {
       this.model,
       placement,
       this.position,
-      this.rotation
+      this.rotation,
     );
 
     const direction = this.model.get(this.core.ExtrudedDirection);

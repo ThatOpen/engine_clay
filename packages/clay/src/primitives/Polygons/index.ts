@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { Lines } from "../../primitives";
+import { Lines } from "..";
 import { Raycaster } from "../../utils";
 
 export class Polygons {

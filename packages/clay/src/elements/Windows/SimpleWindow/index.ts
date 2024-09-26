@@ -86,7 +86,7 @@ export class SimpleWindowType extends StaticElementType<SimpleWindow> {
       IFC.IfcWindowTypeEnum.WINDOW,
       IFC.IfcWindowTypePartitioningEnum.NOTDEFINED,
       null,
-      null
+      null,
     );
 
     this.updateGeometry();

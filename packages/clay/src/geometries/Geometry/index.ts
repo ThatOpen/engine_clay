@@ -34,7 +34,7 @@ export abstract class ClayGeometry extends ClayObject {
     const bool = new IFC.IfcBooleanClippingResult(
       IFC.IfcBooleanOperator.DIFFERENCE,
       this.attributes,
-      item
+      item,
     );
 
     this.model.set(bool);

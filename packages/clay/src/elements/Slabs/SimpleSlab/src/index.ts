@@ -19,14 +19,16 @@ export class SimpleSlab extends Element {
   constructor(model: Model, type: SimpleSlabType) {
     super(model, type);
     this.type = type;
-    
+
     this.body = new Extrusion(model, new ArbitraryClosedProfile(model));
     const id = this.body.attributes.expressID;
     this.type.geometries.set(id, this.body);
     this.geometries.add(id);
 
     const placement = IfcUtils.localPlacement();
-    const shape = IfcUtils.productDefinitionShape(model, [this.body.attributes]);
+    const shape = IfcUtils.productDefinitionShape(model, [
+      this.body.attributes,
+    ]);
 
     this.attributes = new IFC.IfcSlab(
       new IFC.IfcGloballyUniqueId(uuidv4()),
@@ -37,7 +39,7 @@ export class SimpleSlab extends Element {
       placement,
       shape,
       null,
-      null
+      null,
     );
 
     this.model.set(this.attributes);

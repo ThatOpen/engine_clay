@@ -26,7 +26,7 @@ export class SimpleFurniture extends Element {
       null,
       placement,
       type.shape,
-      null
+      null,
     );
 
     this.model.set(this.attributes);

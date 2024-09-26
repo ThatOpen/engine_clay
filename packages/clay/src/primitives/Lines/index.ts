@@ -269,7 +269,6 @@ export class Lines extends Primitive {
       const z = buffer.getZ(lastIndices[i]);
       buffer.setXYZ(indices[i], x, y, z);
     }
-
   }
 
   private transformLines(matrix: THREE.Matrix4, indices: Iterable<number>) {

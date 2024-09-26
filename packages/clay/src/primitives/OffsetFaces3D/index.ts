@@ -299,7 +299,7 @@ export class Walls extends Primitive {
     if (faceHoles) {
       let counter = 0;
       const topHoles = Object.values(
-        this.extrusions.faces.list[extrusion.topFace].holes
+        this.extrusions.faces.list[extrusion.topFace].holes,
       );
 
       for (const holeID in faceHoles) {

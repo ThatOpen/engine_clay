@@ -23,21 +23,21 @@ export class IfcUtils {
   static localPlacement(
     location = new THREE.Vector3(0, 0, 0),
     zDirection = new THREE.Vector3(0, 0, 1),
-    xDirection = new THREE.Vector3(1, 0, 0)
+    xDirection = new THREE.Vector3(1, 0, 0),
   ) {
     return new IFC.IfcLocalPlacement(
       null,
       new IFC.IfcAxis2Placement3D(
         IfcUtils.point(location),
         IfcUtils.direction(zDirection),
-        IfcUtils.direction(xDirection)
-      )
+        IfcUtils.direction(xDirection),
+      ),
     );
   }
 
   static productDefinitionShape(
     model: Model,
-    items: IFC.IfcRepresentationItem[]
+    items: IFC.IfcRepresentationItem[],
   ) {
     const representation = this.shape(model, items);
     return new IFC.IfcProductDefinitionShape(null, null, [representation]);
@@ -51,7 +51,7 @@ export class IfcUtils {
     model: Model,
     placement: IFC.IfcAxis2Placement3D | IFC.IfcAxis2Placement2D,
     position: THREE.Vector3,
-    rotation: THREE.Euler
+    rotation: THREE.Euler,
   ) {
     const location = model.get(placement.Location) as IFC.IfcCartesianPoint;
 

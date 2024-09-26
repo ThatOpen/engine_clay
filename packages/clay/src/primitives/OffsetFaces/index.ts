@@ -175,7 +175,7 @@ export class OffsetFaces extends Primitive {
    */
   setOffset(
     offset: number,
-    ids = this.lines.selected.data as Iterable<number>
+    ids = this.lines.selected.data as Iterable<number>,
   ) {
     for (const id of ids) {
       const offsetFace = this.list[id];
@@ -431,7 +431,7 @@ export class OffsetFaces extends Primitive {
   private getAllNormalizedVectors(
     vectors: LineVector[],
     ids: Set<number>,
-    flip: boolean
+    flip: boolean,
   ) {
     for (const lineID of ids) {
       const line = this.lines.list[lineID];

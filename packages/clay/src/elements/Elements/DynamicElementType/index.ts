@@ -4,7 +4,7 @@ import { Element } from "../Element";
 import { ElementType } from "../ElementType";
 
 export abstract class DynamicElementType<
-  T extends Element
+  T extends Element,
 > extends ElementType {
   abstract attributes: IFC.IfcElementType;
 

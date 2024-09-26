@@ -18,7 +18,6 @@ export class SimpleFurnitureType extends StaticElementType<SimpleFurniture> {
   constructor(model: Model) {
     super(model);
 
-
     this.body = new Brep(model);
     const id = this.body.attributes.expressID;
     this.geometries.set(id, this.body);
@@ -36,7 +35,7 @@ export class SimpleFurnitureType extends StaticElementType<SimpleFurniture> {
       null,
       null,
       null,
-      null
+      null,
     );
   }
 

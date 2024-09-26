@@ -35,7 +35,7 @@ export class Model {
     this._modelID = this.ifcAPI.CreateModel({ schema: WEBIFC.Schemas.IFC4X3 });
     this._context = new WEBIFC.IFC4X3.IfcRepresentationContext(
       new WEBIFC.IFC4X3.IfcLabel("Default"),
-      new WEBIFC.IFC4X3.IfcLabel("Model")
+      new WEBIFC.IFC4X3.IfcLabel("Model"),
     );
   }
 
@@ -45,7 +45,7 @@ export class Model {
 
   delete(
     item: WEBIFC.IfcLineObject | WEBIFC.Handle<IfcLineObject> | null,
-    recursive = false
+    recursive = false,
   ) {
     if (item === null) {
       return;

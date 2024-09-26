@@ -30,7 +30,7 @@ export class RepresentationMap<T extends ClayGeometry[]> extends ClayObject {
     const placement = new IFC.IfcAxis2Placement3D(
       IfcUtils.point(new THREE.Vector3()),
       null,
-      null
+      null,
     );
 
     this.attributes = new IFC.IfcRepresentationMap(placement, representation);
@@ -46,7 +46,7 @@ export class RepresentationMap<T extends ClayGeometry[]> extends ClayObject {
       IfcUtils.direction(yDir),
       IfcUtils.point(position),
       new IFC.IfcReal(1),
-      IfcUtils.direction(zDir)
+      IfcUtils.direction(zDir),
     );
 
     const item = new IFC.IfcMappedItem(this.attributes, operator);
@@ -63,7 +63,7 @@ export class RepresentationMap<T extends ClayGeometry[]> extends ClayObject {
 
     const { position, xDir, yDir, zDir } = this.getTransformData(transform);
     const operator = this.model.get(
-      found.item.MappingTarget
+      found.item.MappingTarget,
     ) as IFC.IfcCartesianTransformationOperator3D;
 
     const origin = this.model.get(operator.LocalOrigin);
@@ -96,7 +96,7 @@ export class RepresentationMap<T extends ClayGeometry[]> extends ClayObject {
 
     const { item } = found;
     const target = this.model.get(
-      item.MappingTarget
+      item.MappingTarget,
     ) as IFC.IfcCartesianTransformationOperator3D;
 
     this.model.delete(target.LocalOrigin);

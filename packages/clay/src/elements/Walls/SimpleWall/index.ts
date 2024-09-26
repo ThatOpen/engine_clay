@@ -24,7 +24,7 @@ export class SimpleWallType extends DynamicElementType<SimpleWall> {
       null,
       null,
       null,
-      IFC.IfcWallTypeEnum.STANDARD
+      IFC.IfcWallTypeEnum.STANDARD,
     );
   }
 

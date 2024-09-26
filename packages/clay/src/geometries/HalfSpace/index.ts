@@ -22,7 +22,7 @@ export class HalfSpace extends ClayGeometry {
     const placement = new IFC.IfcAxis2Placement3D(
       IfcUtils.point(this.position),
       IfcUtils.direction(dirY),
-      IfcUtils.direction(dirX)
+      IfcUtils.direction(dirX),
     );
 
     const plane = new IFC.IfcPlane(placement);
@@ -43,7 +43,7 @@ export class HalfSpace extends ClayGeometry {
       this.model,
       placement,
       this.position,
-      this.rotation
+      this.rotation,
     );
 
     this.model.set(this.core);

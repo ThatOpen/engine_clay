@@ -21,21 +21,23 @@ export class ArbitraryClosedProfile extends Profile {
     this.attributes = new IFC.IfcArbitraryClosedProfileDef(
       IFC.IfcProfileTypeEnum.CURVE,
       null,
-      new IFC.IfcPolyline([])
+      new IFC.IfcPolyline([]),
     );
 
     this.model.set(this.attributes);
   }
 
   addPoint(x: number, y: number, z: number) {
-    const point = new THREE.Vector3(x,y,z)
+    const point = new THREE.Vector3(x, y, z);
     const ifcPoint = IfcUtils.point(point);
 
-    const polyLine = this.model.get(this.attributes.OuterCurve) as IFC.IfcPolyline;
+    const polyLine = this.model.get(
+      this.attributes.OuterCurve,
+    ) as IFC.IfcPolyline;
 
-    polyLine.Points.push(ifcPoint)
+    polyLine.Points.push(ifcPoint);
 
-    this.model.set(polyLine)
+    this.model.set(polyLine);
     this.model.set(ifcPoint);
     this.points.set(ifcPoint.expressID, point);
 
@@ -44,20 +46,24 @@ export class ArbitraryClosedProfile extends Profile {
 
   removePoint(id: number) {
     this.points.delete(id);
-    const polyLine = this.model.get(this.attributes.OuterCurve) as IFC.IfcPolyline;
+    const polyLine = this.model.get(
+      this.attributes.OuterCurve,
+    ) as IFC.IfcPolyline;
     const points = polyLine.Points as Handle<IFC.IfcCartesianPoint>[];
     polyLine.Points = points.filter((point) => point.value !== id);
     this.model.set(polyLine);
   }
 
   update() {
-    const polyLine = this.model.get(this.attributes.OuterCurve) as IFC.IfcPolyline;
+    const polyLine = this.model.get(
+      this.attributes.OuterCurve,
+    ) as IFC.IfcPolyline;
 
     for (const pointRef of polyLine.Points) {
       const point = this.model.get(pointRef);
 
       const threePoint = this.points.get(point.expressID);
-      
+
       if (!threePoint) {
         throw new Error("Point not found!");
       }

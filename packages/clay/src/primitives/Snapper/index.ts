@@ -147,7 +147,7 @@ export class Snapper {
 
     this._helperLinesTimeout = window.setTimeout(
       () => this.createHelperLines(found),
-      1000
+      1000,
     );
   };
 
@@ -304,7 +304,7 @@ export class Snapper {
   private getSnapCoordinates(
     item: Vertices | Lines,
     id: number,
-    result: THREE.Intersection
+    result: THREE.Intersection,
   ) {
     if (item instanceof Vertices) {
       return item.get(id);

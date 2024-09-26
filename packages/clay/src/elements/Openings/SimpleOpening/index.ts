@@ -46,7 +46,7 @@ export class SimpleOpeningType extends StaticElementType<SimpleOpening> {
       null,
       null,
       null,
-      null
+      null,
     );
 
     this.model.set(this.attributes);

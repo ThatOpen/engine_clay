@@ -165,7 +165,7 @@ export class Vertices extends Primitive {
         index,
         buffer.getX(lastIndex),
         buffer.getY(lastIndex),
-        buffer.getZ(lastIndex)
+        buffer.getZ(lastIndex),
       );
     }
   }
