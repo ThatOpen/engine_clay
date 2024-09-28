@@ -1,13 +1,13 @@
 import { IFC4X3 as IFC } from "web-ifc";
 import { v4 as uuidv4 } from "uuid";
 import * as THREE from "three";
-import { Element } from "../../../Elements";
-import { Model } from "../../../../base";
+import { ClayElement, Model } from "../../../../core";
+
 import { SimplePlateType } from "..";
 import { IfcUtils } from "../../../../utils/ifc-utils";
 import { Extrusion, RectangleProfile } from "../../../../geometries";
 
-export class SimplePlate extends Element {
+export class SimplePlate extends ClayElement {
   attributes: IFC.IfcPlate;
 
   body: Extrusion<RectangleProfile>;

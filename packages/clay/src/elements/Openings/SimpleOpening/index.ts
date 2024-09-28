@@ -1,14 +1,14 @@
 import { IFC4X3, IFC4X3 as IFC } from "web-ifc";
 import { v4 as uuidv4 } from "uuid";
-import { StaticElementType } from "../../Elements/StaticElementType";
+import { StaticClayElementType, Model } from "../../../core";
 import { SimpleOpening } from "./src";
 import { Extrusion, RectangleProfile } from "../../../geometries";
-import { Model } from "../../../base";
+
 import { IfcUtils } from "../../../utils/ifc-utils";
 
 export * from "./src";
 
-export class SimpleOpeningType extends StaticElementType<SimpleOpening> {
+export class SimpleOpeningType extends StaticClayElementType<SimpleOpening> {
   attributes: IFC4X3.IfcElementType;
 
   shape: IFC4X3.IfcProductDefinitionShape;

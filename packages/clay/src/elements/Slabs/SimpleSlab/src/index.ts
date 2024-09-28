@@ -1,13 +1,13 @@
 import { v4 as uuidv4 } from "uuid";
 import { IFC4X3 as IFC } from "web-ifc";
-import { Model } from "../../../../base";
+import { Model, ClayElement } from "../../../../core";
 import { IfcUtils } from "../../../../utils/ifc-utils";
-import { Element } from "../../../Elements";
+
 import { SimpleSlabType } from "../index";
 import { Extrusion } from "../../../../geometries";
 import { ArbitraryClosedProfile } from "../../../../geometries/Profiles/ArbitraryClosedProfile";
 
-export class SimpleSlab extends Element {
+export class SimpleSlab extends ClayElement {
   attributes: IFC.IfcSlab;
 
   type: SimpleSlabType;

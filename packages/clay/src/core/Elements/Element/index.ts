@@ -1,26 +1,50 @@
 import * as THREE from "three";
 import * as FRAGS from "@thatopen/fragments";
-import * as WEBIFC from "web-ifc";
 import { v4 as uuidv4 } from "uuid";
 import { IFC4X3 as IFC } from "web-ifc";
-import { ClayObject, Model } from "../../../base";
-import { ElementType } from "../ElementType";
+import * as WEBIFC from "web-ifc";
+import { ClayObject } from "../../Object";
+import { Model } from "../../Model";
+import { ClayElementType } from "../ElementType";
 import { IfcUtils } from "../../../utils/ifc-utils";
-import { SimpleOpening } from "../../Openings";
 
-export abstract class Element extends ClayObject {
+/**
+ * Any object with a physical representation in the IFC. It corresponds to the IFCELEMENT entity in the IFC schema.
+ */
+export abstract class ClayElement extends ClayObject {
+  /**
+   * {@link ClayObject.attributes}
+   */
   abstract attributes: IFC.IfcElement;
 
+  /**
+   * Position of this element in 3D space.
+   */
   position = new THREE.Vector3();
 
+  /**
+   * Rotation of this element in 3D space.
+   */
   rotation = new THREE.Euler();
 
-  type: ElementType;
+  /**
+   * The type of this element.
+   */
+  type: ClayElementType;
 
+  /**
+   * The geometry IDs of this element.
+   */
   geometries = new Set<number>();
 
-  openings = new Map<number, IFC.IfcRelVoidsElement>();
+  /**
+   * The list of IFC links to the Elements that create subtractions in this element.
+   */
+  subtractions = new Map<number, IFC.IfcRelVoidsElement>();
 
+  /**
+   * The list of all meshes of the fragments that compose this element.
+   */
   get meshes() {
     const meshes: FRAGS.FragmentMesh[] = [];
     for (const id of this.geometries) {
@@ -33,11 +57,15 @@ export abstract class Element extends ClayObject {
     return meshes;
   }
 
-  protected constructor(model: Model, type: ElementType) {
+  protected constructor(model: Model, type: ClayElementType) {
     super(model);
     this.type = type;
   }
 
+  /**
+   * Updates this element both in the IFC model and in the 3D scene.
+   * @param updateGeometry whether to update the geometries of the fragments that compose this element.
+   */
   update(updateGeometry = false) {
     this.updateIfcElement();
     const modelID = this.model.modelID;
@@ -75,46 +103,41 @@ export abstract class Element extends ClayObject {
     });
   }
 
-  private updateIfcElement() {
-    const placement = this.model.get(
-      this.attributes.ObjectPlacement,
-    ) as IFC.IfcLocalPlacement;
+  /**
+   * Adds a new subtraction to this element.
+   * @param subtraction the element that will be subtracted from this element.
+   */
+  addSubtraction(subtraction: ClayElement) {
+    if (!(subtraction.attributes instanceof IFC.IfcFeatureElementSubtraction)) {
+      throw new Error(
+        "Only elements with attributes of type IfcFeatureElementSubtraction can be used to subtract",
+      );
+    }
 
-    const relPlacement = this.model.get(
-      placement.RelativePlacement,
-    ) as IFC.IfcAxis2Placement3D;
-
-    IfcUtils.setAxis2Placement(
-      this.model,
-      relPlacement,
-      this.position,
-      this.rotation,
-    );
-
-    this.model.set(this.attributes);
-  }
-
-  addOpening(opening: SimpleOpening) {
     const voids = new IFC.IfcRelVoidsElement(
       new IFC.IfcGloballyUniqueId(uuidv4()),
       null,
       null,
       null,
       this.attributes,
-      opening.attributes,
+      subtraction.attributes,
     );
 
     this.model.set(voids);
 
-    const id = opening.attributes.expressID;
-    this.openings.set(id, voids);
+    const id = subtraction.attributes.expressID;
+    this.subtractions.set(id, voids);
 
     this.model.update();
   }
 
-  removeOpening(opening: SimpleOpening) {
-    const id = opening.attributes.expressID;
-    const found = this.openings.get(id);
+  /**
+   * Removes an existing subtraction from this element.
+   * @param subtraction the element whose subtraction will be removed from this element.
+   */
+  removeSubtraction(subtraction: ClayElement) {
+    const id = subtraction.attributes.expressID;
+    const found = this.subtractions.get(id);
     if (!found) return;
     this.model.delete(found);
     this.model.update();
@@ -149,5 +172,24 @@ export abstract class Element extends ClayObject {
     geometry.setAttribute("normal", new THREE.BufferAttribute(normal, 3));
     geometry.setIndex(Array.from(index));
     return geometry as FRAGS.IndexedGeometry;
+  }
+
+  private updateIfcElement() {
+    const placement = this.model.get(
+      this.attributes.ObjectPlacement,
+    ) as IFC.IfcLocalPlacement;
+
+    const relPlacement = this.model.get(
+      placement.RelativePlacement,
+    ) as IFC.IfcAxis2Placement3D;
+
+    IfcUtils.setAxis2Placement(
+      this.model,
+      relPlacement,
+      this.position,
+      this.rotation,
+    );
+
+    this.model.set(this.attributes);
   }
 }

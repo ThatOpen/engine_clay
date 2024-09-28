@@ -1,12 +1,12 @@
 import { v4 as uuidv4 } from "uuid";
 import { IFC4X3, IFC4X3 as IFC } from "web-ifc";
-import { Model } from "../../../base";
-import { DynamicElementType } from "../../Elements";
+import { Model, DynamicClayElementType } from "../../../core";
+
 import { SimpleSlab } from "./src";
 
 export * from "./src";
 
-export class SimpleSlabType extends DynamicElementType<SimpleSlab> {
+export class SimpleSlabType extends DynamicClayElementType<SimpleSlab> {
   attributes: IFC4X3.IfcSlabType;
 
   constructor(model: Model) {

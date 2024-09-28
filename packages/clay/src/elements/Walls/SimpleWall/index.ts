@@ -1,12 +1,11 @@
 import { v4 as uuidv4 } from "uuid";
 import { IFC4X3, IFC4X3 as IFC } from "web-ifc";
-import { Model } from "../../../base";
-import { DynamicElementType } from "../../Elements";
+import { Model, DynamicClayElementType } from "../../../core";
 import { SimpleWall } from "./src";
 
 export * from "./src";
 
-export class SimpleWallType extends DynamicElementType<SimpleWall> {
+export class SimpleWallType extends DynamicClayElementType<SimpleWall> {
   attributes: IFC4X3.IfcWallType;
 
   width = 0.2;

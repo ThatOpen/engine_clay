@@ -1,14 +1,14 @@
 import { IFC4X3 as IFC } from "web-ifc";
 import { v4 as uuidv4 } from "uuid";
-import { Model } from "../../../base";
-import { StaticElementType } from "../../Elements/StaticElementType";
+import { Model, StaticClayElementType } from "../../../core";
+
 import { SimpleFurniture } from "./src";
 import { Brep } from "../../../geometries";
 import { IfcUtils } from "../../../utils/ifc-utils";
 
 export * from "./src";
 
-export class SimpleFurnitureType extends StaticElementType<SimpleFurniture> {
+export class SimpleFurnitureType extends StaticClayElementType<SimpleFurniture> {
   attributes: IFC.IfcFurnishingElementType;
 
   shape: IFC.IfcProductDefinitionShape;

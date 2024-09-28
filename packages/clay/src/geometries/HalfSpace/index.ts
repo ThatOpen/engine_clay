@@ -1,7 +1,7 @@
 import { IFC4X3 as IFC } from "web-ifc";
 import * as THREE from "three";
-import { Model } from "../../base";
-import { ClayGeometry } from "../Geometry";
+import { Model, ClayGeometry } from "../../core";
+
 import { MathUtils } from "../../utils/math-utils";
 import { IfcUtils } from "../../utils/ifc-utils";
 

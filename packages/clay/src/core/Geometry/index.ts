@@ -1,17 +1,23 @@
-import { IFC4X3 as IFC, IfcLineObject } from "web-ifc";
-import { ClayObject } from "../../base";
+import { IFC4X3 as IFC } from "web-ifc";
+import { ClayObject } from "../Object";
 
+/**
+ * An object that represents an IFC geometry that can represent one or many IfcElements in 3D. It supports boolean operations.
+ */
 export abstract class ClayGeometry extends ClayObject {
+  /**
+   * {@link ClayObject.attributes}. It can either be an IFC geometry, or the result of a boolean operation.
+   */
   abstract attributes:
     | IFC.IfcGeometricRepresentationItem
     | IFC.IfcBooleanClippingResult;
 
+  /**
+   * The base IFC geometry of this object. If there are no boolean operations, it's the same as {@link ClayGeometry.attributes}.
+   */
   abstract core: IFC.IfcGeometricRepresentationItem;
 
-  protected firstClipping: number | null = null;
-  protected lastClipping: number | null = null;
-
-  clippings = new Map<
+  protected clippings = new Map<
     number,
     {
       previous: number | null;
@@ -20,8 +26,28 @@ export abstract class ClayGeometry extends ClayObject {
     }
   >();
 
-  delete() {}
+  protected firstClipping: number | null = null;
 
+  protected lastClipping: number | null = null;
+
+  protected subtractedGeometriesToBools = new Map<number, number>();
+
+  /**
+   * Deletes this geometry in the IFC model.
+   */
+  delete() {
+    this.model.delete(this.core);
+    for (const [, { bool }] of this.clippings) {
+      this.model.delete(bool);
+    }
+    this.clippings.clear();
+    this.subtractedGeometriesToBools.clear();
+  }
+
+  /**
+   * Adds a boolean subtraction to this geometry.
+   * @param geometry the geometry to subtract from this.
+   */
   addSubtraction(geometry: ClayGeometry) {
     const item = geometry.attributes;
 
@@ -62,10 +88,28 @@ export abstract class ClayGeometry extends ClayObject {
 
     this.attributes = bool;
     this.update();
+
+    this.subtractedGeometriesToBools.set(
+      geometry.attributes.expressID,
+      bool.expressID,
+    );
   }
 
-  removeSubtraction(item: IFC.IfcBooleanOperand & IfcLineObject) {
-    const found = this.clippings.get(item.expressID);
+  /**
+   * Remove the specified geometry as subtraction (if it is a subtraction).
+   * @param geometry the geometry whose subtraction to remove. If this geometry is not a subtraction, nothing happens.
+   */
+  removeSubtraction(geometry: ClayGeometry) {
+    const boolID = this.subtractedGeometriesToBools.get(
+      geometry.attributes.expressID,
+    );
+
+    if (boolID === undefined) {
+      // This geometry was not subtracted from this one
+      return;
+    }
+
+    const found = this.clippings.get(boolID);
     if (!found) {
       return;
     }
@@ -111,7 +155,7 @@ export abstract class ClayGeometry extends ClayObject {
     }
 
     // Remove bool
-    this.clippings.delete(item.expressID);
+    this.clippings.delete(boolID);
     this.model.delete(bool);
     this.update();
   }

@@ -1,15 +1,27 @@
 import { IFC4X3 as IFC } from "web-ifc";
 import * as THREE from "three";
-import { Element } from "../Element";
-import { ElementType } from "../ElementType";
+import { ClayElement } from "../Element";
+import { ClayElementType } from "../ElementType";
 
-export abstract class StaticElementType<
-  T extends Element,
-> extends ElementType<T> {
+/**
+ * Static variation of {@link ClayElementType}, used in types that need geometry control at the type level. It's more efficient but less flexible than {@link StaticClayElementType}.
+ */
+export abstract class StaticClayElementType<
+  T extends ClayElement,
+> extends ClayElementType<T> {
+  /**
+   * {@link ClayElementType.attributes}
+   */
   abstract attributes: IFC.IfcElementType;
 
+  /**
+   * The IFC data containing the geometries of this type (remember that all elements of static types share the same geometry).
+   */
   abstract shape: IFC.IfcProductDefinitionShape;
 
+  /**
+   * {@link ClayElementType.addInstance}. It creates a new instance to the fragments shared by all elements.
+   */
   addInstance(): T {
     const element = this.createElement();
     const id = element.attributes.expressID;
@@ -26,6 +38,9 @@ export abstract class StaticElementType<
     return element;
   }
 
+  /**
+   * {@link ClayElementType.addInstance}. Deletes a specific instance in the shared fragments.
+   */
   deleteInstance(id: number) {
     const element = this.elements.get(id);
     if (!element) {
@@ -40,9 +55,14 @@ export abstract class StaticElementType<
     }
   }
 
+  /**
+   * Updates all the elements of this type.
+   * @param updateGeometry whether to update the element geometries or not. Remember that in static types, all elements share the same geometries.
+   */
   update(updateGeometry = false) {
     let first = updateGeometry;
     for (const [_id, element] of this.elements) {
+      // Geometry is shared, so only update it in first instance
       element.update(first);
       first = false;
     }

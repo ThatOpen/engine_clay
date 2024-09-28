@@ -148,9 +148,6 @@
 
 	// Set up the controls to move them around
 
-	const control = new TransformControls(world.camera, world.renderer.domElement);
-	const helper = new THREE.Object3D();
-	let transform = new THREE.Matrix4();
 	world.scene.add(helper);
 	control.attach(helper);
 	world.scene.add(control);
@@ -159,9 +156,9 @@
 	control.addEventListener('change', () => {
 		helper.updateMatrix();
 		const temp = helper.matrix.clone();
-		temp.multiply(transform.invert());
+		temp.multiply(controlsTransform.invert());
 		faces.transform(temp);
-		transform = helper.matrix.clone();
+    controlsTransform = helper.matrix.clone();
 	});
 
 	const gui = new dat.GUI();

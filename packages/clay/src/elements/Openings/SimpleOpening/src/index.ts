@@ -1,11 +1,11 @@
 import { IFC4X3 as IFC } from "web-ifc";
 import { v4 as uuidv4 } from "uuid";
-import { Element } from "../../../Elements/Element";
+import { ClayElement, Model } from "../../../../core";
 import { SimpleOpeningType } from "../index";
-import { Model } from "../../../../base";
+
 import { IfcUtils } from "../../../../utils/ifc-utils";
 
-export class SimpleOpening extends Element {
+export class SimpleOpening extends ClayElement {
   attributes: IFC.IfcOpeningElement;
 
   type: SimpleOpeningType;

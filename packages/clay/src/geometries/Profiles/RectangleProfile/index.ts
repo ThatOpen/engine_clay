@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { IFC4X3 as IFC } from "web-ifc";
 import { Profile } from "../Profile";
-import { Model } from "../../../base";
+import { Model } from "../../../core";
 import { IfcUtils } from "../../../utils/ifc-utils";
 
 export class RectangleProfile extends Profile {

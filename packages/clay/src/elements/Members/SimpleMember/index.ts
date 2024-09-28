@@ -1,10 +1,10 @@
 import { v4 as uuidv4 } from "uuid";
 import { IFC4X3 as IFC } from "web-ifc";
-import { Model } from "../../../base";
-import { DynamicElementType } from "../../Elements";
+import { Model, DynamicClayElementType } from "../../../core";
+
 import { SimpleMember } from "./src";
 
-export class SimpleMemberType extends DynamicElementType<SimpleMember> {
+export class SimpleMemberType extends DynamicClayElementType<SimpleMember> {
   attributes: IFC.IfcMemberType;
 
   memberType: IFC.IfcMemberTypeEnum;

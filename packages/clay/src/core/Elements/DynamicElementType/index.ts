@@ -1,13 +1,22 @@
 import * as THREE from "three";
 import { IFC4X3 as IFC } from "web-ifc";
-import { Element } from "../Element";
-import { ElementType } from "../ElementType";
+import { ClayElement } from "../Element";
+import { ClayElementType } from "../ElementType";
 
-export abstract class DynamicElementType<
-  T extends Element,
-> extends ElementType {
+/**
+ * Dynamic variation of {@link ClayElementType}, used in types that need geometry control at the instance level. It's less efficient but more flexible than {@link StaticClayElementType}.
+ */
+export abstract class DynamicClayElementType<
+  T extends ClayElement,
+> extends ClayElementType {
+  /**
+   * {@link ClayElementType.attributes}
+   */
   abstract attributes: IFC.IfcElementType;
 
+  /**
+   * {@link ClayElementType.addInstance}. It creates a new fragment per instance, allowing for geometry control at the instance level.
+   */
   addInstance(): T {
     const element = this.createElement();
     const id = element.attributes.expressID;
@@ -23,6 +32,9 @@ export abstract class DynamicElementType<
     return element;
   }
 
+  /**
+   * {@link ClayElementType.addInstance}. Deletes a specific fragment.
+   */
   deleteInstance(id: number) {
     const element = this.elements.get(id);
     if (!element) {
@@ -47,6 +59,10 @@ export abstract class DynamicElementType<
     }
   }
 
+  /**
+   * Updates all the elements of this type.
+   * @param updateGeometry whether to update the element geometries or not. Remember that in dynamic types, each element has a
+   */
   update(updateGeometry = false) {
     for (const [_id, element] of this.elements) {
       element.update(updateGeometry);

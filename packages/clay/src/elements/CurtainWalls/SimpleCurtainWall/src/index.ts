@@ -1,11 +1,11 @@
 import { IFC4X3 as IFC } from "web-ifc";
 import { v4 as uuidv4 } from "uuid";
-import { Model } from "../../../../base";
+import { Model, ClayElement } from "../../../../core";
 import { IfcUtils } from "../../../../utils/ifc-utils";
-import { Element } from "../../../Elements/Element";
+
 import { SimpleCurtainWallType } from "../index";
 
-export class SimpleCurtainWall extends Element {
+export class SimpleCurtainWall extends ClayElement {
   attributes: IFC.IfcCurtainWall;
 
   type: SimpleCurtainWallType;

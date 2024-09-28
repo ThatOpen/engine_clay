@@ -1,6 +1,6 @@
 import { IFC4X3 as IFC } from "web-ifc";
 import * as THREE from "three";
-import { Model } from "../base";
+import { Model } from "../core";
 import { MathUtils } from "./math-utils";
 
 export class IfcUtils {

@@ -1,7 +1,7 @@
 import { IFC4X3 as IFC } from "web-ifc";
 import * as THREE from "three";
-import { ClayObject, Model } from "../../base";
-import { ClayGeometry } from "../Geometry";
+import { ClayObject, Model, ClayGeometry } from "../../core";
+
 import { IfcUtils } from "../../utils/ifc-utils";
 
 // TODO: Are we going to use this, or is just necessary for reading?

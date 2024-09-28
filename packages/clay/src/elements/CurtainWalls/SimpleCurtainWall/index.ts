@@ -1,9 +1,9 @@
 import { IFC4X3, IFC4X3 as IFC } from "web-ifc";
 import { v4 as uuidv4 } from "uuid";
 import * as THREE from "three";
-import { Model } from "../../../base";
+import { Model, StaticClayElementType } from "../../../core";
 import { IfcUtils } from "../../../utils/ifc-utils";
-import { StaticElementType } from "../../Elements";
+
 import { SimpleCurtainWall } from "./src";
 import { SimpleMemberType } from "../../Members";
 import { SimplePlateType } from "../../Plates";
@@ -12,7 +12,7 @@ import { SimplePlate } from "../../Plates/SimplePlate/src";
 
 export * from "./src";
 
-export class SimpleCurtainWallType extends StaticElementType<SimpleCurtainWall> {
+export class SimpleCurtainWallType extends StaticClayElementType<SimpleCurtainWall> {
   attributes: IFC4X3.IfcCurtainWallType;
 
   shape: IFC4X3.IfcProductDefinitionShape;

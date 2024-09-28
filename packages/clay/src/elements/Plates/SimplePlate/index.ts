@@ -1,10 +1,10 @@
 import { v4 as uuidv4 } from "uuid";
 import { IFC4X3 as IFC } from "web-ifc";
-import { Model } from "../../../base";
-import { DynamicElementType } from "../../Elements";
+import { Model, DynamicClayElementType } from "../../../core";
+
 import { SimplePlate } from "./src";
 
-export class SimplePlateType extends DynamicElementType<SimplePlate> {
+export class SimplePlateType extends DynamicClayElementType<SimplePlate> {
   attributes: IFC.IfcPlateType;
 
   plateType: IFC.IfcPlateTypeEnum;

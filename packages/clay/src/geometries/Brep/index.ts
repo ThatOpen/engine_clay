@@ -1,7 +1,7 @@
 import { IFC4X3 as IFC } from "web-ifc";
 import * as THREE from "three";
-import { ClayGeometry } from "../Geometry";
-import { Model } from "../../base";
+import { ClayGeometry, Model } from "../../core";
+
 import { IfcUtils } from "../../utils/ifc-utils";
 
 export class Brep extends ClayGeometry {

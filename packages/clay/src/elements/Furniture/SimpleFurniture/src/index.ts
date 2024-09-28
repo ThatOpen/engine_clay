@@ -1,11 +1,11 @@
 import { IFC4X3 as IFC } from "web-ifc";
 import { v4 as uuidv4 } from "uuid";
-import { Model } from "../../../../base";
+import { Model, ClayElement } from "../../../../core";
 import { IfcUtils } from "../../../../utils/ifc-utils";
-import { Element } from "../../../Elements/Element";
+
 import { SimpleFurnitureType } from "../index";
 
-export class SimpleFurniture extends Element {
+export class SimpleFurniture extends ClayElement {
   attributes: IFC.IfcFurnishingElement;
 
   type: SimpleFurnitureType;

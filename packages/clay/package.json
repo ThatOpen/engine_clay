@@ -37,7 +37,9 @@
     "access": "public"
   },
   "devDependencies": {
+    "@thatopen/components": "^2.2.11",
     "@thatopen/fragments": "2.2.0",
+    "@thatopen/ui": "^2.2.2",
     "@types/earcut": "^2.1.4",
     "@types/jest": "27.0.0",
     "@types/node": "20.11.30",
