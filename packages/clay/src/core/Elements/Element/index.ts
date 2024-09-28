@@ -7,6 +7,7 @@ import { ClayObject } from "../../Object";
 import { Model } from "../../Model";
 import { ClayElementType } from "../ElementType";
 import { IfcUtils } from "../../../utils/ifc-utils";
+import { ClayGeometry } from "../../Geometry";
 
 /**
  * Any object with a physical representation in the IFC. It corresponds to the IFCELEMENT entity in the IFC schema.
@@ -172,6 +173,35 @@ export abstract class ClayElement extends ClayObject {
     geometry.setAttribute("normal", new THREE.BufferAttribute(normal, 3));
     geometry.setIndex(Array.from(index));
     return geometry as FRAGS.IndexedGeometry;
+  }
+
+  protected updateGeometryID() {
+    // When performing boolean operations, web-ifc creates new geometry IDs
+    // If this happens, we need to update the data and remove the old geometry
+    const modelID = this.model.modelID;
+    const id = this.attributes.expressID;
+    this.model.ifcAPI.StreamMeshes(modelID, [id], (ifcMesh) => {
+      const newGeometry = ifcMesh.geometries.get(0);
+      const newGeomID = newGeometry.geometryExpressID;
+      const oldGeomID = this.geometries.values().next().value;
+
+      if (newGeomID === oldGeomID) {
+        return;
+      }
+
+      this.geometries.clear();
+      this.geometries.add(newGeomID);
+
+      const frag = this.type.fragments.get(oldGeomID) as FRAGS.Fragment;
+      this.type.fragments.delete(oldGeomID);
+      this.type.fragments.set(newGeomID, frag);
+
+      const geometry = this.type.geometries.get(oldGeomID) as ClayGeometry;
+      this.type.geometries.delete(oldGeomID);
+      this.type.geometries.set(newGeomID, geometry);
+
+      this.model.delete(oldGeomID);
+    });
   }
 
   private updateIfcElement() {
