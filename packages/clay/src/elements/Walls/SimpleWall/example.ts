@@ -33,12 +33,22 @@ model.ifcAPI.SetWasmPath("https://unpkg.com/web-ifc@0.0.59/", true);
 await model.init();
 
 const simpleWallType = new CLAY.SimpleWallType(model);
-const wall1 = simpleWallType.addInstance();
-world.scene.three.add(...wall1.meshes);
+const wall = simpleWallType.addInstance();
+world.scene.three.add(...wall.meshes);
 
-wall1.startPoint = new THREE.Vector3(1, 1, 0);
-wall1.endPoint = new THREE.Vector3(-1, -1, 0);
-wall1.update(true);
+wall.startPoint = new THREE.Vector3(1, 1, 0);
+wall.endPoint = new THREE.Vector3(-1, -1, 0);
+wall.update(true);
+
+world.camera.controls.fitToSphere(wall.meshes[0], false);
+
+const simpleOpeningType = new CLAY.SimpleOpeningType(model);
+const opening = simpleOpeningType.addInstance();
+// scene.add(...opening.meshes);
+// console.log(simpleOpeningType);
+
+wall.addSubtraction(opening);
+wall.update(true);
 
 // Stats
 
@@ -59,6 +69,63 @@ const panel = BUI.Component.create<BUI.PanelSection>(() => {
   return BUI.html`
     <bim-panel label="Simple Walls Tutorial" class="options-menu">
       <bim-panel-section collapsed label="Controls">
+      
+      <div style="display: flex; gap: 12px">
+      
+        <bim-number-input slider step="0.1" label="Start X" vertical="true" value="${wall.startPoint.x}" @change="${(
+          event: any,
+        ) => {
+          wall.startPoint.x = event.target.value;
+          wall.update(true);
+        }}"></bim-number-input>
+        
+        <bim-number-input slider step="0.1" label="Start Y" vertical="true" value="${wall.startPoint.y}" @change="${(
+          event: any,
+        ) => {
+          wall.startPoint.y = event.target.value;
+          wall.update(true);
+        }}"></bim-number-input>
+        
+        <bim-number-input slider step="0.1" label="Start Z" vertical="true" value="${wall.startPoint.z}" @change="${(
+          event: any,
+        ) => {
+          wall.startPoint.z = event.target.value;
+          wall.update(true);
+        }}"></bim-number-input>
+        
+      </div>
+      
+      <div style="display: flex; gap: 12px">
+      
+        <bim-number-input slider step="0.1" label="End X" vertical="true" value="${wall.endPoint.x}" @change="${(
+          event: any,
+        ) => {
+          wall.endPoint.x = event.target.value;
+          wall.update(true);
+        }}"></bim-number-input>
+          
+        <bim-number-input slider step="0.1" label="End Y" vertical="true" value="${wall.endPoint.y}" @change="${(
+          event: any,
+        ) => {
+          wall.endPoint.y = event.target.value;
+          wall.update(true);
+        }}"></bim-number-input>
+          
+        <bim-number-input slider step="0.1" label="End Z" vertical="true" value="${wall.endPoint.z}" @change="${(
+          event: any,
+        ) => {
+          wall.endPoint.z = event.target.value;
+          wall.update(true);
+        }}"></bim-number-input>
+        
+      </div>
+      
+      <bim-number-input slider step="0.05" label="Thickness" value="${wall.endPoint.z}" @change="${(
+        event: any,
+      ) => {
+        simpleWallType.width = event.target.value;
+        simpleWallType.update(true);
+      }}"></bim-number-input>
         
       </bim-panel-section>
     </bim-panel>

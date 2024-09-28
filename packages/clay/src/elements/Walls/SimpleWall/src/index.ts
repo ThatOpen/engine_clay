@@ -31,7 +31,7 @@ export class SimpleWall extends ClayElement {
   //   { wall: SimpleWall; atTheEndPoint: boolean }
   // >();
 
-  _halfSpaces = new Map<number, { halfSpace: HalfSpace }>();
+  // private _halfSpaces = new Map<number, { halfSpace: HalfSpace }>();
 
   get length() {
     return this.startPoint.distanceTo(this.endPoint);
