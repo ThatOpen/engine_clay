@@ -97,7 +97,7 @@ export class SimpleWall extends ClayElement {
   }
 
   update(updateGeometry: boolean = false) {
-    this.updateAllOpenings();
+    this.updateAllSubtractions();
 
     const profile = this.body.profile;
     profile.dimension.x = this.length;
@@ -308,7 +308,7 @@ export class SimpleWall extends ClayElement {
 
   addSubtraction(element: ClayElement) {
     super.addSubtraction(element);
-    this.setSubtraction(element);
+    this.alignSubtraction(element);
     this.updateGeometryID();
   }
 
@@ -318,7 +318,7 @@ export class SimpleWall extends ClayElement {
     this.updateGeometryID();
   }
 
-  setSubtraction(element: ClayElement) {
+  private alignSubtraction(element: ClayElement) {
     const wallPlane = new THREE.Plane();
 
     const tempPoint = this.startPoint3D;
@@ -348,7 +348,7 @@ export class SimpleWall extends ClayElement {
     this._openings.set(id, { opening: element, distance });
   }
 
-  private updateAllOpenings() {
+  private updateAllSubtractions() {
     const start = this.startPoint3D;
     const dir = this.direction;
     for (const [_id, { opening, distance }] of this._openings) {
@@ -371,6 +371,10 @@ export class SimpleWall extends ClayElement {
       const newGeomID = newGeometry.geometryExpressID;
       const oldGeomID = this.geometries.values().next().value;
 
+      if (newGeomID === oldGeomID) {
+        return;
+      }
+
       this.geometries.clear();
       this.geometries.add(newGeomID);
 
@@ -381,6 +385,8 @@ export class SimpleWall extends ClayElement {
       const geometry = this.type.geometries.get(oldGeomID) as ClayGeometry;
       this.type.geometries.delete(oldGeomID);
       this.type.geometries.set(newGeomID, geometry);
+
+      this.model.delete(oldGeomID);
     });
   }
 }
