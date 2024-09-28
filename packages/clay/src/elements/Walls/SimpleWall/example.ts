@@ -86,13 +86,6 @@ const panel = BUI.Component.create<BUI.PanelSection>(() => {
           wall.update(true);
         }}"></bim-number-input>
         
-        <bim-number-input slider step="0.1" label="Start Z" vertical="true" value="${wall.startPoint.z}" @change="${(
-          event: any,
-        ) => {
-          wall.startPoint.z = event.target.value;
-          wall.update(true);
-        }}"></bim-number-input>
-        
       </div>
       
       <div style="display: flex; gap: 12px">
@@ -111,20 +104,30 @@ const panel = BUI.Component.create<BUI.PanelSection>(() => {
           wall.update(true);
         }}"></bim-number-input>
           
-        <bim-number-input slider step="0.1" label="End Z" vertical="true" value="${wall.endPoint.z}" @change="${(
-          event: any,
-        ) => {
-          wall.endPoint.z = event.target.value;
-          wall.update(true);
-        }}"></bim-number-input>
         
       </div>
+      
+      <bim-number-input slider step="0.05" label="Elevation" value="${wall.endPoint.z}" @change="${(
+        event: any,
+      ) => {
+        opening.position.z = event.target.value;
+        opening.update();
+        wall.elevation = event.target.value;
+        wall.update(true);
+      }}"></bim-number-input>
       
       <bim-number-input slider step="0.05" label="Thickness" value="${wall.endPoint.z}" @change="${(
         event: any,
       ) => {
         simpleWallType.width = event.target.value;
         simpleWallType.update(true);
+      }}"></bim-number-input>      
+      
+      <bim-number-input slider step="0.05" label="Height" value="${wall.endPoint.z}" @change="${(
+        event: any,
+      ) => {
+        wall.height = event.target.value;
+        wall.update(true);
       }}"></bim-number-input>
         
       </bim-panel-section>
