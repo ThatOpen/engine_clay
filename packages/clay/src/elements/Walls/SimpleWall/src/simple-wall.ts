@@ -7,6 +7,7 @@ import { IfcUtils } from "../../../../utils/ifc-utils";
 import { Extrusion, RectangleProfile } from "../../../../geometries";
 import { SimpleWallType } from "../index";
 import { SimpleWallNester } from "./simple-wall-nester";
+import { SimpleWallExtender } from "./simple-wall-extender";
 
 export class SimpleWall extends ClayElement {
   attributes: IFC.IfcWall;
@@ -24,13 +25,7 @@ export class SimpleWall extends ClayElement {
   endPoint = new THREE.Vector2(1, 0);
 
   private _nester = new SimpleWallNester(this);
-
-  // private _corners = new Map<
-  //   number,
-  //   { wall: SimpleWall; atTheEndPoint: boolean }
-  // >();
-
-  // private _halfSpaces = new Map<number, { halfSpace: HalfSpace }>();
+  private _extender = new SimpleWallExtender(this);
 
   get length() {
     return this.startPoint.distanceTo(this.endPoint);
@@ -129,5 +124,9 @@ export class SimpleWall extends ClayElement {
     super.removeSubtraction(element);
     this._nester.delete(element);
     this.updateGeometryID();
+  }
+
+  extend(wall: SimpleWall) {
+    this._extender.extend(wall);
   }
 }

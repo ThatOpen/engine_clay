@@ -33,12 +33,19 @@ model.ifcAPI.SetWasmPath("https://unpkg.com/web-ifc@0.0.59/", true);
 await model.init();
 
 const simpleWallType = new CLAY.SimpleWallType(model);
+
 const wall = simpleWallType.addInstance();
 world.scene.three.add(...wall.meshes);
-
-wall.startPoint = new THREE.Vector3(1, 1, 0);
-wall.endPoint = new THREE.Vector3(-1, -1, 0);
+// wall.startPoint = new THREE.Vector2(1, 1);
+// wall.endPoint = new THREE.Vector2(-1, -1);
 wall.update(true);
+
+const wall2 = simpleWallType.addInstance();
+world.scene.three.add(...wall2.meshes);
+wall2.startPoint = new THREE.Vector2(0, 2);
+wall2.endPoint = new THREE.Vector2(0, 1);
+wall2.extend(wall);
+wall2.update(true);
 
 world.camera.controls.fitToSphere(wall.meshes[0], false);
 
@@ -77,6 +84,7 @@ const panel = BUI.Component.create<BUI.PanelSection>(() => {
         ) => {
           wall.startPoint.x = event.target.value;
           wall.update(true);
+          wall2.extend(wall);
         }}"></bim-number-input>
         
         <bim-number-input slider step="0.1" label="Start Y" vertical="true" value="${wall.startPoint.y}" @change="${(
@@ -84,6 +92,7 @@ const panel = BUI.Component.create<BUI.PanelSection>(() => {
         ) => {
           wall.startPoint.y = event.target.value;
           wall.update(true);
+          wall2.extend(wall);
         }}"></bim-number-input>
         
       </div>
@@ -95,6 +104,7 @@ const panel = BUI.Component.create<BUI.PanelSection>(() => {
         ) => {
           wall.endPoint.x = event.target.value;
           wall.update(true);
+          wall2.extend(wall);
         }}"></bim-number-input>
           
         <bim-number-input slider step="0.1" label="End Y" vertical="true" value="${wall.endPoint.y}" @change="${(
@@ -102,12 +112,13 @@ const panel = BUI.Component.create<BUI.PanelSection>(() => {
         ) => {
           wall.endPoint.y = event.target.value;
           wall.update(true);
+          wall2.extend(wall);
         }}"></bim-number-input>
           
         
       </div>
       
-      <bim-number-input slider step="0.05" label="Elevation" value="${wall.endPoint.z}" @change="${(
+      <bim-number-input slider step="0.05" label="Elevation" value="${wall.elevation}" @change="${(
         event: any,
       ) => {
         opening.position.z = event.target.value;
@@ -116,14 +127,14 @@ const panel = BUI.Component.create<BUI.PanelSection>(() => {
         wall.update(true);
       }}"></bim-number-input>
       
-      <bim-number-input slider step="0.05" label="Thickness" value="${wall.endPoint.z}" @change="${(
+      <bim-number-input slider step="0.05" label="Thickness" value="${simpleWallType.width}" @change="${(
         event: any,
       ) => {
         simpleWallType.width = event.target.value;
         simpleWallType.update(true);
       }}"></bim-number-input>      
       
-      <bim-number-input slider step="0.05" label="Height" value="${wall.endPoint.z}" @change="${(
+      <bim-number-input slider step="0.05" label="Height" value="${wall.height}" @change="${(
         event: any,
       ) => {
         wall.height = event.target.value;
@@ -152,3 +163,29 @@ const button = BUI.Component.create<BUI.PanelSection>(() => {
 });
 
 document.body.append(button);
+
+// window.addEventListener("keydown", async (e) => {
+//   if (e.code === "KeyP") {
+//     const directoryHandle = await window.showDirectoryPicker();
+//     async function writeIFC() {
+//       const buffer = model.ifcAPI.SaveModel(model.modelID);
+//
+//       console.log(buffer);
+//
+//       const fileName = "example.ifc";
+//       const fileHandle = await directoryHandle.getFileHandle("example.ifc", {
+//         create: true,
+//       });
+//
+//       // Create a FileSystemWritableFileStream to write to.
+//       const writable = await fileHandle.createWritable();
+//       await writable.truncate(0);
+//       // Write the contents of the file to the stream.
+//       await writable.write(buffer);
+//       // Close the file and write the contents to disk.
+//       await writable.close();
+//     }
+//
+//     setInterval(() => writeIFC(), 1000);
+//   }
+// });

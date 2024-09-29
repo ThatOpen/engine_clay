@@ -38,11 +38,6 @@ export class RectangleProfile extends Profile {
     this.attributes.XDim.value = this.dimension.x;
     this.attributes.YDim.value = this.dimension.y;
 
-    this.attributes.Position = new IFC.IfcAxis2Placement2D(
-      IfcUtils.point(this.position),
-      IfcUtils.direction(new THREE.Vector3(1, 0, 0)),
-    );
-
     const placement = this.model.get(this.attributes.Position);
 
     IfcUtils.setAxis2Placement(

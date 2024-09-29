@@ -1,55 +1,10 @@
-// extend(wall: SimpleWall, atTheEndPoint = true) {
-//   const zDirection = new THREE.Vector3(0, 0, 1);
-//   const normalVector = wall.direction.cross(zDirection);
-//   const correctedNormalVector = new THREE.Vector3(
-//     normalVector.x,
-//     normalVector.z,
-//     normalVector.y * -1,
-//   );
-//
-//   const coplanarPoint = new THREE.Vector3(
-//     wall.startPoint.x,
-//     wall.startPoint.z,
-//     wall.startPoint.y * -1,
-//   );
-//
-//   const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(
-//     correctedNormalVector,
-//     coplanarPoint,
-//   );
-//
-//   const correctedDirection = new THREE.Vector3(
-//     this.direction.x * -1,
-//     this.direction.z,
-//     this.direction.y,
-//   );
-//
-//   if (atTheEndPoint) correctedDirection.negate();
-//
-//   const origin = atTheEndPoint ? this.startPoint : this.endPoint;
-//
-//   const rayOriginPoint = new THREE.Vector3(origin.x, origin.z, origin.y * -1);
-//
-//   const rayAxisWall1 = new THREE.Ray(rayOriginPoint, correctedDirection);
-//   const intersectionPoint = rayAxisWall1.intersectPlane(
-//     plane,
-//     new THREE.Vector3(),
-//   );
-//
-//   if (intersectionPoint) {
-//     const correctedIntersectionPoint = new THREE.Vector3(
-//       intersectionPoint?.x,
-//       intersectionPoint?.z * -1,
-//       intersectionPoint?.y,
-//     );
-//
-//     wall.update(true);
-//     this.update(true);
-//
-//     return correctedIntersectionPoint;
-//   }
-//   return null;
-// }
+export class SimpleWallCornerer {
+  // private _corners = new Map<
+  //   number,
+  //   { wall: SimpleWall; atTheEndPoint: boolean }
+  // >();
+  // private _halfSpaces = new Map<number, { halfSpace: HalfSpace }>();
+}
 
 // private calculateDistances(
 //   wall: SimpleWall,
