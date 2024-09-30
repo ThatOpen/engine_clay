@@ -126,7 +126,7 @@ export class SimpleWall extends ClayElement {
     this.updateGeometryID();
   }
 
-  extend(wall: SimpleWall) {
-    this._extender.extend(wall);
+  extend(wall: SimpleWall, priority: "start" | "end" = "end") {
+    this._extender.extend(wall, priority);
   }
 }

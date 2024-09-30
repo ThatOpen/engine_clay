@@ -42,8 +42,8 @@ wall.update(true);
 
 const wall2 = simpleWallType.addInstance();
 world.scene.three.add(...wall2.meshes);
-wall2.startPoint = new THREE.Vector2(0, 2);
-wall2.endPoint = new THREE.Vector2(0, 1);
+wall2.startPoint = new THREE.Vector2(0, -2);
+wall2.endPoint = new THREE.Vector2(0, -1);
 wall2.extend(wall);
 wall2.update(true);
 
