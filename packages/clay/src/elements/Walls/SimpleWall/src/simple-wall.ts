@@ -1,18 +1,20 @@
 import * as THREE from "three";
 import { v4 as uuidv4 } from "uuid";
 import { IFC4X3 as IFC } from "web-ifc";
-import { Model, ClayElement } from "../../../../core";
+import { Model, ClayElement, Event } from "../../../../core";
 import { IfcUtils } from "../../../../utils/ifc-utils";
 
 import { Extrusion, RectangleProfile } from "../../../../geometries";
 import { SimpleWallType } from "../index";
 import { SimpleWallNester } from "./simple-wall-nester";
-import { SimpleWallExtender } from "./simple-wall-extender";
+import { SimpleWallCornerer, WallCornerConfig } from "./simple-wall-cornerer";
 
 export type WallPlaneType = "center" | "exterior" | "interior";
 export type WallEndPointType = "start" | "end";
 
 export class SimpleWall extends ClayElement {
+  readonly onUpdate = new Event<void>();
+
   attributes: IFC.IfcWall;
 
   type: SimpleWallType;
@@ -28,7 +30,6 @@ export class SimpleWall extends ClayElement {
   endPoint = new THREE.Vector2(1, 0);
 
   private _nester = new SimpleWallNester(this);
-  private _extender = new SimpleWallExtender(this);
 
   get length() {
     return this.startPoint.distanceTo(this.endPoint);
@@ -97,7 +98,7 @@ export class SimpleWall extends ClayElement {
     this.model.set(this.attributes);
   }
 
-  update(updateGeometry: boolean = false) {
+  update(updateGeometry = false) {
     this._nester.update();
 
     const profile = this.body.profile;
@@ -119,8 +120,6 @@ export class SimpleWall extends ClayElement {
 
     this.updateGeometryID();
     super.update(updateGeometry);
-
-    // if (updateCorners) this.updateAllCorners();
   }
 
   addSubtraction(element: ClayElement) {
@@ -133,14 +132,6 @@ export class SimpleWall extends ClayElement {
     super.removeSubtraction(element);
     this._nester.delete(element);
     this.updateGeometryID();
-  }
-
-  extend(
-    wall: SimpleWall,
-    plane: WallPlaneType = "center",
-    priority: WallEndPointType = "end",
-  ) {
-    this._extender.extend(wall, plane, priority);
   }
 
   getPlane(type: WallPlaneType = "center") {

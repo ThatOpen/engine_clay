@@ -34,29 +34,31 @@ await model.init();
 
 const simpleWallType = new CLAY.SimpleWallType(model);
 
-const wall = simpleWallType.addInstance();
-world.scene.three.add(...wall.meshes);
+const wall1 = simpleWallType.addInstance();
+world.scene.three.add(...wall1.meshes);
 // wall.startPoint = new THREE.Vector2(1, 1);
-wall.endPoint = new THREE.Vector2(3, 0);
-wall.update(true);
-wall.meshes[0].setColorAt(0, new THREE.Color(1, 0, 0));
+wall1.endPoint = new THREE.Vector2(3, 0);
+wall1.update(true);
+wall1.meshes[0].setColorAt(0, new THREE.Color(1, 0, 0));
 
 const wall2 = simpleWallType.addInstance();
 world.scene.three.add(...wall2.meshes);
 wall2.startPoint = new THREE.Vector2(0, -2);
 wall2.endPoint = new THREE.Vector2(1, -1);
-wall2.extend(wall, "exterior");
 wall2.update(true);
 
-world.camera.controls.fitToSphere(wall.meshes[0], false);
+simpleWallType.addCorner({ wall1, wall2, to: "exterior" });
+simpleWallType.updateCorners();
+
+world.camera.controls.fitToSphere(wall1.meshes[0], false);
 
 const simpleOpeningType = new CLAY.SimpleOpeningType(model);
 const opening = simpleOpeningType.addInstance();
 // scene.add(...opening.meshes);
 // console.log(simpleOpeningType);
 
-wall.addSubtraction(opening);
-wall.update(true);
+wall1.addSubtraction(opening);
+wall1.update(true);
 
 // Stats
 
@@ -80,52 +82,53 @@ const panel = BUI.Component.create<BUI.PanelSection>(() => {
       
       <div style="display: flex; gap: 12px">
       
-        <bim-number-input slider step="0.1" label="Start X" vertical="true" value="${wall.startPoint.x}" @change="${(
+        <bim-number-input slider step="0.1" label="Start X" vertical="true" value="${wall1.startPoint.x}" @change="${(
           event: any,
         ) => {
-          wall.startPoint.x = event.target.value;
-          wall.update(true);
-          wall2.extend(wall);
+          wall1.startPoint.x = event.target.value;
+          wall1.update(true);
+          simpleWallType.updateCorners([wall1.attributes.expressID]);
         }}"></bim-number-input>
         
-        <bim-number-input slider step="0.1" label="Start Y" vertical="true" value="${wall.startPoint.y}" @change="${(
+        <bim-number-input slider step="0.1" label="Start Y" vertical="true" value="${wall1.startPoint.y}" @change="${(
           event: any,
         ) => {
-          wall.startPoint.y = event.target.value;
-          wall.update(true);
-          wall2.extend(wall);
+          wall1.startPoint.y = event.target.value;
+          wall1.update(true);
+          simpleWallType.updateCorners([wall1.attributes.expressID]);
         }}"></bim-number-input>
         
       </div>
       
       <div style="display: flex; gap: 12px">
       
-        <bim-number-input slider step="0.1" label="End X" vertical="true" value="${wall.endPoint.x}" @change="${(
+        <bim-number-input slider step="0.1" label="End X" vertical="true" value="${wall1.endPoint.x}" @change="${(
           event: any,
         ) => {
-          wall.endPoint.x = event.target.value;
-          wall.update(true);
-          wall2.extend(wall);
+          wall1.endPoint.x = event.target.value;
+          wall1.update(true);
+          simpleWallType.updateCorners([wall1.attributes.expressID]);
         }}"></bim-number-input>
           
-        <bim-number-input slider step="0.1" label="End Y" vertical="true" value="${wall.endPoint.y}" @change="${(
+        <bim-number-input slider step="0.1" label="End Y" vertical="true" value="${wall1.endPoint.y}" @change="${(
           event: any,
         ) => {
-          wall.endPoint.y = event.target.value;
-          wall.update(true);
-          wall2.extend(wall);
+          wall1.endPoint.y = event.target.value;
+          wall1.update(true);
+          simpleWallType.updateCorners([wall1.attributes.expressID]);
         }}"></bim-number-input>
           
         
       </div>
       
-      <bim-number-input slider step="0.05" label="Elevation" value="${wall.elevation}" @change="${(
+      <bim-number-input slider step="0.05" label="Elevation" value="${wall1.elevation}" @change="${(
         event: any,
       ) => {
         opening.position.z = event.target.value;
         opening.update();
-        wall.elevation = event.target.value;
-        wall.update(true);
+        wall1.elevation = event.target.value;
+        wall1.update(true);
+        simpleWallType.updateCorners([wall1.attributes.expressID]);
       }}"></bim-number-input>
       
       <bim-number-input slider step="0.05" label="Thickness" value="${simpleWallType.width}" @change="${(
@@ -133,13 +136,15 @@ const panel = BUI.Component.create<BUI.PanelSection>(() => {
       ) => {
         simpleWallType.width = event.target.value;
         simpleWallType.update(true);
+        simpleWallType.updateCorners();
       }}"></bim-number-input>      
       
-      <bim-number-input slider step="0.05" label="Height" value="${wall.height}" @change="${(
+      <bim-number-input slider step="0.05" label="Height" value="${wall1.height}" @change="${(
         event: any,
       ) => {
-        wall.height = event.target.value;
-        wall.update(true);
+        wall1.height = event.target.value;
+        wall1.update(true);
+        simpleWallType.updateCorners([wall1.attributes.expressID]);
       }}"></bim-number-input>
         
       </bim-panel-section>

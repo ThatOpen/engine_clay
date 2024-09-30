@@ -1,138 +1,103 @@
-export class SimpleWallCornerer {
-  // private _corners = new Map<
-  //   number,
-  //   { wall: SimpleWall; atTheEndPoint: boolean }
-  // >();
-  // private _halfSpaces = new Map<number, { halfSpace: HalfSpace }>();
+import * as THREE from "three";
+import { SimpleWall, WallEndPointType, WallPlaneType } from "./simple-wall";
+
+export interface WallCornerConfig {
+  wall1: SimpleWall;
+  wall2: SimpleWall;
+  to?: WallPlaneType;
+  priority?: WallEndPointType;
 }
 
-// private calculateDistances(
-//   wall: SimpleWall,
-//   atTheEndPoint: boolean,
-//   intersectionPoint: THREE.Vector3,
-// ) {
-//   const distance1 = this.midPoint.distanceTo(intersectionPoint);
-//   const distance2 = wall.midPoint.distanceTo(intersectionPoint);
-//
-//   const distance3 = this.startPoint.distanceTo(this.midPoint);
-//   const distance4 = this.startPoint.distanceTo(intersectionPoint);
-//
-//   const distance5 = wall.startPoint.distanceTo(wall.midPoint);
-//   const distance6 = wall.startPoint.distanceTo(intersectionPoint);
-//
-//   let sign1 = 1;
-//   let sign2 = 1;
-//
-//   if (distance3 <= distance4 && distance5 <= distance6) {
-//     sign1 = atTheEndPoint ? 1 : -1;
-//     sign2 = atTheEndPoint ? 1 : -1;
-//   } else if (distance3 >= distance4 && distance5 >= distance6) {
-//     sign1 = -1;
-//     sign2 = -1;
-//   } else if (distance3 >= distance4 && distance5 <= distance6) {
-//     sign1 = 1;
-//     sign2 = -1;
-//   } else if (distance3 < distance4 && distance5 > distance6) {
-//     sign1 = -1;
-//     sign2 = 1;
-//   }
-//
-//   const sign3 = atTheEndPoint ? 1 : -1;
-//
-//   return {
-//     distance1,
-//     distance2,
-//     sign1,
-//     sign2,
-//     sign3,
-//   };
-// }
+interface WallCorner extends WallCornerConfig {
+  to: WallPlaneType;
+  priority: WallEndPointType;
+}
 
-// private updateAllCorners() {
-//   for (const [_id, { wall, atTheEndPoint }] of this._corners) {
-//     const intersectionPoint = this.extend(wall, atTheEndPoint);
-//     if (!intersectionPoint) return;
-//
-//     const angle = wall.rotation.z - this.rotation.z;
-//
-//     const width1 = this.type.width;
-//     const width2 = wall.type.width;
-//
-//     const { distance1, distance2, sign1, sign2, sign3 } =
-//       this.calculateDistances(wall, atTheEndPoint, intersectionPoint);
-//
-//     for (const [_id, { halfSpace }] of wall._halfSpaces) {
-//       halfSpace.position.x =
-//         sign2 * distance1 + width1 / (2 * Math.sin(angle));
-//       halfSpace.rotation.y = sign3 * angle;
-//       halfSpace.rotation.x = (sign3 * Math.PI) / 2;
-//       halfSpace.update();
-//     }
-//
-//     for (const [_id, { halfSpace }] of this._halfSpaces) {
-//       halfSpace.position.x =
-//         sign1 * distance2 + width2 / (2 * Math.sin(angle));
-//       halfSpace.rotation.y = angle;
-//       halfSpace.rotation.x = -Math.PI / 2;
-//       halfSpace.update();
-//     }
-//
-//     wall.update(true);
-//   }
-//   this.update(true);
-// }
+export class SimpleWallCornerer {
+  list = new Map<number, Set<WallCorner>>();
 
-// addCorner(wall: SimpleWall, atTheEndPoint = true) {
-//   const intersectionPoint = this.extend(wall, atTheEndPoint);
-//
-//   if (!intersectionPoint) return;
-//
-//   const angle = wall.rotation.z - this.rotation.z;
-//
-//   const width1 = this.type.width;
-//   const width2 = wall.type.width;
-//
-//   const { distance1, distance2, sign1, sign2, sign3 } =
-//     this.calculateDistances(wall, atTheEndPoint, intersectionPoint);
-//
-//   const hsExteriorWall1 = new HalfSpace(this.model);
-//   hsExteriorWall1.position.x =
-//     sign1 * distance2 + width2 / (2 * Math.sin(angle));
-//   hsExteriorWall1.rotation.y = angle;
-//   hsExteriorWall1.rotation.x = -Math.PI / 2;
-//   hsExteriorWall1.update();
-//
-//   const hsInteriorWall2 = new HalfSpace(this.model);
-//   hsInteriorWall2.position.x =
-//     sign2 * distance1 + width1 / (2 * Math.sin(angle));
-//   hsInteriorWall2.rotation.y = sign3 * angle;
-//   hsInteriorWall2.rotation.x = (sign3 * Math.PI) / 2;
-//   hsInteriorWall2.update();
-//
-//   this.body.addSubtraction(hsInteriorWall2);
-//   wall.body.addSubtraction(hsExteriorWall1);
-//
-//   wall.update(true);
-//   this.update(true);
-//
-//   this._corners.set(wall.attributes.expressID, {
-//     wall,
-//     atTheEndPoint,
-//   });
-//
-//   wall._corners.set(this.attributes.expressID, {
-//     wall: this,
-//     atTheEndPoint,
-//   });
-//
-//   const hsInteriorWall2Id = hsInteriorWall2.attributes.expressID;
-//   const hsExteriorWall1Id = hsExteriorWall1.attributes.expressID;
-//
-//   wall._halfSpaces.set(hsInteriorWall2Id, {
-//     halfSpace: hsInteriorWall2,
-//   });
-//
-//   this._halfSpaces.set(hsExteriorWall1Id, {
-//     halfSpace: hsExteriorWall1,
-//   });
-// }
+  add(config: WallCornerConfig) {
+    const to = config.to || "center";
+    const priority = config.priority || "end";
+
+    const id = config.wall1.attributes.expressID;
+    if (!this.list.has(id)) {
+      this.list.set(id, new Set());
+    }
+
+    const corners = this.list.get(id) as Set<WallCorner>;
+    corners.add({ ...config, to, priority });
+  }
+
+  update(ids: Iterable<number> = this.list.keys()) {
+    for (const id of ids) {
+      const corners = this.list.get(id);
+      if (!corners) {
+        continue;
+      }
+      for (const corner of corners) {
+        this.extend(corner);
+      }
+    }
+  }
+
+  extend(corner: WallCornerConfig) {
+    const { wall1, wall2, to, priority } = corner;
+    // Strategy: there are 2 cases
+    // A) Both points of the wall are on one side of this wall
+    // In this case, extend its closest point to this wall
+    // B) Each point of the wall are on one side of this wall
+    // In that case, keep the point specified in priority
+
+    if (wall1.direction.equals(wall2.direction)) {
+      // Same direction, so walls can't intersect
+      return;
+    }
+
+    const plane = wall1.getPlane(to);
+    if (plane === null) {
+      // Malformed wall (e.g. zero length)
+      return;
+    }
+
+    const currentWallLine = new THREE.Line3(
+      wall2.startPoint3D,
+      wall2.endPoint3D,
+    );
+    const wallsIntersect = plane.intersectsLine(currentWallLine);
+
+    const start = wall2.startPoint3D;
+    const end = wall2.endPoint3D;
+
+    let extendStart = priority === "start";
+
+    if (!wallsIntersect) {
+      const d1 = Math.abs(plane.distanceToPoint(start));
+      const d2 = Math.abs(plane.distanceToPoint(end));
+      extendStart = d1 < d2;
+    }
+
+    const pointToExtend = extendStart ? start : end;
+    if (plane.distanceToPoint(pointToExtend) === 0) {
+      // Point is already aligned with wall
+      return;
+    }
+
+    const origin = extendStart ? end : start;
+    const direction = extendStart ? start : end;
+    direction.sub(origin);
+
+    const ray = new THREE.Ray(origin, direction);
+
+    const intersection = ray.intersectPlane(plane, new THREE.Vector3());
+
+    if (intersection === null) {
+      return;
+    }
+
+    const extended = extendStart ? wall2.startPoint : wall2.endPoint;
+    extended.x = intersection.x;
+    extended.y = intersection.y;
+    wall2.update(true);
+  }
+}

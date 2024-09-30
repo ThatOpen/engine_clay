@@ -2,6 +2,10 @@ import { v4 as uuidv4 } from "uuid";
 import { IFC4X3, IFC4X3 as IFC } from "web-ifc";
 import { Model, DynamicClayElementType } from "../../../core";
 import { SimpleWall } from "./src";
+import {
+  SimpleWallCornerer,
+  WallCornerConfig,
+} from "./src/simple-wall-cornerer.ts";
 
 export * from "./src";
 
@@ -9,6 +13,8 @@ export class SimpleWallType extends DynamicClayElementType<SimpleWall> {
   attributes: IFC4X3.IfcWallType;
 
   width = 0.2;
+
+  private _cornerer = new SimpleWallCornerer();
 
   constructor(model: Model) {
     super(model);
@@ -25,6 +31,14 @@ export class SimpleWallType extends DynamicClayElementType<SimpleWall> {
       null,
       IFC.IfcWallTypeEnum.STANDARD,
     );
+  }
+
+  addCorner(config: WallCornerConfig) {
+    this._cornerer.add(config);
+  }
+
+  updateCorners(ids?: Iterable<number>) {
+    this._cornerer.update(ids);
   }
 
   protected createElement() {
