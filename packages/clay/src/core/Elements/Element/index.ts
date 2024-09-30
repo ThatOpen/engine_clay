@@ -204,7 +204,7 @@ export abstract class ClayElement extends ClayObject {
     });
   }
 
-  private updateIfcElement() {
+  protected updateIfcElement() {
     const placement = this.model.get(
       this.attributes.ObjectPlacement,
     ) as IFC.IfcLocalPlacement;

@@ -7,7 +7,7 @@ import { IfcUtils } from "../../../../utils/ifc-utils";
 import { Extrusion, RectangleProfile } from "../../../../geometries";
 import { SimpleWallType } from "../index";
 import { SimpleWallNester } from "./simple-wall-nester";
-import { SimpleWallCornerer, WallCornerConfig } from "./simple-wall-cornerer";
+import { SimpleWallClippingPlanes } from "./simple-wall-clipping-planes";
 
 export type WallPlaneType = "center" | "exterior" | "interior";
 export type WallEndPointType = "start" | "end";
@@ -28,6 +28,8 @@ export class SimpleWall extends ClayElement {
   startPoint = new THREE.Vector2(0, 0);
 
   endPoint = new THREE.Vector2(1, 0);
+
+  planes: SimpleWallClippingPlanes;
 
   private _nester = new SimpleWallNester(this);
 
@@ -96,6 +98,8 @@ export class SimpleWall extends ClayElement {
     );
 
     this.model.set(this.attributes);
+
+    this.planes = new SimpleWallClippingPlanes(this);
   }
 
   update(updateGeometry = false) {
@@ -118,17 +122,27 @@ export class SimpleWall extends ClayElement {
     reps.Items = [this.body.attributes];
     this.model.set(reps);
 
+    this.planes.update();
+
     this.updateGeometryID();
     super.update(updateGeometry);
   }
 
-  addSubtraction(element: ClayElement) {
+  addSubtraction(element: ClayElement, nest = false) {
+    if (this.subtractions.has(element.attributes.expressID)) {
+      return;
+    }
     super.addSubtraction(element);
-    this._nester.add(element);
+    if (nest) {
+      this._nester.add(element);
+    }
     this.updateGeometryID();
   }
 
   removeSubtraction(element: ClayElement) {
+    if (!this.subtractions.has(element.attributes.expressID)) {
+      return;
+    }
     super.removeSubtraction(element);
     this._nester.delete(element);
     this.updateGeometryID();

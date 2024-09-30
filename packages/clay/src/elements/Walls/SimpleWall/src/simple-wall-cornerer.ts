@@ -6,6 +6,8 @@ export interface WallCornerConfig {
   wall2: SimpleWall;
   to?: WallPlaneType;
   priority?: WallEndPointType;
+  cut?: "exterior" | "interior";
+  cutDirection?: "exterior" | "interior";
 }
 
 interface WallCorner extends WallCornerConfig {
@@ -14,19 +16,21 @@ interface WallCorner extends WallCornerConfig {
 }
 
 export class SimpleWallCornerer {
-  list = new Map<number, Set<WallCorner>>();
+  list = new Map<number, Map<number, WallCorner>>();
 
   add(config: WallCornerConfig) {
-    const to = config.to || "center";
-    const priority = config.priority || "end";
+    const id1 = config.wall1.attributes.expressID;
+    const id2 = config.wall2.attributes.expressID;
 
-    const id = config.wall1.attributes.expressID;
-    if (!this.list.has(id)) {
-      this.list.set(id, new Set());
+    if (!this.list.has(id1)) {
+      this.list.set(id1, new Map());
     }
 
-    const corners = this.list.get(id) as Set<WallCorner>;
-    corners.add({ ...config, to, priority });
+    const corners = this.list.get(id1) as Map<number, WallCorner>;
+
+    const to = config.to || "center";
+    const priority = config.priority || "end";
+    corners.set(id2, { ...config, to, priority });
   }
 
   update(ids: Iterable<number> = this.list.keys()) {
@@ -35,7 +39,7 @@ export class SimpleWallCornerer {
       if (!corners) {
         continue;
       }
-      for (const corner of corners) {
+      for (const [, corner] of corners) {
         this.extend(corner);
       }
     }
@@ -64,6 +68,7 @@ export class SimpleWallCornerer {
       wall2.startPoint3D,
       wall2.endPoint3D,
     );
+
     const wallsIntersect = plane.intersectsLine(currentWallLine);
 
     const start = wall2.startPoint3D;
@@ -93,6 +98,11 @@ export class SimpleWallCornerer {
 
     if (intersection === null) {
       return;
+    }
+
+    if (corner.cut && corner.cutDirection) {
+      const planeCut = wall1.planes.get(corner.cut, corner.cutDirection);
+      wall2.addSubtraction(planeCut);
     }
 
     const extended = extendStart ? wall2.startPoint : wall2.endPoint;

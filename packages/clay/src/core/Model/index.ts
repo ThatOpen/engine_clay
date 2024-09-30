@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import * as WEBIFC from "web-ifc";
+import { ClayElementType } from "../Elements";
 
 /**
  * Object that represents an IFC model and manages all its data.
@@ -22,6 +23,11 @@ export class Model {
    * The core of our libraries. It contains our IFC parser and geometry engine.
    */
   ifcAPI = new WEBIFC.IfcAPI();
+
+  /**
+   * Types created within this model.
+   */
+  types = new Map<string, ClayElementType>();
 
   private _context?: WEBIFC.IFC4X3.IfcRepresentationContext;
 
@@ -121,6 +127,7 @@ export class Model {
     if (this._modelID === undefined) {
       throw new Error("Malformed model!");
     }
+    // TODO: Fix memory leak
     const model = this.ifcAPI.SaveModel(this._modelID);
     this.ifcAPI.CloseModel(this._modelID);
     this._modelID++;

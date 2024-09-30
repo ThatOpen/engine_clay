@@ -5,7 +5,8 @@ import { SimpleWall } from "./src";
 import {
   SimpleWallCornerer,
   WallCornerConfig,
-} from "./src/simple-wall-cornerer.ts";
+} from "./src/simple-wall-cornerer";
+import { ClippingPlaneType } from "../../Openings";
 
 export * from "./src";
 
@@ -18,6 +19,10 @@ export class SimpleWallType extends DynamicClayElementType<SimpleWall> {
 
   constructor(model: Model) {
     super(model);
+
+    if (!this.model.types.has("clipping-planes")) {
+      this.model.types.set("clipping-planes", new ClippingPlaneType(model));
+    }
 
     this.attributes = new IFC.IfcWallType(
       new IFC.IfcGloballyUniqueId(uuidv4()),
