@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { SimpleWall } from "./simple-wall";
+import { SimpleWall, WallEndPointType, WallPlaneType } from "./simple-wall";
 
 export class SimpleWallExtender {
   private _wall: SimpleWall;
@@ -8,29 +8,23 @@ export class SimpleWallExtender {
     this._wall = wall;
   }
 
-  extend(wall: SimpleWall, priority: "start" | "end") {
+  extend(wall: SimpleWall, to: WallPlaneType, priority: WallEndPointType) {
     // Strategy: there are 2 cases
     // A) Both points of the wall are on one side of this wall
     // In this case, extend its closest point to this wall
     // B) Each point of the wall are on one side of this wall
     // In that case, keep the point specified in priority
 
-    const p1 = wall.startPoint3D;
-    const p2 = wall.endPoint3D;
-    const p3 = p1.clone();
-    p3.z += 1;
-
-    if (p1.equals(p2)) {
-      // Zero length wall
-      return;
-    }
-
     if (wall.direction.equals(this._wall.direction)) {
       // Same direction, so walls can't intersect
       return;
     }
 
-    const plane = new THREE.Plane().setFromCoplanarPoints(p1, p2, p3);
+    const plane = wall.getPlane(to);
+    if (plane === null) {
+      // Malformed wall (e.g. zero length)
+      return;
+    }
 
     const currentWallLine = new THREE.Line3(
       this._wall.startPoint3D,

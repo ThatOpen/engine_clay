@@ -9,6 +9,9 @@ import { SimpleWallType } from "../index";
 import { SimpleWallNester } from "./simple-wall-nester";
 import { SimpleWallExtender } from "./simple-wall-extender";
 
+export type WallPlaneType = "center" | "exterior" | "interior";
+export type WallEndPointType = "start" | "end";
+
 export class SimpleWall extends ClayElement {
   attributes: IFC.IfcWall;
 
@@ -46,6 +49,12 @@ export class SimpleWall extends ClayElement {
     vector.subVectors(this.endPoint3D, this.startPoint3D);
     vector.normalize();
     return vector;
+  }
+
+  get normal() {
+    const direction = this.direction;
+    const up = new THREE.Vector3(0, 0, 1);
+    return direction.cross(up);
   }
 
   get startPoint3D() {
@@ -126,7 +135,35 @@ export class SimpleWall extends ClayElement {
     this.updateGeometryID();
   }
 
-  extend(wall: SimpleWall, priority: "start" | "end" = "end") {
-    this._extender.extend(wall, priority);
+  extend(
+    wall: SimpleWall,
+    plane: WallPlaneType = "center",
+    priority: WallEndPointType = "end",
+  ) {
+    this._extender.extend(wall, plane, priority);
+  }
+
+  getPlane(type: WallPlaneType = "center") {
+    const p1 = this.startPoint3D;
+    const p2 = this.endPoint3D;
+    const p3 = p1.clone();
+    p3.z += 1;
+
+    if (p1.equals(p2)) {
+      // Zero length wall
+      return null;
+    }
+
+    if (type !== "center") {
+      const offset = this.normal;
+      const factor = type === "exterior" ? 1 : -1;
+      const offsetAmount = (this.type.width / 2) * factor;
+      offset.multiplyScalar(offsetAmount);
+      p1.add(offset);
+      p2.add(offset);
+      p3.add(offset);
+    }
+
+    return new THREE.Plane().setFromCoplanarPoints(p1, p2, p3);
   }
 }

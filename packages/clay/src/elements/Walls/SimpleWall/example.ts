@@ -37,14 +37,15 @@ const simpleWallType = new CLAY.SimpleWallType(model);
 const wall = simpleWallType.addInstance();
 world.scene.three.add(...wall.meshes);
 // wall.startPoint = new THREE.Vector2(1, 1);
-// wall.endPoint = new THREE.Vector2(-1, -1);
+wall.endPoint = new THREE.Vector2(3, 0);
 wall.update(true);
+wall.meshes[0].setColorAt(0, new THREE.Color(1, 0, 0));
 
 const wall2 = simpleWallType.addInstance();
 world.scene.three.add(...wall2.meshes);
 wall2.startPoint = new THREE.Vector2(0, -2);
-wall2.endPoint = new THREE.Vector2(0, -1);
-wall2.extend(wall);
+wall2.endPoint = new THREE.Vector2(1, -1);
+wall2.extend(wall, "exterior");
 wall2.update(true);
 
 world.camera.controls.fitToSphere(wall.meshes[0], false);
