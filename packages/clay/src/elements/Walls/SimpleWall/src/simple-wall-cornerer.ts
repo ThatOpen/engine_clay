@@ -8,11 +8,13 @@ export interface WallCornerConfig {
   priority?: WallEndPointType;
   cut?: "exterior" | "interior";
   cutDirection?: "exterior" | "interior";
+  offset?: number | "auto";
 }
 
 interface WallCorner extends WallCornerConfig {
   to: WallPlaneType;
   priority: WallEndPointType;
+  offset: number | "auto";
 }
 
 export class SimpleWallCornerer {
@@ -30,7 +32,8 @@ export class SimpleWallCornerer {
 
     const to = config.to || "center";
     const priority = config.priority || "end";
-    corners.set(id2, { ...config, to, priority });
+    const offset = config.offset || "auto";
+    corners.set(id2, { ...config, to, priority, offset });
   }
 
   update(ids: Iterable<number> = this.list.keys()) {
@@ -45,15 +48,17 @@ export class SimpleWallCornerer {
     }
   }
 
-  extend(corner: WallCornerConfig) {
-    const { wall1, wall2, to, priority } = corner;
+  extend(corner: WallCorner) {
+    const { wall1, wall2, to, priority, offset } = corner;
     // Strategy: there are 2 cases
     // A) Both points of the wall are on one side of this wall
     // In this case, extend its closest point to this wall
     // B) Each point of the wall are on one side of this wall
     // In that case, keep the point specified in priority
 
-    if (wall1.direction.equals(wall2.direction)) {
+    const dir1 = wall1.direction;
+    const dir2 = wall2.direction;
+    if (dir1.equals(dir2)) {
       // Same direction, so walls can't intersect
       return;
     }
@@ -99,6 +104,11 @@ export class SimpleWallCornerer {
     if (intersection === null) {
       return;
     }
+
+    const offsetDist = offset === "auto" ? wall2.type.width : offset;
+    const factor = extendStart ? -1 : 1;
+    const offsetVec = dir2.multiplyScalar(offsetDist * factor);
+    intersection.add(offsetVec);
 
     if (corner.cut && corner.cutDirection) {
       const planeCut = wall1.planes.get(corner.cut, corner.cutDirection);
