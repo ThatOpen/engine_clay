@@ -29,6 +29,8 @@ export class SimpleWall extends ClayElement {
 
   endPoint = new THREE.Vector2(1, 0);
 
+  offset = 0;
+
   planes: SimpleWallClippingPlanes;
 
   private _nester = new SimpleWallNester(this);
@@ -108,6 +110,7 @@ export class SimpleWall extends ClayElement {
     const profile = this.body.profile;
     profile.dimension.x = this.length;
     profile.dimension.y = this.type.width;
+    profile.position.y = this.offset;
     profile.update();
 
     this.body.depth = this.height;
@@ -149,6 +152,8 @@ export class SimpleWall extends ClayElement {
   }
 
   getPlane(type: WallPlaneType = "center") {
+    const normal = this.normal;
+
     const p1 = this.startPoint3D;
     const p2 = this.endPoint3D;
     const p3 = p1.clone();
@@ -159,8 +164,15 @@ export class SimpleWall extends ClayElement {
       return null;
     }
 
+    const offsetCorrection = normal.clone();
+    offsetCorrection.multiplyScalar(-this.offset);
+
+    p1.add(offsetCorrection);
+    p2.add(offsetCorrection);
+    p3.add(offsetCorrection);
+
     if (type !== "center") {
-      const offset = this.normal;
+      const offset = normal.clone();
       const factor = type === "exterior" ? 1 : -1;
       const offsetAmount = (this.type.width / 2) * factor;
       offset.multiplyScalar(offsetAmount);

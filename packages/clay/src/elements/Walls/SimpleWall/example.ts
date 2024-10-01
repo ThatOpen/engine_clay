@@ -148,6 +148,16 @@ const panel = BUI.Component.create<BUI.PanelSection>(() => {
         simpleWallType.updateCorners();
       }}"></bim-number-input>
       
+      <bim-number-input slider step="0.01" label="Offset" value="${wall1.offset}" @change="${(
+        event: any,
+      ) => {
+        wall1.offset = event.target.value;
+        wall1.update(true);
+        wall2.offset = event.target.value;
+        wall2.update(true);
+        simpleWallType.updateCorners();
+      }}"></bim-number-input>
+      
       <bim-number-input slider step="0.05" label="Thickness" value="${simpleWallType.width}" @change="${(
         event: any,
       ) => {

@@ -55,22 +55,24 @@ export class SimpleWallClippingPlanes {
   }
 
   update() {
-    const offset = this._wall.type.width / 2;
+    const width = this._wall.type.width / 2;
 
     const temp = new THREE.Object3D();
 
     const downDirection = this._wall.normal;
     const upDirection = downDirection.clone().multiplyScalar(-1);
 
-    const downOffset = downDirection.clone().multiplyScalar(offset);
-    const downPoint = this._wall.startPoint3D.add(downOffset);
+    const offsetOffset = upDirection.clone().multiplyScalar(this._wall.offset);
 
-    const upOffset = upDirection.clone().multiplyScalar(offset);
-    const upPoint = this._wall.startPoint3D.add(upOffset);
+    const downOffset = downDirection.clone().multiplyScalar(width);
+    const downPoint = this._wall.startPoint3D.add(downOffset).add(offsetOffset);
+
+    const upOffset = upDirection.clone().multiplyScalar(width);
+    const upPoint = this._wall.startPoint3D.add(upOffset).add(offsetOffset);
 
     const { downDown, upDown, downUp, upUp } = this.list;
 
-    temp.position.copy(this._wall.startPoint3D);
+    temp.position.copy(this._wall.startPoint3D.add(offsetOffset));
     temp.lookAt(downPoint);
 
     downDown.position.copy(downPoint);
