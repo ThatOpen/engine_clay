@@ -33,6 +33,9 @@ const model = new CLAY.Model();
 model.wasm = { path: "https://unpkg.com/web-ifc@0.0.59/", absolute: true };
 await model.init();
 
+const project = new CLAY.Project(model);
+const site = new CLAY.Site(model, project);
+
 const simpleWallType = new CLAY.SimpleWallType(model);
 
 const wall1 = simpleWallType.addInstance();
@@ -47,6 +50,9 @@ world.scene.three.add(...wall2.meshes);
 wall2.startPoint = new THREE.Vector2(0, -2);
 wall2.endPoint = new THREE.Vector2(0, 3);
 wall2.update(true);
+
+site.children.add(wall1.attributes.expressID);
+site.children.add(wall2.attributes.expressID);
 
 simpleWallType.addCorner({
   wall1,
@@ -198,23 +204,21 @@ const button = BUI.Component.create<BUI.PanelSection>(() => {
 
 document.body.append(button);
 
-// window.addEventListener("keydown", async (e) => {
-//   if (e.code === "KeyP") {
-//     simpleWallType.attributes = {};
-//     console.log("hey");
-//     if (model._modelID === undefined) {
-//       throw new Error("Malformed model!");
-//     }
-//     // TODO: Fix memory leak
-//     const asdf = model._ifcAPI.SaveModel(model._modelID);
-//
-//     model._ifcAPI.Dispose();
-//     model._ifcAPI = null as any;
-//     model._ifcAPI = new WEBIFC.IfcAPI();
-//
-//     await model.init();
-//     model._modelID = model._ifcAPI.OpenModel(asdf, {
-//       TAPE_SIZE: 5000000, // 5MB
-//     });
-//   }
-// });
+window.addEventListener("keydown", async (e) => {
+  if (e.code === "KeyP") {
+    simpleWallType.attributes = {};
+    console.log("hey");
+    if (model._modelID === undefined) {
+      throw new Error("Malformed model!");
+    }
+    // TODO: Fix memory leak
+    const asdf = model._ifcAPI.SaveModel(model._modelID);
+
+    const a = document.createElement("a");
+    const name = "example.ifc";
+    a.href = URL.createObjectURL(new File([asdf], name));
+    a.download = name;
+    a.click();
+    a.remove();
+  }
+});
