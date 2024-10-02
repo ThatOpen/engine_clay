@@ -36,19 +36,19 @@ export class SimpleWallCornerer {
     corners.set(id2, { ...config, to, priority, offset });
   }
 
-  update(ids: Iterable<number> = this.list.keys()) {
+  async update(ids: Iterable<number> = this.list.keys()) {
     for (const id of ids) {
       const corners = this.list.get(id);
       if (!corners) {
         continue;
       }
       for (const [, corner] of corners) {
-        this.extend(corner);
+        await this.extend(corner);
       }
     }
   }
 
-  extend(corner: WallCorner) {
+  async extend(corner: WallCorner) {
     const { wall1, wall2, to, priority, offset } = corner;
     // Strategy: there are 2 cases
     // A) Both points of the wall are on one side of this wall
@@ -112,7 +112,7 @@ export class SimpleWallCornerer {
 
     if (corner.cut && corner.cutDirection) {
       const planeCut = wall1.planes.get(corner.cut, corner.cutDirection);
-      wall2.addSubtraction(planeCut);
+      await wall2.addSubtraction(planeCut);
     }
 
     const extended = extendStart ? wall2.startPoint : wall2.endPoint;

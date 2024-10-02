@@ -108,7 +108,7 @@ export abstract class ClayElement extends ClayObject {
    * Adds a new subtraction to this element.
    * @param subtraction the element that will be subtracted from this element.
    */
-  addSubtraction(subtraction: ClayElement) {
+  async addSubtraction(subtraction: ClayElement) {
     if (!(subtraction.attributes instanceof IFC.IfcFeatureElementSubtraction)) {
       throw new Error(
         "Only elements with attributes of type IfcFeatureElementSubtraction can be used to subtract",
@@ -129,19 +129,19 @@ export abstract class ClayElement extends ClayObject {
     const id = subtraction.attributes.expressID;
     this.subtractions.set(id, voids);
 
-    this.model.update();
+    await this.model.update();
   }
 
   /**
    * Removes an existing subtraction from this element.
    * @param subtraction the element whose subtraction will be removed from this element.
    */
-  removeSubtraction(subtraction: ClayElement) {
+  async removeSubtraction(subtraction: ClayElement) {
     const id = subtraction.attributes.expressID;
     const found = this.subtractions.get(id);
     if (!found) return;
     this.model.delete(found);
-    this.model.update();
+    await this.model.update();
   }
 
   protected ifcToThreeGeometry(data: WEBIFC.IfcGeometry) {

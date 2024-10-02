@@ -6,6 +6,11 @@ import { ClayElementType } from "../Elements";
  * Object that represents an IFC model and manages all its data.
  */
 export class Model {
+  wasm = {
+    path: "",
+    absolute: false,
+  };
+
   /**
    * Opaque material of the model. All models have just 1 shared opaque and transparent material.
    */
@@ -20,18 +25,22 @@ export class Model {
   });
 
   /**
-   * The core of our libraries. It contains our IFC parser and geometry engine.
-   */
-  ifcAPI = new WEBIFC.IfcAPI();
-
-  /**
    * Types created within this model.
    */
   types = new Map<string, ClayElementType>();
 
+  private _ifcAPI = new WEBIFC.IfcAPI();
+
   private _context?: WEBIFC.IFC4X3.IfcRepresentationContext;
 
   private _modelID?: number;
+
+  /**
+   * The core of our libraries. It contains our IFC parser and geometry engine.
+   */
+  get ifcAPI() {
+    return this._ifcAPI;
+  }
 
   /**
    * The ID that identifies this IFC file.
@@ -57,8 +66,14 @@ export class Model {
    * Initializes the library, allowing it to create and edit IFC data.
    */
   async init() {
-    await this.ifcAPI.Init();
-    this._modelID = this.ifcAPI.CreateModel({ schema: WEBIFC.Schemas.IFC4X3 });
+    this._ifcAPI.SetWasmPath(this.wasm.path, this.wasm.absolute);
+    await this._ifcAPI.Init();
+    this._modelID = this._ifcAPI.CreateModel(
+      { schema: WEBIFC.Schemas.IFC4X3 },
+      {
+        TAPE_SIZE: 5000000, // 5MB
+      },
+    );
     this._context = new WEBIFC.IFC4X3.IfcRepresentationContext(
       new WEBIFC.IFC4X3.IfcLabel("Default"),
       new WEBIFC.IFC4X3.IfcLabel("Model"),
@@ -70,7 +85,7 @@ export class Model {
    * @param item the object to create or override.
    */
   set(item: WEBIFC.IfcLineObject) {
-    this.ifcAPI.WriteLine(this.modelID, item);
+    this._ifcAPI.WriteLine(this.modelID, item);
   }
 
   /**
@@ -88,7 +103,7 @@ export class Model {
 
     let foundItem: WEBIFC.IfcLineObject;
     if (item instanceof WEBIFC.Handle) {
-      foundItem = this.ifcAPI.GetLine(this.modelID, item.value);
+      foundItem = this._ifcAPI.GetLine(this.modelID, item.value);
     } else {
       foundItem = item;
     }
@@ -103,7 +118,7 @@ export class Model {
       }
     }
 
-    this.ifcAPI.DeleteLine(this.modelID, foundItem.expressID);
+    this._ifcAPI.DeleteLine(this.modelID, foundItem.expressID);
   }
 
   /**
@@ -115,7 +130,7 @@ export class Model {
       throw new Error("Item not found!");
     }
     if (item instanceof WEBIFC.Handle) {
-      return this.ifcAPI.GetLine(this.modelID, item.value) as T;
+      return this._ifcAPI.GetLine(this.modelID, item.value) as T;
     }
     return item;
   }
@@ -123,14 +138,19 @@ export class Model {
   /**
    * Updates a model. Necessary for applying new boolean operations.
    */
-  update() {
+  async update() {
+    console.log("hey")
     if (this._modelID === undefined) {
       throw new Error("Malformed model!");
     }
     // TODO: Fix memory leak
-    const model = this.ifcAPI.SaveModel(this._modelID);
-    this.ifcAPI.CloseModel(this._modelID);
-    this._modelID++;
-    this.ifcAPI.OpenModel(model);
+    const model = this._ifcAPI.SaveModel(this._modelID);
+
+    this._ifcAPI.Dispose();
+    this._ifcAPI = null as any;
+    this._ifcAPI = new WEBIFC.IfcAPI();
+
+    await this.init();
+    this._modelID = this._ifcAPI.OpenModel(model);
   }
 }

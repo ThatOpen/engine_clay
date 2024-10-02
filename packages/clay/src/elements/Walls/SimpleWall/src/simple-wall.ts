@@ -131,22 +131,22 @@ export class SimpleWall extends ClayElement {
     super.update(updateGeometry);
   }
 
-  addSubtraction(element: ClayElement, nest = false) {
+  async addSubtraction(element: ClayElement, nest = false) {
     if (this.subtractions.has(element.attributes.expressID)) {
       return;
     }
-    super.addSubtraction(element);
+    await super.addSubtraction(element);
     if (nest) {
       this._nester.add(element);
     }
     this.updateGeometryID();
   }
 
-  removeSubtraction(element: ClayElement) {
+  async removeSubtraction(element: ClayElement) {
     if (!this.subtractions.has(element.attributes.expressID)) {
       return;
     }
-    super.removeSubtraction(element);
+    await super.removeSubtraction(element);
     this._nester.delete(element);
     this.updateGeometryID();
   }

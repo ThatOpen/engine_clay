@@ -29,14 +29,14 @@ const grids = components.get(OBC.Grids);
 grids.create(world);
 
 const model = new CLAY.Model();
-model.ifcAPI.SetWasmPath("https://unpkg.com/web-ifc@0.0.59/", true);
+model.wasm = { path: "https://unpkg.com/web-ifc@0.0.59/", absolute: true };
 await model.init();
 
 const simpleWallType = new CLAY.SimpleWallType(model);
-
+//
 const wall1 = simpleWallType.addInstance();
 world.scene.three.add(...wall1.meshes);
-// wall.startPoint = new THREE.Vector2(1, 1);
+wall1.startPoint = new THREE.Vector2(1, 1);
 wall1.endPoint = new THREE.Vector2(3, 0);
 wall1.update(true);
 wall1.meshes[0].setColorAt(0, new THREE.Color(1, 0, 0));
@@ -65,7 +65,7 @@ simpleWallType.addCorner({
   priority: "start",
 });
 
-simpleWallType.updateCorners();
+await simpleWallType.updateCorners();
 
 world.camera.controls.fitToSphere(wall1.meshes[0], false);
 
@@ -74,7 +74,7 @@ const opening = simpleOpeningType.addInstance();
 // scene.add(...opening.meshes);
 // console.log(simpleOpeningType);
 
-wall1.addSubtraction(opening, true);
+await wall1.addSubtraction(opening, true);
 wall1.update(true);
 
 // Stats
