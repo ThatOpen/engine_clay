@@ -3,6 +3,7 @@ import * as BUI from "@thatopen/ui";
 import Stats from "stats.js";
 import * as OBC from "@thatopen/components";
 
+import * as WEBIFC from "web-ifc";
 import * as CLAY from "../../..";
 
 const container = document.getElementById("container")!;
@@ -33,7 +34,7 @@ model.wasm = { path: "https://unpkg.com/web-ifc@0.0.59/", absolute: true };
 await model.init();
 
 const simpleWallType = new CLAY.SimpleWallType(model);
-//
+
 const wall1 = simpleWallType.addInstance();
 world.scene.three.add(...wall1.meshes);
 wall1.startPoint = new THREE.Vector2(1, 1);
@@ -96,9 +97,9 @@ const panel = BUI.Component.create<BUI.PanelSection>(() => {
   return BUI.html`
     <bim-panel label="Simple Walls Tutorial" class="options-menu">
       <bim-panel-section collapsed label="Controls">
-      
+
       <div style="display: flex; gap: 12px">
-      
+
         <bim-number-input slider step="0.1" label="Start X" vertical="true" value="${wall1.startPoint.x}" @change="${(
           event: any,
         ) => {
@@ -106,7 +107,7 @@ const panel = BUI.Component.create<BUI.PanelSection>(() => {
           wall1.update(true);
           simpleWallType.updateCorners();
         }}"></bim-number-input>
-        
+
         <bim-number-input slider step="0.1" label="Start Y" vertical="true" value="${wall1.startPoint.y}" @change="${(
           event: any,
         ) => {
@@ -114,11 +115,11 @@ const panel = BUI.Component.create<BUI.PanelSection>(() => {
           wall1.update(true);
           simpleWallType.updateCorners();
         }}"></bim-number-input>
-        
+
       </div>
-      
+
       <div style="display: flex; gap: 12px">
-      
+
         <bim-number-input slider step="0.1" label="End X" vertical="true" value="${wall1.endPoint.x}" @change="${(
           event: any,
         ) => {
@@ -126,7 +127,7 @@ const panel = BUI.Component.create<BUI.PanelSection>(() => {
           wall1.update(true);
           simpleWallType.updateCorners();
         }}"></bim-number-input>
-          
+
         <bim-number-input slider step="0.1" label="End Y" vertical="true" value="${wall1.endPoint.y}" @change="${(
           event: any,
         ) => {
@@ -134,10 +135,10 @@ const panel = BUI.Component.create<BUI.PanelSection>(() => {
           wall1.update(true);
           simpleWallType.updateCorners();
         }}"></bim-number-input>
-          
-        
+
+
       </div>
-      
+
       <bim-number-input slider step="0.05" label="Elevation" value="${wall1.elevation}" @change="${(
         event: any,
       ) => {
@@ -147,7 +148,7 @@ const panel = BUI.Component.create<BUI.PanelSection>(() => {
         wall1.update(true);
         simpleWallType.updateCorners();
       }}"></bim-number-input>
-      
+
       <bim-number-input slider step="0.01" label="Offset" value="${wall1.offset}" @change="${(
         event: any,
       ) => {
@@ -157,15 +158,15 @@ const panel = BUI.Component.create<BUI.PanelSection>(() => {
         wall2.update(true);
         simpleWallType.updateCorners();
       }}"></bim-number-input>
-      
+
       <bim-number-input slider step="0.05" label="Thickness" value="${simpleWallType.width}" @change="${(
         event: any,
       ) => {
         simpleWallType.width = event.target.value;
         simpleWallType.update(true);
         simpleWallType.updateCorners();
-      }}"></bim-number-input>      
-      
+      }}"></bim-number-input>
+
       <bim-number-input slider step="0.05" label="Height" value="${wall1.height}" @change="${(
         event: any,
       ) => {
@@ -173,7 +174,7 @@ const panel = BUI.Component.create<BUI.PanelSection>(() => {
         wall1.update(true);
         simpleWallType.updateCorners();
       }}"></bim-number-input>
-        
+
       </bim-panel-section>
     </bim-panel>
     `;
@@ -199,26 +200,21 @@ document.body.append(button);
 
 // window.addEventListener("keydown", async (e) => {
 //   if (e.code === "KeyP") {
-//     const directoryHandle = await window.showDirectoryPicker();
-//     async function writeIFC() {
-//       const buffer = model.ifcAPI.SaveModel(model.modelID);
-//
-//       console.log(buffer);
-//
-//       const fileName = "example.ifc";
-//       const fileHandle = await directoryHandle.getFileHandle("example.ifc", {
-//         create: true,
-//       });
-//
-//       // Create a FileSystemWritableFileStream to write to.
-//       const writable = await fileHandle.createWritable();
-//       await writable.truncate(0);
-//       // Write the contents of the file to the stream.
-//       await writable.write(buffer);
-//       // Close the file and write the contents to disk.
-//       await writable.close();
+//     simpleWallType.attributes = {};
+//     console.log("hey");
+//     if (model._modelID === undefined) {
+//       throw new Error("Malformed model!");
 //     }
+//     // TODO: Fix memory leak
+//     const asdf = model._ifcAPI.SaveModel(model._modelID);
 //
-//     setInterval(() => writeIFC(), 1000);
+//     model._ifcAPI.Dispose();
+//     model._ifcAPI = null as any;
+//     model._ifcAPI = new WEBIFC.IfcAPI();
+//
+//     await model.init();
+//     model._modelID = model._ifcAPI.OpenModel(asdf, {
+//       TAPE_SIZE: 5000000, // 5MB
+//     });
 //   }
 // });

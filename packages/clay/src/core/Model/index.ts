@@ -11,6 +11,10 @@ export class Model {
     absolute: false,
   };
 
+  settings: WEBIFC.LoaderSettings = {
+    TAPE_SIZE: 5000000, // 5MB
+  };
+
   /**
    * Opaque material of the model. All models have just 1 shared opaque and transparent material.
    */
@@ -70,9 +74,7 @@ export class Model {
     await this._ifcAPI.Init();
     this._modelID = this._ifcAPI.CreateModel(
       { schema: WEBIFC.Schemas.IFC4X3 },
-      {
-        TAPE_SIZE: 5000000, // 5MB
-      },
+      this.settings,
     );
     this._context = new WEBIFC.IFC4X3.IfcRepresentationContext(
       new WEBIFC.IFC4X3.IfcLabel("Default"),
@@ -139,7 +141,6 @@ export class Model {
    * Updates a model. Necessary for applying new boolean operations.
    */
   async update() {
-    console.log("hey")
     if (this._modelID === undefined) {
       throw new Error("Malformed model!");
     }
@@ -151,6 +152,6 @@ export class Model {
     this._ifcAPI = new WEBIFC.IfcAPI();
 
     await this.init();
-    this._modelID = this._ifcAPI.OpenModel(model);
+    this._modelID = this._ifcAPI.OpenModel(model, this.settings);
   }
 }
