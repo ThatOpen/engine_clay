@@ -10,4 +10,12 @@ export class MathUtils {
     dirs.extractBasis(dirX, dirY, dirZ);
     return { dirX, dirY, dirZ };
   }
+
+  static toThreeCoords(value: THREE.Vector3) {
+    return new THREE.Vector3(value.x, value.z, -value.y);
+  }
+
+  static toIfcCoords(value: THREE.Vector3) {
+    return new THREE.Vector3(value.x, -value.z, value.y);
+  }
 }

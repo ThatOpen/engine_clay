@@ -1,5 +1,7 @@
 import * as THREE from "three";
 import { SimpleWall, WallEndPointType, WallPlaneType } from "./simple-wall";
+import { HalfSpace } from "../../../../geometries";
+import { MathUtils } from "../../../../utils";
 
 export interface WallCornerConfig {
   wall1: SimpleWall;
@@ -15,6 +17,7 @@ interface WallCorner extends WallCornerConfig {
   to: WallPlaneType;
   priority: WallEndPointType;
   offset: number | "auto";
+  halfSpace?: HalfSpace;
 }
 
 export class SimpleWallCornerer {
@@ -63,7 +66,7 @@ export class SimpleWallCornerer {
       return;
     }
 
-    const plane = wall1.getPlane(to);
+    const { plane, p1, p2, p3 } = wall1.getPlane(to);
     if (plane === null) {
       // Malformed wall (e.g. zero length)
       return;
@@ -110,14 +113,71 @@ export class SimpleWallCornerer {
     const offsetVec = dir2.multiplyScalar(offsetDist * factor);
     intersection.add(offsetVec);
 
-    if (corner.cut && corner.cutDirection) {
-      const planeCut = wall1.planes.get(corner.cut, corner.cutDirection);
-      await wall2.addSubtraction(planeCut);
-    }
-
     const extended = extendStart ? wall2.startPoint : wall2.endPoint;
     extended.x = intersection.x;
     extended.y = intersection.y;
+
+    if (corner.cut && corner.cutDirection) {
+      if (!corner.halfSpace) {
+        const halfSpace = new HalfSpace(wall1.model);
+        corner.halfSpace = halfSpace;
+        wall2.body.addSubtraction(halfSpace);
+      }
+
+      const halfSpace = corner.halfSpace as HalfSpace;
+
+      const temp = new THREE.Mesh(
+        new THREE.PlaneGeometry(10, 10, 10),
+        new THREE.MeshLambertMaterial({
+          color: "blue",
+        }),
+      );
+
+      const temp2 = new THREE.Object3D();
+      temp2.position.copy(p1);
+      const p4 = p1.clone().add(plane.normal);
+      temp2.lookAt(p4);
+
+      temp2.applyMatrix4(new THREE.Matrix4().makeRotationX(-Math.PI / 2));
+      temp2.applyMatrix4(new THREE.Matrix4().makeRotationY(Math.PI / 2));
+      temp2.applyMatrix4(new THREE.Matrix4().makeRotationX(Math.PI / 2));
+
+      temp.applyMatrix4(temp2.matrix);
+
+      // temp.updateMatrix();
+
+      const temp3 = new THREE.Object3D();
+      const transform = wall2.getTransform();
+      transform.invert();
+
+      temp3.applyMatrix4(transform);
+      temp3.applyMatrix4(new THREE.Matrix4().makeRotationZ(Math.PI / 2));
+      temp.applyMatrix4(temp3.matrix);
+
+      // const temp4 = new THREE.Object3D();
+      // temp4.position.copy(p1);
+      // temp4.applyMatrix4(transform);
+
+      // const obj = MathUtils.getTempObject3DToDisplayIfcCoords();
+      // obj.add(temp);
+      // wall1.meshes[0].parent.add(obj);
+
+      // halfSpace.position.copy(temp.position);
+      // halfSpace.rotation.copy(temp.rotation);
+
+      // const transform = wall2.getTransform();
+      // transform.invert();
+      // halfSpace.applyTransform(transform);
+
+      // halfSpace.rotation.y = Math.PI / 2;
+      // halfSpace.position.x = 0.25;
+
+      halfSpace.rotation.copy(temp.rotation);
+      halfSpace.position.copy(temp.position);
+
+      halfSpace.update();
+    }
+
     wall2.update(true);
   }
 }

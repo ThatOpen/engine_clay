@@ -2,7 +2,6 @@ import { IFC4X3 as IFC } from "web-ifc";
 import { v4 as uuidv4 } from "uuid";
 import * as THREE from "three";
 import { ClayObject, Model } from "../../core";
-import { ClippingPlaneType } from "../../elements";
 import { IfcUtils } from "../../utils/ifc-utils";
 import { SpatialChildren } from "../SpatialChildren";
 
@@ -15,10 +14,6 @@ export class Project extends ClayObject {
 
   constructor(model: Model) {
     super(model);
-
-    if (!this.model.types.has("clipping-planes")) {
-      this.model.types.set("clipping-planes", new ClippingPlaneType(model));
-    }
 
     const organization = new IFC.IfcOrganization(
       null,

@@ -4,3 +4,4 @@ export * from "./selector";
 export * from "./vector";
 export * from "./raycaster";
 export * from "./transform-controls";
+export * from "./math-utils";

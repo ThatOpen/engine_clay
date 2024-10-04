@@ -1,5 +1,4 @@
 import { IFC4X3 as IFC } from "web-ifc";
-import * as THREE from "three";
 import { Model, ClayGeometry } from "../../core";
 
 import { MathUtils } from "../../utils/math-utils";
@@ -9,10 +8,6 @@ export class HalfSpace extends ClayGeometry {
   attributes: IFC.IfcHalfSpaceSolid | IFC.IfcBooleanClippingResult;
 
   core: IFC.IfcHalfSpaceSolid;
-
-  position = new THREE.Vector3(0, 0, 0);
-
-  rotation = new THREE.Euler(0, 0, 0);
 
   constructor(model: Model) {
     super(model);
@@ -48,5 +43,9 @@ export class HalfSpace extends ClayGeometry {
 
     this.model.set(this.core);
     this.attributes = this.core;
+  }
+
+  fromThreePlane() {
+    
   }
 }

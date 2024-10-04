@@ -8,25 +8,16 @@ import { Model } from "../../Model";
 import { ClayElementType } from "../ElementType";
 import { IfcUtils } from "../../../utils/ifc-utils";
 import { ClayGeometry } from "../../Geometry";
+import { ClayObject3D } from "../../Object3D";
 
 /**
  * Any object with a physical representation in the IFC. It corresponds to the IFCELEMENT entity in the IFC schema.
  */
-export abstract class ClayElement extends ClayObject {
+export abstract class ClayElement extends ClayObject3D {
   /**
    * {@link ClayObject.attributes}
    */
   abstract attributes: IFC.IfcElement;
-
-  /**
-   * Position of this element in 3D space.
-   */
-  position = new THREE.Vector3();
-
-  /**
-   * Rotation of this element in 3D space.
-   */
-  rotation = new THREE.Euler();
 
   /**
    * The type of this element.

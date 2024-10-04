@@ -7,7 +7,6 @@ import { IfcUtils } from "../../../../utils/ifc-utils";
 import { Extrusion, RectangleProfile } from "../../../../geometries";
 import { SimpleWallType } from "../index";
 import { SimpleWallNester } from "./simple-wall-nester";
-import { SimpleWallClippingPlanes } from "./simple-wall-clipping-planes";
 
 export type WallPlaneType = "center" | "exterior" | "interior";
 export type WallEndPointType = "start" | "end";
@@ -30,8 +29,6 @@ export class SimpleWall extends ClayElement {
   endPoint = new THREE.Vector2(1, 0);
 
   offset = 0;
-
-  planes: SimpleWallClippingPlanes;
 
   private _nester = new SimpleWallNester(this);
 
@@ -100,8 +97,6 @@ export class SimpleWall extends ClayElement {
     );
 
     this.model.set(this.attributes);
-
-    this.planes = new SimpleWallClippingPlanes(this);
   }
 
   update(updateGeometry = false) {
@@ -124,8 +119,6 @@ export class SimpleWall extends ClayElement {
     const reps = this.model.get(shape.Representations[0]);
     reps.Items = [this.body.attributes];
     this.model.set(reps);
-
-    this.planes.update();
 
     this.updateGeometryID();
     super.update(updateGeometry);
@@ -161,7 +154,8 @@ export class SimpleWall extends ClayElement {
 
     if (p1.equals(p2)) {
       // Zero length wall
-      return null;
+      const plane = null;
+      return { p1, p2, p3, plane };
     }
 
     const offsetCorrection = normal.clone();
@@ -181,6 +175,7 @@ export class SimpleWall extends ClayElement {
       p3.add(offset);
     }
 
-    return new THREE.Plane().setFromCoplanarPoints(p1, p2, p3);
+    const plane = new THREE.Plane().setFromCoplanarPoints(p1, p2, p3);
+    return { plane, p1, p2, p3 };
   }
 }

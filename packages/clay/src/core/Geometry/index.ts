@@ -1,10 +1,11 @@
 import { IFC4X3 as IFC } from "web-ifc";
 import { ClayObject } from "../Object";
+import { ClayObject3D } from "../Object3D";
 
 /**
  * An object that represents an IFC geometry that can represent one or many IfcElements in 3D. It supports boolean operations.
  */
-export abstract class ClayGeometry extends ClayObject {
+export abstract class ClayGeometry extends ClayObject3D {
   /**
    * {@link ClayObject.attributes}. It can either be an IFC geometry, or the result of a boolean operation.
    */
