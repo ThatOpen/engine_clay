@@ -1,7 +1,6 @@
 import * as THREE from "three";
 import { SimpleWall, WallEndPointType, WallPlaneType } from "./simple-wall";
 import { HalfSpace } from "../../../../geometries";
-import { MathUtils } from "../../../../utils";
 
 export interface WallCornerConfig {
   wall1: SimpleWall;
@@ -66,7 +65,7 @@ export class SimpleWallCornerer {
       return;
     }
 
-    const { plane, p1, p2, p3 } = wall1.getPlane(to);
+    const { plane, p1 } = wall1.getPlane(to);
     if (plane === null) {
       // Malformed wall (e.g. zero length)
       return;
@@ -147,7 +146,7 @@ export class SimpleWallCornerer {
       // temp.updateMatrix();
 
       const temp3 = new THREE.Object3D();
-      const transform = wall2.getTransform();
+      const transform = wall2.transformation.matrix.clone();
       transform.invert();
 
       temp3.applyMatrix4(transform);
@@ -172,8 +171,8 @@ export class SimpleWallCornerer {
       // halfSpace.rotation.y = Math.PI / 2;
       // halfSpace.position.x = 0.25;
 
-      halfSpace.rotation.copy(temp.rotation);
-      halfSpace.position.copy(temp.position);
+      halfSpace.transformation.rotation.copy(temp.rotation);
+      halfSpace.transformation.position.copy(temp.position);
 
       halfSpace.update();
     }

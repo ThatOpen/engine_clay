@@ -50,10 +50,12 @@ export class IfcUtils {
   static setAxis2Placement(
     model: Model,
     placement: IFC.IfcAxis2Placement3D | IFC.IfcAxis2Placement2D,
-    position: THREE.Vector3,
-    rotation: THREE.Euler,
+    object: THREE.Object3D,
   ) {
     const location = model.get(placement.Location) as IFC.IfcCartesianPoint;
+
+    const position = MathUtils.toIfcCoords(object.position);
+    const rotation = MathUtils.toIfcRot(object.rotation) as THREE.Euler;
 
     location.Coordinates[0].value = position.x;
     location.Coordinates[1].value = position.y;

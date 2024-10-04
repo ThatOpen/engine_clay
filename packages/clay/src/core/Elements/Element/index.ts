@@ -204,12 +204,7 @@ export abstract class ClayElement extends ClayObject3D {
       placement.RelativePlacement,
     ) as IFC.IfcAxis2Placement3D;
 
-    IfcUtils.setAxis2Placement(
-      this.model,
-      relPlacement,
-      this.position,
-      this.rotation,
-    );
+    IfcUtils.setAxis2Placement(this.model, relPlacement, this.transformation);
 
     this.model.set(this.attributes);
   }

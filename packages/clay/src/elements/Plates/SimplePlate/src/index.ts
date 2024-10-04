@@ -1,6 +1,5 @@
 import { IFC4X3 as IFC } from "web-ifc";
 import { v4 as uuidv4 } from "uuid";
-import * as THREE from "three";
 import { ClayElement, Model } from "../../../../core";
 
 import { SimplePlateType } from "..";
@@ -24,7 +23,7 @@ export class SimplePlate extends ClayElement {
     profile.dimension.x = 0.0833333333333333;
     profile.dimension.y = 1.9238;
     profile.dimension.z = 1;
-    profile.position = new THREE.Vector3(0, 0, 0);
+    profile.transformation.position.set(0, 0, 0);
     profile.update();
 
     this.body = new Extrusion(model, profile);

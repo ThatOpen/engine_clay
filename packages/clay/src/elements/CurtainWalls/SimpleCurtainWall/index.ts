@@ -310,7 +310,7 @@ export class SimpleCurtainWallType extends StaticClayElementType<SimpleCurtainWa
         if (currentColumn === 0) {
           const sideAMember = this.sideAMembers[currentRow];
           sideAMember.body.profile.dimension.x = this.frameWidth;
-          sideAMember.body.profile.position.y = memberWidth / 2;
+          sideAMember.body.profile.transformation.position.y = memberWidth / 2;
           sideAMember.body.depth = plateHeight;
           sideAMember.body.position.x = this.startPoint.x;
           sideAMember.body.position.y = this.startPoint.y;
@@ -391,7 +391,8 @@ export class SimpleCurtainWallType extends StaticClayElementType<SimpleCurtainWa
 
         if (currentColumn === this.numberOfColumns - 1) {
           const sideBMember = this.sideBMembers[currentRow];
-          sideBMember.body.profile.position.y = -1 * (memberWidth / 2);
+          sideBMember.body.profile.transformation.position.y =
+            -1 * (memberWidth / 2);
           sideBMember.body.profile.dimension.x = this.frameWidth;
           sideBMember.body.depth = plateHeight;
           sideBMember.body.position.x = this.endPoint.x;
@@ -440,11 +441,11 @@ export class SimpleCurtainWallType extends StaticClayElementType<SimpleCurtainWa
 
         if (currentColumn === 0 || currentColumn === this.numberOfColumns - 1) {
           plate.body.profile.dimension.y = plateWidth - memberWidth / 2;
-          plate.body.profile.position.y = memberWidth / 4;
+          plate.body.profile.transformation.position.y = memberWidth / 4;
         }
 
         if (currentColumn === this.numberOfColumns - 1) {
-          plate.body.profile.position.y = -memberWidth / 4;
+          plate.body.profile.transformation.position.y = -memberWidth / 4;
         }
 
         plate.body.profile.update();

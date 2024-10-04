@@ -15,7 +15,8 @@ export class SimpleWallNester {
     const wallPlane = new THREE.Plane();
 
     const tempPoint = this._wall.startPoint3D;
-    tempPoint.z += 1;
+    tempPoint.y += 1;
+
     wallPlane.setFromCoplanarPoints(
       tempPoint,
       this._wall.startPoint3D,
@@ -23,9 +24,10 @@ export class SimpleWallNester {
     );
 
     const newPosition = new THREE.Vector3();
-    wallPlane.projectPoint(element.position, newPosition);
+    wallPlane.projectPoint(element.transformation.position, newPosition);
 
-    element.position.copy(newPosition);
+    console.log(newPosition);
+    element.transformation.position.copy(newPosition);
     element.update();
 
     // The distance is signed, so that it also supports openings that are
@@ -52,9 +54,9 @@ export class SimpleWallNester {
       const pos = dir.clone().multiplyScalar(distance).add(start);
 
       // Align opening to wall
-      opening.position.x = pos.x;
-      opening.position.y = pos.y;
-      opening.rotation.z = this._wall.rotation.z;
+      opening.transformation.position.x = pos.x;
+      opening.transformation.position.z = pos.z;
+      opening.transformation.rotation.y = this._wall.transformation.rotation.y;
 
       opening.update();
     }

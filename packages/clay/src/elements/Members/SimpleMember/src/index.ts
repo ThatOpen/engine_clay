@@ -27,7 +27,7 @@ export class SimpleMember extends ClayElement {
     const profile = new RectangleProfile(model);
     profile.dimension.x = this.depth;
     profile.dimension.y = this.width;
-    profile.position = new THREE.Vector3(0, 0, 5);
+    profile.transformation.position.set(0, 0, 5);
     profile.update();
 
     this.body = new Extrusion(model, profile);

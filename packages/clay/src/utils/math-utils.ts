@@ -12,10 +12,18 @@ export class MathUtils {
   }
 
   static toThreeCoords(value: THREE.Vector3) {
-    return new THREE.Vector3(value.x, value.z, -value.y);
+    return value.clone().set(value.x, value.z, -value.y);
   }
 
   static toIfcCoords(value: THREE.Vector3) {
-    return new THREE.Vector3(value.x, -value.z, value.y);
+    return value.clone().set(value.x, -value.z, value.y);
+  }
+
+  static toThreeRot(value: THREE.Euler) {
+    return value.clone().set(value.x, value.z, -value.y);
+  }
+
+  static toIfcRot(value: THREE.Euler) {
+    return value.clone().set(value.x, -value.z, value.y);
   }
 }

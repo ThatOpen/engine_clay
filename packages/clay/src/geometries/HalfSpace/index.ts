@@ -12,10 +12,12 @@ export class HalfSpace extends ClayGeometry {
   constructor(model: Model) {
     super(model);
 
-    const { dirX, dirY } = MathUtils.basisFromEuler(this.rotation);
+    const position = MathUtils.toIfcCoords(this.transformation.position);
+    const rotation = MathUtils.toIfcRot(this.transformation.rotation);
+    const { dirX, dirY } = MathUtils.basisFromEuler(rotation);
 
     const placement = new IFC.IfcAxis2Placement3D(
-      IfcUtils.point(this.position),
+      IfcUtils.point(position),
       IfcUtils.direction(dirY),
       IfcUtils.direction(dirX),
     );
@@ -34,18 +36,9 @@ export class HalfSpace extends ClayGeometry {
 
     const placement = this.model.get(plane.Position);
 
-    IfcUtils.setAxis2Placement(
-      this.model,
-      placement,
-      this.position,
-      this.rotation,
-    );
+    IfcUtils.setAxis2Placement(this.model, placement, this.transformation);
 
     this.model.set(this.core);
     this.attributes = this.core;
-  }
-
-  fromThreePlane() {
-    
   }
 }

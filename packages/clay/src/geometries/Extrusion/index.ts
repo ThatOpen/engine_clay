@@ -50,12 +50,7 @@ export class Extrusion<T extends Profile> extends ClayGeometry {
   update() {
     const placement = this.model.get(this.core.Position);
 
-    IfcUtils.setAxis2Placement(
-      this.model,
-      placement,
-      this.position,
-      this.rotation,
-    );
+    IfcUtils.setAxis2Placement(this.model, placement, this.transformation);
 
     const direction = this.model.get(this.core.ExtrudedDirection);
     direction.DirectionRatios[0].value = this.direction.z;

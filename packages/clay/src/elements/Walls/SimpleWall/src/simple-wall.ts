@@ -22,8 +22,6 @@ export class SimpleWall extends ClayElement {
 
   height = 3;
 
-  elevation = 0;
-
   startPoint = new THREE.Vector2(0, 0);
 
   endPoint = new THREE.Vector2(1, 0);
@@ -61,12 +59,12 @@ export class SimpleWall extends ClayElement {
 
   get startPoint3D() {
     const { x, y } = this.startPoint;
-    return new THREE.Vector3(x, y, this.elevation);
+    return new THREE.Vector3(x, this.transformation.position.y, y);
   }
 
   get endPoint3D() {
     const { x, y } = this.endPoint;
-    return new THREE.Vector3(x, y, this.elevation);
+    return new THREE.Vector3(x, this.transformation.position.y, y);
   }
 
   constructor(model: Model, type: SimpleWallType) {
@@ -105,15 +103,15 @@ export class SimpleWall extends ClayElement {
     const profile = this.body.profile;
     profile.dimension.x = this.length;
     profile.dimension.y = this.type.width;
-    profile.position.y = this.offset;
+    profile.transformation.position.y = this.offset;
     profile.update();
 
     this.body.depth = this.height;
     this.body.update();
 
     const dir = this.direction;
-    this.rotation.z = Math.atan2(dir.y, dir.x);
-    this.position = this.midPoint;
+    this.transformation.rotation.y = Math.atan2(-dir.z, dir.x);
+    this.transformation.position.copy(this.midPoint);
 
     const shape = this.model.get(this.attributes.Representation);
     const reps = this.model.get(shape.Representations[0]);
