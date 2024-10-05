@@ -26,7 +26,6 @@ export class SimpleWallNester {
     const newPosition = new THREE.Vector3();
     wallPlane.projectPoint(element.transformation.position, newPosition);
 
-    console.log(newPosition);
     element.transformation.position.copy(newPosition);
     element.update();
 

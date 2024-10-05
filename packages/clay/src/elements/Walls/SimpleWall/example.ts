@@ -30,8 +30,9 @@ const grids = components.get(OBC.Grids);
 grids.create(world);
 
 const axis = new THREE.AxesHelper();
-axis.material.depthTest = false;
-axis.material.transparent = true;
+const axisMat = axis.material as THREE.MeshLambertMaterial;
+axisMat.depthTest = false;
+axisMat.transparent = true;
 world.scene.three.add(axis);
 
 const model = new CLAY.Model();
@@ -45,18 +46,36 @@ const simpleWallType = new CLAY.SimpleWallType(model);
 
 const wall1 = simpleWallType.addInstance();
 world.scene.three.add(...wall1.meshes);
-// wall1.startPoint = new THREE.Vector2(0, 0);
-// wall1.endPoint = new THREE.Vector2(1, 0);
+wall1.startPoint = new THREE.Vector2(0, 0);
+wall1.endPoint = new THREE.Vector2(1, 0);
 wall1.update(true);
-// wall1.meshes[0].setColorAt(0, new THREE.Color(1, 0, 0));
+wall1.meshes[0].setColorAt(0, new THREE.Color(1, 0, 0));
+
+const wall2 = simpleWallType.addInstance();
+world.scene.three.add(...wall2.meshes);
+wall2.startPoint = new THREE.Vector2(0, 0);
+wall2.endPoint = new THREE.Vector2(0, 1);
+wall2.update(true);
 
 site.children.add(wall1.attributes.expressID);
+site.children.add(wall2.attributes.expressID);
+
+simpleWallType.addCorner({
+  wall1,
+  wall2,
+  to: "interior",
+  cut: "interior",
+  cutDirection: "interior",
+  priority: "start",
+});
+
+simpleWallType.updateCorners();
 
 world.camera.controls.fitToSphere(wall1.meshes[0], false);
 
 const simpleOpeningType = new CLAY.SimpleOpeningType(model);
 const opening = simpleOpeningType.addInstance();
-world.scene.three.add(...opening.meshes);
+// world.scene.three.add(...opening.meshes);
 console.log(simpleOpeningType);
 opening.transformation.position.x += 1;
 
@@ -90,6 +109,8 @@ const panel = BUI.Component.create<BUI.PanelSection>(() => {
         ) => {
           wall1.startPoint.x = event.target.value;
           wall1.update(true);
+          simpleWallType.updateCorners();
+
           // simpleWallType.updateCorners();
         }}"></bim-number-input>
 
@@ -98,6 +119,10 @@ const panel = BUI.Component.create<BUI.PanelSection>(() => {
         ) => {
           wall1.startPoint.y = event.target.value;
           wall1.update(true);
+          simpleWallType.updateCorners();
+
+          console.log("hey");
+
           // simpleWallType.updateCorners();
         }}"></bim-number-input>
 
@@ -110,6 +135,8 @@ const panel = BUI.Component.create<BUI.PanelSection>(() => {
         ) => {
           wall1.endPoint.x = event.target.value;
           wall1.update(true);
+          simpleWallType.updateCorners();
+
           // simpleWallType.updateCorners();
         }}"></bim-number-input>
 
@@ -118,17 +145,20 @@ const panel = BUI.Component.create<BUI.PanelSection>(() => {
         ) => {
           wall1.endPoint.y = event.target.value;
           wall1.update(true);
+          simpleWallType.updateCorners();
+
           // simpleWallType.updateCorners();
         }}"></bim-number-input>
 
 
       </div>
 
-      <bim-number-input slider step="0.05" label="Elevation" value="${wall1.elevation}" @change="${(
+      <bim-number-input slider step="0.05" label="Elevation" value="${wall1.transformation.position.y}" @change="${(
         event: any,
       ) => {
         wall1.transformation.position.y = event.target.value;
         wall1.update(true);
+        simpleWallType.updateCorners();
       }}"></bim-number-input>
 
       <bim-number-input slider step="0.01" label="Offset" value="${wall1.offset}" @change="${(
@@ -136,6 +166,8 @@ const panel = BUI.Component.create<BUI.PanelSection>(() => {
       ) => {
         wall1.offset = event.target.value;
         wall1.update(true);
+        simpleWallType.updateCorners();
+
         // simpleWallType.updateCorners();
       }}"></bim-number-input>
 
@@ -152,6 +184,8 @@ const panel = BUI.Component.create<BUI.PanelSection>(() => {
       ) => {
         wall1.height = event.target.value;
         wall1.update(true);
+        simpleWallType.updateCorners();
+
         // simpleWallType.updateCorners();
       }}"></bim-number-input>
 

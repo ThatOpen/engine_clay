@@ -39,8 +39,8 @@ export class SimpleWallType extends DynamicClayElementType<SimpleWall> {
     this._cornerer.add(config);
   }
 
-  async updateCorners(ids?: Iterable<number>) {
-    await this._cornerer.update(ids);
+  updateCorners(ids?: Iterable<number>) {
+    this._cornerer.update(ids);
   }
 
   protected createElement() {

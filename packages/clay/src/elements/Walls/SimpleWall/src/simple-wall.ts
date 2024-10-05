@@ -34,16 +34,6 @@ export class SimpleWall extends ClayElement {
     return this.startPoint.distanceTo(this.endPoint);
   }
 
-  get midPoint() {
-    const start = this.startPoint3D;
-    const end = this.endPoint3D;
-    return new THREE.Vector3(
-      (start.x + end.x) / 2,
-      (start.y + end.y) / 2,
-      (start.z + end.z) / 2,
-    );
-  }
-
   get direction() {
     const vector = new THREE.Vector3();
     vector.subVectors(this.endPoint3D, this.startPoint3D);
@@ -98,8 +88,6 @@ export class SimpleWall extends ClayElement {
   }
 
   update(updateGeometry = false) {
-    this._nester.update();
-
     const profile = this.body.profile;
     profile.dimension.x = this.length;
     profile.dimension.y = this.type.width;
@@ -109,9 +97,17 @@ export class SimpleWall extends ClayElement {
     this.body.depth = this.height;
     this.body.update();
 
+    const start = this.startPoint3D;
+    const end = this.endPoint3D;
+    const midPoint = new THREE.Vector3(
+      (start.x + end.x) / 2,
+      (start.y + end.y) / 2,
+      (start.z + end.z) / 2,
+    );
+
     const dir = this.direction;
     this.transformation.rotation.y = Math.atan2(-dir.z, dir.x);
-    this.transformation.position.copy(this.midPoint);
+    this.transformation.position.copy(midPoint);
 
     const shape = this.model.get(this.attributes.Representation);
     const reps = this.model.get(shape.Representations[0]);
@@ -119,6 +115,9 @@ export class SimpleWall extends ClayElement {
     this.model.set(reps);
 
     this.updateGeometryID();
+
+    this._nester.update();
+
     super.update(updateGeometry);
   }
 
@@ -148,7 +147,7 @@ export class SimpleWall extends ClayElement {
     const p1 = this.startPoint3D;
     const p2 = this.endPoint3D;
     const p3 = p1.clone();
-    p3.z += 1;
+    p3.y += 1;
 
     if (p1.equals(p2)) {
       // Zero length wall
