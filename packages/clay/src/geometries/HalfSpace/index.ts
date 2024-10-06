@@ -1,3 +1,4 @@
+import * as THREE from "three";
 import { IFC4X3 as IFC } from "web-ifc";
 import { Model, ClayGeometry } from "../../core";
 
@@ -6,6 +7,8 @@ import { IfcUtils } from "../../utils/ifc-utils";
 
 export class HalfSpace extends ClayGeometry {
   attributes: IFC.IfcHalfSpaceSolid | IFC.IfcBooleanClippingResult;
+
+  direction = new THREE.Vector3();
 
   core: IFC.IfcHalfSpaceSolid;
 
@@ -36,9 +39,22 @@ export class HalfSpace extends ClayGeometry {
 
     const placement = this.model.get(plane.Position);
 
-    IfcUtils.setAxis2Placement(this.model, placement, this.transformation);
+    const location = this.model.get(
+      placement.Location,
+    ) as IFC.IfcCartesianPoint;
 
-    this.model.set(this.core);
-    this.attributes = this.core;
+    const position = MathUtils.toIfcCoords(this.transformation.position);
+    const direction = MathUtils.toIfcCoords(this.direction);
+
+    location.Coordinates[0].value = position.x;
+    location.Coordinates[1].value = position.y;
+    location.Coordinates[2].value = position.z;
+    this.model.set(location);
+
+    const zDirection = this.model.get(placement.Axis);
+    zDirection.DirectionRatios[0].value = direction.x;
+    zDirection.DirectionRatios[1].value = direction.y;
+    zDirection.DirectionRatios[2].value = direction.z;
+    this.model.set(zDirection);
   }
 }

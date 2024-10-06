@@ -4,7 +4,9 @@ import Stats from "stats.js";
 import * as OBC from "@thatopen/components";
 
 import * as WEBIFC from "web-ifc";
+import { ParametricGeometries } from "three/examples/jsm/geometries/ParametricGeometries";
 import * as CLAY from "../../..";
+import plane = ParametricGeometries.plane;
 
 const container = document.getElementById("container")!;
 
@@ -47,40 +49,100 @@ const simpleWallType = new CLAY.SimpleWallType(model);
 const wall1 = simpleWallType.addInstance();
 world.scene.three.add(...wall1.meshes);
 wall1.startPoint = new THREE.Vector2(0, 0);
-wall1.endPoint = new THREE.Vector2(1, 0);
+wall1.endPoint = new THREE.Vector2(0, 1);
 wall1.update(true);
 wall1.meshes[0].setColorAt(0, new THREE.Color(1, 0, 0));
-
-const wall2 = simpleWallType.addInstance();
-world.scene.three.add(...wall2.meshes);
-wall2.startPoint = new THREE.Vector2(0, 0);
-wall2.endPoint = new THREE.Vector2(0, 1);
-wall2.update(true);
+//
+// const wall2 = simpleWallType.addInstance();
+// world.scene.three.add(...wall2.meshes);
+// wall2.startPoint = new THREE.Vector2(0, 0);
+// wall2.endPoint = new THREE.Vector2(0, 1);
+// wall2.update(true);
 
 site.children.add(wall1.attributes.expressID);
-site.children.add(wall2.attributes.expressID);
+// site.children.add(wall2.attributes.expressID);
 
-simpleWallType.addCorner({
-  wall1,
-  wall2,
-  to: "interior",
-  cut: "interior",
-  cutDirection: "interior",
-  priority: "start",
-});
+// simpleWallType.addCorner({
+//   wall1,
+//   wall2,
+//   to: "interior",
+//   cut: "interior",
+//   cutDirection: "interior",
+//   priority: "start",
+// });
 
 simpleWallType.updateCorners();
 
 world.camera.controls.fitToSphere(wall1.meshes[0], false);
 
-const simpleOpeningType = new CLAY.SimpleOpeningType(model);
-const opening = simpleOpeningType.addInstance();
-// world.scene.three.add(...opening.meshes);
-console.log(simpleOpeningType);
-opening.transformation.position.x += 1;
+// const simpleOpeningType = new CLAY.SimpleOpeningType(model);
+// const opening = simpleOpeningType.addInstance();
+// // world.scene.three.add(...opening.meshes);
+// console.log(simpleOpeningType);
+// opening.transformation.position.x += 1;
+//
+// await wall1.addSubtraction(opening, true);
+// wall1.update(true);
 
-await wall1.addSubtraction(opening, true);
-wall1.update(true);
+const test = new THREE.Mesh(
+  new THREE.PlaneGeometry(),
+  new THREE.MeshLambertMaterial({
+    color: "blue",
+    transparent: true,
+    opacity: 0.3,
+    side: 2,
+  }),
+);
+
+const wallAxis = new THREE.AxesHelper();
+wallAxis.material.depthTest = false;
+wallAxis.material.transparent = true;
+wall1.transformation.add(wallAxis);
+world.scene.three.add(wall1.transformation);
+
+world.scene.three.add(test);
+test.position.set(0.5, 0.5, 0.5);
+test.lookAt(0, 0, 0);
+test.updateMatrix();
+
+const halfSpace = new CLAY.HalfSpace(model);
+wall1.body.addSubtraction(halfSpace);
+
+function updatePlane() {
+  const delta = 0.000000001;
+  const vector = new THREE.Vector3(0, 0, 1);
+
+  const planeRotation = new THREE.Matrix4();
+  planeRotation.extractRotation(test.matrix);
+  vector.applyMatrix4(planeRotation);
+
+  wall1.transformation.updateMatrix();
+  const rotation = new THREE.Matrix4();
+  const inverseWall = wall1.transformation.matrix.clone();
+  inverseWall.invert();
+  rotation.extractRotation(inverseWall);
+  vector.applyMatrix4(rotation);
+
+  const position = test.position.clone();
+  position.applyMatrix4(inverseWall);
+
+  halfSpace.transformation.position.copy(position);
+  halfSpace.direction.copy(vector).normalize();
+
+  halfSpace.update();
+  wall1.update(true);
+}
+
+updatePlane();
+
+function animate() {
+  test.rotation.x += Math.PI / 180;
+  test.updateMatrix();
+  updatePlane();
+  requestAnimationFrame(animate);
+}
+
+animate();
 
 // Stats
 
@@ -109,6 +171,7 @@ const panel = BUI.Component.create<BUI.PanelSection>(() => {
         ) => {
           wall1.startPoint.x = event.target.value;
           wall1.update(true);
+          updatePlane();
           simpleWallType.updateCorners();
 
           // simpleWallType.updateCorners();
@@ -119,6 +182,7 @@ const panel = BUI.Component.create<BUI.PanelSection>(() => {
         ) => {
           wall1.startPoint.y = event.target.value;
           wall1.update(true);
+          updatePlane();
           simpleWallType.updateCorners();
 
           console.log("hey");
@@ -135,6 +199,7 @@ const panel = BUI.Component.create<BUI.PanelSection>(() => {
         ) => {
           wall1.endPoint.x = event.target.value;
           wall1.update(true);
+          updatePlane();
           simpleWallType.updateCorners();
 
           // simpleWallType.updateCorners();
@@ -145,6 +210,7 @@ const panel = BUI.Component.create<BUI.PanelSection>(() => {
         ) => {
           wall1.endPoint.y = event.target.value;
           wall1.update(true);
+          updatePlane();
           simpleWallType.updateCorners();
 
           // simpleWallType.updateCorners();
@@ -158,6 +224,7 @@ const panel = BUI.Component.create<BUI.PanelSection>(() => {
       ) => {
         wall1.transformation.position.y = event.target.value;
         wall1.update(true);
+        updatePlane();
         simpleWallType.updateCorners();
       }}"></bim-number-input>
 
@@ -166,6 +233,7 @@ const panel = BUI.Component.create<BUI.PanelSection>(() => {
       ) => {
         wall1.offset = event.target.value;
         wall1.update(true);
+        updatePlane();
         simpleWallType.updateCorners();
 
         // simpleWallType.updateCorners();
@@ -184,6 +252,7 @@ const panel = BUI.Component.create<BUI.PanelSection>(() => {
       ) => {
         wall1.height = event.target.value;
         wall1.update(true);
+        updatePlane();
         simpleWallType.updateCorners();
 
         // simpleWallType.updateCorners();
