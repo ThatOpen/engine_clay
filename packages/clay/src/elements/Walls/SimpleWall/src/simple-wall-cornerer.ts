@@ -22,6 +22,8 @@ interface WallCorner extends WallCornerConfig {
 export class SimpleWallCornerer {
   list = new Map<number, Map<number, WallCorner>>();
 
+  private _temp = new THREE.Object3D();
+
   add(config: WallCornerConfig) {
     const id1 = config.wall1.attributes.expressID;
     const id2 = config.wall2.attributes.expressID;
@@ -58,6 +60,8 @@ export class SimpleWallCornerer {
     // B) Each point of the wall are on one side of this wall
     // In that case, keep the point specified in priority
 
+    wall1.transformation.updateMatrix();
+
     const dir1 = wall1.direction;
     const dir2 = wall2.direction;
     if (dir1.equals(dir2)) {
@@ -65,7 +69,7 @@ export class SimpleWallCornerer {
       return;
     }
 
-    const { plane } = wall1.getPlane(to);
+    const { plane, p1 } = wall1.getPlane(to);
     if (plane === null) {
       // Malformed wall (e.g. zero length)
       return;
@@ -77,92 +81,68 @@ export class SimpleWallCornerer {
     const extendStart = priority === "start";
 
     const pointToExtend = extendStart ? start : end;
-    if (plane.distanceToPoint(pointToExtend) === 0) {
+    if (plane.distanceToPoint(pointToExtend) !== 0) {
       // Point is already aligned with wall
-      return;
+      const origin = extendStart ? end : start;
+      const direction = extendStart ? start : end;
+      direction.sub(origin);
+
+      const ray = new THREE.Ray(origin, direction);
+
+      const intersection = ray.intersectPlane(plane, new THREE.Vector3());
+
+      if (intersection === null) {
+        return;
+      }
+
+      const offsetDist = offset === "auto" ? wall2.type.width : offset;
+      const factor = extendStart ? -1 : 1;
+      const offsetVec = dir2.multiplyScalar(offsetDist * factor);
+      intersection.add(offsetVec);
+
+      const extended = extendStart ? wall2.startPoint : wall2.endPoint;
+      extended.x = intersection.x;
+      extended.y = intersection.z;
+
+      wall2.update();
     }
 
-    const origin = extendStart ? end : start;
-    const direction = extendStart ? start : end;
-    direction.sub(origin);
+    if (corner.cut && corner.cutDirection) {
+      if (!corner.halfSpace) {
+        const halfSpace = new HalfSpace(wall1.model);
+        corner.halfSpace = halfSpace;
+        wall2.body.addSubtraction(halfSpace);
+      }
 
-    const ray = new THREE.Ray(origin, direction);
+      const halfSpace = corner.halfSpace as HalfSpace;
 
-    const intersection = ray.intersectPlane(plane, new THREE.Vector3());
+      const rotation = new THREE.Vector3(0, 0, 1);
 
-    if (intersection === null) {
-      return;
+      this._temp.position.copy(p1);
+      const factor = corner.cutDirection === "interior" ? -1 : 1;
+      const minusNormal = plane.normal.clone().multiplyScalar(factor);
+      this._temp.lookAt(p1.clone().add(minusNormal));
+      this._temp.updateMatrix();
+
+      const planeRotation = new THREE.Matrix4();
+      planeRotation.extractRotation(this._temp.matrix);
+      rotation.applyMatrix4(planeRotation);
+
+      wall2.transformation.updateMatrix();
+      const wallRotation = new THREE.Matrix4();
+      const inverseWall = wall2.transformation.matrix.clone();
+      inverseWall.invert();
+      wallRotation.extractRotation(inverseWall);
+      rotation.applyMatrix4(wallRotation);
+
+      const position = this._temp.position.clone();
+      position.applyMatrix4(inverseWall);
+
+      halfSpace.transformation.position.copy(position);
+      halfSpace.direction.copy(rotation).normalize();
+
+      halfSpace.update();
     }
-
-    const offsetDist = offset === "auto" ? wall2.type.width : offset;
-    const factor = extendStart ? -1 : 1;
-    const offsetVec = dir2.multiplyScalar(offsetDist * factor);
-    intersection.add(offsetVec);
-
-    const extended = extendStart ? wall2.startPoint : wall2.endPoint;
-    extended.x = intersection.x;
-    extended.y = intersection.z;
-
-    // if (corner.cut && corner.cutDirection) {
-    //   if (!corner.halfSpace) {
-    //     const halfSpace = new HalfSpace(wall1.model);
-    //     corner.halfSpace = halfSpace;
-    //     wall2.body.addSubtraction(halfSpace);
-    //   }
-    //
-    //   const halfSpace = corner.halfSpace as HalfSpace;
-    //
-    //   const temp = new THREE.Mesh(
-    //     new THREE.PlaneGeometry(10, 10, 10),
-    //     new THREE.MeshLambertMaterial({
-    //       color: "blue",
-    //     }),
-    //   );
-    //
-    //   const temp2 = new THREE.Object3D();
-    //   temp2.position.copy(p1);
-    //   const p4 = p1.clone().add(plane.normal);
-    //   temp2.lookAt(p4);
-    //
-    //   temp2.applyMatrix4(new THREE.Matrix4().makeRotationX(-Math.PI / 2));
-    //   temp2.applyMatrix4(new THREE.Matrix4().makeRotationY(Math.PI / 2));
-    //   temp2.applyMatrix4(new THREE.Matrix4().makeRotationX(Math.PI / 2));
-    //
-    //   temp.applyMatrix4(temp2.matrix);
-    //
-    //   // temp.updateMatrix();
-    //
-    //   const temp3 = new THREE.Object3D();
-    //   const transform = wall2.transformation.matrix.clone();
-    //   transform.invert();
-    //
-    //   temp3.applyMatrix4(transform);
-    //   temp3.applyMatrix4(new THREE.Matrix4().makeRotationZ(Math.PI / 2));
-    //   temp.applyMatrix4(temp3.matrix);
-    //
-    //   // const temp4 = new THREE.Object3D();
-    //   // temp4.position.copy(p1);
-    //   // temp4.applyMatrix4(transform);
-    //
-    //   // const obj = MathUtils.getTempObject3DToDisplayIfcCoords();
-    //   // obj.add(temp);
-    //   // wall1.meshes[0].parent.add(obj);
-    //
-    //   // halfSpace.position.copy(temp.position);
-    //   // halfSpace.rotation.copy(temp.rotation);
-    //
-    //   // const transform = wall2.getTransform();
-    //   // transform.invert();
-    //   // halfSpace.applyTransform(transform);
-    //
-    //   // halfSpace.rotation.y = Math.PI / 2;
-    //   // halfSpace.position.x = 0.25;
-    //
-    //   halfSpace.transformation.rotation.copy(temp.rotation);
-    //   halfSpace.transformation.position.copy(temp.position);
-    //
-    //   halfSpace.update();
-    // }
 
     wall2.update(true);
   }

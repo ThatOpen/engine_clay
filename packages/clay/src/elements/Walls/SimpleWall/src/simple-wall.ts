@@ -43,7 +43,7 @@ export class SimpleWall extends ClayElement {
 
   get normal() {
     const direction = this.direction;
-    const up = new THREE.Vector3(0, 0, 1);
+    const up = new THREE.Vector3(0, 1, 0);
     return direction.cross(up);
   }
 
@@ -155,12 +155,12 @@ export class SimpleWall extends ClayElement {
       return { p1, p2, p3, plane };
     }
 
-    const offsetCorrection = normal.clone();
-    offsetCorrection.multiplyScalar(-this.offset);
+    // const offsetCorrection = normal.clone();
+    // offsetCorrection.multiplyScalar(-this.offset);
 
-    p1.add(offsetCorrection);
-    p2.add(offsetCorrection);
-    p3.add(offsetCorrection);
+    // p1.add(offsetCorrection);
+    // p2.add(offsetCorrection);
+    // p3.add(offsetCorrection);
 
     if (type !== "center") {
       const offset = normal.clone();
